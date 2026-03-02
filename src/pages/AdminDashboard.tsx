@@ -15,6 +15,9 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import CouponManager from '../components/CouponManager'
+
+type AdminTab = 'chat' | 'coupon'
 
 interface UserRecord {
   uid: string
@@ -22,6 +25,7 @@ interface UserRecord {
   email: string
   attribute: string
   birthMonth: string
+  totalSavedAmount: number
 }
 
 interface ChatMeta {
@@ -97,6 +101,7 @@ export default function AdminDashboard() {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [showChatPanel, setShowChatPanel] = useState(false)
+  const [adminTab, setAdminTab] = useState<AdminTab>('chat')
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -111,6 +116,7 @@ export default function AdminDashboard() {
           email: d.data().email as string,
           attribute: d.data().attribute as string,
           birthMonth: d.data().birthMonth as string,
+          totalSavedAmount: (d.data().totalSavedAmount as number) ?? 0,
         })),
       )
     })
@@ -224,8 +230,35 @@ export default function AdminDashboard() {
         </button>
       </header>
 
+      {/* タブバー */}
+      <div className="flex border-b border-white/5 bg-[#12122a] flex-shrink-0">
+        <button
+          onClick={() => setAdminTab('chat')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'chat'
+              ? 'text-amber-400 border-b-2 border-amber-400'
+              : 'text-white/30 hover:text-white/50'
+          }`}
+        >
+          💬 チャット
+        </button>
+        <button
+          onClick={() => setAdminTab('coupon')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'coupon'
+              ? 'text-amber-400 border-b-2 border-amber-400'
+              : 'text-white/30 hover:text-white/50'
+          }`}
+        >
+          🎫 クーポン管理
+        </button>
+      </div>
+
       {/* メインエリア */}
-      <div className="flex-1 flex overflow-hidden">
+      {adminTab === 'coupon' ? (
+        <CouponManager />
+      ) : (
+        <div className="flex-1 flex overflow-hidden">
         {/* ── 左パネル：顧客リスト ── */}
         <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-white/5 flex flex-col bg-[#12122a] ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
           <div className="px-4 py-3 border-b border-white/5">
@@ -284,6 +317,11 @@ export default function AdminDashboard() {
                           ? meta.lastMessage
                           : `${ATTRIBUTE_LABELS[user.attribute] ?? user.attribute} · ${user.birthMonth}`}
                       </p>
+                      {user.totalSavedAmount > 0 && (
+                        <span className="text-[9px] text-amber-400/60 mt-0.5 inline-block">
+                          👑 累計 ¥{user.totalSavedAmount.toLocaleString()}
+                        </span>
+                      )}
                     </div>
                   </button>
                 )
@@ -315,10 +353,16 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <p className="text-white text-sm font-medium">{selectedUser.fullName}</p>
-                  <p className="text-white/30 text-[10px]">
-                    {ATTRIBUTE_LABELS[selectedUser.attribute] ?? selectedUser.attribute} ·{' '}
-                    {selectedUser.birthMonth}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white/30 text-[10px]">
+                      {ATTRIBUTE_LABELS[selectedUser.attribute] ?? selectedUser.attribute} · {selectedUser.birthMonth}
+                    </p>
+                    {selectedUser.totalSavedAmount > 0 && (
+                      <span className="text-[9px] bg-amber-400/10 text-amber-400 px-1.5 py-0.5 rounded-full font-bold">
+                        👑 ¥{selectedUser.totalSavedAmount.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -416,7 +460,8 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
