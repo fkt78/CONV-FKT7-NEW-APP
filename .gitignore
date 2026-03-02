@@ -1,0 +1,23 @@
+# 依存関係
+node_modules/
+dist/
+dist-ssr/
+
+# 環境変数（Firebaseのキー等を含むため絶対にコミットしないこと）
+.env
+.env.local
+.env.*.local
+
+# エディタ
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# キャッシュ
+*.local
