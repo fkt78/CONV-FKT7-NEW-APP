@@ -16,6 +16,7 @@ import {
 import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import CouponWallet from '../components/CouponWallet'
+import VipNews from '../components/VipNews'
 
 type HomeTab = 'chat' | 'coupon'
 
@@ -228,6 +229,9 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* ── VIP NEWS ── */}
+      <VipNews />
 
       {/* ── タブ切り替え ── */}
       <div className="flex mx-4 mt-3 rounded-lg bg-white/[0.03] p-0.5 flex-shrink-0">

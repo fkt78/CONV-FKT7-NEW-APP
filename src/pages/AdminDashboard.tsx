@@ -16,8 +16,9 @@ import {
 import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import CouponManager from '../components/CouponManager'
+import NewsManager from '../components/NewsManager'
 
-type AdminTab = 'chat' | 'coupon'
+type AdminTab = 'chat' | 'coupon' | 'news'
 
 interface UserRecord {
   uid: string
@@ -252,11 +253,23 @@ export default function AdminDashboard() {
         >
           🎫 クーポン管理
         </button>
+        <button
+          onClick={() => setAdminTab('news')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'news'
+              ? 'text-amber-400 border-b-2 border-amber-400'
+              : 'text-white/30 hover:text-white/50'
+          }`}
+        >
+          📢 お知らせ管理
+        </button>
       </div>
 
       {/* メインエリア */}
       {adminTab === 'coupon' ? (
         <CouponManager />
+      ) : adminTab === 'news' ? (
+        <NewsManager />
       ) : (
         <div className="flex-1 flex overflow-hidden">
         {/* ── 左パネル：顧客リスト ── */}
