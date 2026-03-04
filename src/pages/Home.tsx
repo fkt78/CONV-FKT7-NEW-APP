@@ -17,6 +17,7 @@ import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import CouponWallet from '../components/CouponWallet'
 import VipNews from '../components/VipNews'
+import VoiceCreditsPopup from '../components/VoiceCreditsPopup'
 
 type HomeTab = 'chat' | 'coupon'
 
@@ -82,6 +83,7 @@ export default function Home() {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [couponCount, setCouponCount] = useState(0)
+  const [creditsOpen, setCreditsOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -364,6 +366,18 @@ export default function Home() {
           </div>
         </>
       )}
+
+      {/* ── フッター（クレジット） ── */}
+      <footer className="flex-shrink-0 px-4 py-2 border-t border-white/5 bg-[#0f0f23]">
+        <button
+          onClick={() => setCreditsOpen(true)}
+          className="text-white/40 text-xs hover:text-amber-400/80 transition"
+        >
+          クレジット
+        </button>
+      </footer>
+
+      <VoiceCreditsPopup open={creditsOpen} onClose={() => setCreditsOpen(false)} />
     </div>
   )
 }
