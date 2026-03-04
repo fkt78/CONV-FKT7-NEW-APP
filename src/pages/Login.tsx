@@ -150,6 +150,14 @@ export default function Login() {
             新規登録
           </Link>
         </p>
+        <p className="text-center mt-4">
+          <Link
+            to="/install-guide"
+            className="text-amber-400/80 text-sm hover:text-amber-400 transition inline-flex items-center gap-1"
+          >
+            📱 ホーム画面に追加する方法
+          </Link>
+        </p>
       </div>
     </div>
   )

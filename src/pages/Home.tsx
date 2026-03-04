@@ -177,6 +177,13 @@ export default function Home() {
           <span className="text-amber-400 font-bold text-sm tracking-widest">VIP Store</span>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/install-guide')}
+            title="ホーム画面に追加"
+            className="text-amber-400/80 text-base hover:text-amber-400 transition"
+          >
+            📱
+          </button>
           {userRole === 'admin' && (
             <button
               onClick={() => navigate('/admin')}
