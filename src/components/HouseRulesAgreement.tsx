@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 
 const STORAGE_KEY = 'fkt7_rules_accepted'
 
@@ -82,6 +83,18 @@ export default function HouseRulesAgreement() {
                 万が一、上記のお約束や信頼関係を損なう行為が見受けられた場合、誠に勝手ながら事前の予告なくアプリの利用を停止させていただく場合がございます。
               </p>
             </div>
+
+            <p className="text-white/60 text-xs leading-relaxed">
+              本アプリのご利用には、
+              <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-amber-400 underline hover:text-amber-300">
+                利用規約
+              </Link>
+              および
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 underline hover:text-amber-300">
+                プライバシーポリシー
+              </Link>
+              への同意が必要です。下のボタンを押すことで、上記ハウスルールならびに利用規約・プライバシーポリシーに同意したものとみなします。
+            </p>
           </div>
         </div>
       </div>
@@ -92,7 +105,7 @@ export default function HouseRulesAgreement() {
           onClick={handleAccept}
           className="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold text-lg tracking-widest rounded-lg hover:from-amber-400 hover:to-yellow-400 active:scale-[0.98] transition shadow-lg shadow-amber-500/20"
         >
-          上記のルールを理解し、FKT7へ入場する
+          同意してFKT7へ入場する
         </button>
       </div>
     </div>

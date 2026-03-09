@@ -17,8 +17,9 @@ import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import CouponManager from '../components/CouponManager'
 import NewsManager from '../components/NewsManager'
+import RoadmapManager from '../components/RoadmapManager'
 
-type AdminTab = 'chat' | 'coupon' | 'news'
+type AdminTab = 'chat' | 'coupon' | 'news' | 'roadmap'
 
 interface UserRecord {
   uid: string
@@ -263,14 +264,26 @@ export default function AdminDashboard() {
         >
           📢 お知らせ管理
         </button>
+        <button
+          onClick={() => setAdminTab('roadmap')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'roadmap'
+              ? 'text-amber-400 border-b-2 border-amber-400'
+              : 'text-white/30 hover:text-white/50'
+          }`}
+        >
+          📋 実装予定
+        </button>
       </div>
 
       {/* メインエリア */}
-      {adminTab === 'coupon' ? (
+      {adminTab === 'roadmap' ? (
+        <RoadmapManager />
+      ) : adminTab === 'coupon' ? (
         <CouponManager />
       ) : adminTab === 'news' ? (
         <NewsManager />
-      ) : (
+      ) : adminTab === 'chat' ? (
         <div className="flex-1 flex overflow-hidden">
         {/* ── 左パネル：顧客リスト ── */}
         <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-white/5 flex flex-col bg-[#12122a] ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
@@ -474,7 +487,7 @@ export default function AdminDashboard() {
           )}
         </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

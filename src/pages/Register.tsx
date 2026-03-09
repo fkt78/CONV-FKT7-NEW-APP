@@ -32,6 +32,7 @@ export default function Register() {
   const [attribute, setAttribute] = useState<Attribute>('male')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [agreeTerms, setAgreeTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -61,6 +62,10 @@ export default function Register() {
     }
     if (!birthMonth.match(/^\d{4}-(0[1-9]|1[0-2])$/)) {
       setError('生年月を YYYY-MM 形式で入力してください。')
+      return
+    }
+    if (!agreeTerms) {
+      setError('利用規約およびプライバシーポリシーへの同意が必要です。')
       return
     }
 
@@ -206,10 +211,29 @@ export default function Register() {
             />
           </div>
 
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={agreeTerms}
+              onChange={(e) => setAgreeTerms(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded border-white/30 bg-white/5 text-amber-500 focus:ring-amber-400/50 focus:ring-offset-0"
+            />
+            <span className="text-white/80 text-sm leading-relaxed">
+              <Link to="/terms" className="text-amber-400 underline hover:text-amber-300" target="_blank">
+                利用規約
+              </Link>
+              および
+              <Link to="/privacy" className="text-amber-400 underline hover:text-amber-300" target="_blank">
+                プライバシーポリシー
+              </Link>
+              に同意する <span className="text-amber-400">*</span>
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-3 rounded-lg hover:from-amber-400 hover:to-yellow-400 transition disabled:opacity-50"
+            disabled={loading || !agreeTerms}
+            className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-3 rounded-lg hover:from-amber-400 hover:to-yellow-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '確認中...' : '登録する'}
           </button>
@@ -229,6 +253,15 @@ export default function Register() {
             📱 ホーム画面に追加する方法
           </Link>
         </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 mt-6 pt-4 border-t border-white/10 text-[11px]">
+          <Link to="/privacy" className="text-white/40 hover:text-amber-400/80 transition">プライバシーポリシー</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/terms" className="text-white/40 hover:text-amber-400/80 transition">利用規約</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/tokushoho" className="text-white/40 hover:text-amber-400/80 transition">特商法表記</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/licenses" className="text-white/40 hover:text-amber-400/80 transition">ライセンス</Link>
+        </div>
       </div>
     </div>
   )

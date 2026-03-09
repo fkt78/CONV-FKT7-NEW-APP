@@ -158,6 +158,15 @@ export default function Login() {
             📱 ホーム画面に追加する方法
           </Link>
         </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 mt-6 pt-4 border-t border-white/10 text-[11px]">
+          <Link to="/privacy" className="text-white/40 hover:text-amber-400/80 transition">プライバシーポリシー</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/terms" className="text-white/40 hover:text-amber-400/80 transition">利用規約</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/tokushoho" className="text-white/40 hover:text-amber-400/80 transition">特商法表記</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/licenses" className="text-white/40 hover:text-amber-400/80 transition">ライセンス</Link>
+        </div>
       </div>
     </div>
   )

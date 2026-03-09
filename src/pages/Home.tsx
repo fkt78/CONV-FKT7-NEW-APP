@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
   collection,
@@ -367,14 +367,32 @@ export default function Home() {
         </>
       )}
 
-      {/* ── フッター（クレジット） ── */}
-      <footer className="flex-shrink-0 px-4 py-2 border-t border-white/5 bg-[#0f0f23]">
-        <button
-          onClick={() => setCreditsOpen(true)}
-          className="text-white/40 text-xs hover:text-amber-400/80 transition"
-        >
-          クレジット
-        </button>
+      {/* ── フッター ── */}
+      <footer className="flex-shrink-0 px-4 py-3 border-t border-white/5 bg-[#0f0f23]">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px]">
+          <button
+            onClick={() => setCreditsOpen(true)}
+            className="text-white/40 hover:text-amber-400/80 transition"
+          >
+            クレジット
+          </button>
+          <span className="text-white/20">|</span>
+          <Link to="/privacy" className="text-white/40 hover:text-amber-400/80 transition">
+            プライバシーポリシー
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/terms" className="text-white/40 hover:text-amber-400/80 transition">
+            利用規約
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/tokushoho" className="text-white/40 hover:text-amber-400/80 transition">
+            特商法表記
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/licenses" className="text-white/40 hover:text-amber-400/80 transition">
+            ライセンス
+          </Link>
+        </div>
       </footer>
 
       <VoiceCreditsPopup open={creditsOpen} onClose={() => setCreditsOpen(false)} />

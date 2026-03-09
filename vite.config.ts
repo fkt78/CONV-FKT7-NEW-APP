@@ -15,6 +15,10 @@ function getBuildVersion(): string {
 }
 
 export default defineConfig({
+  server: {
+    port: 8005,
+    strictPort: true,
+  },
   define: {
     'import.meta.env.VITE_BUILD_VERSION': JSON.stringify(getBuildVersion()),
   },
