@@ -25,7 +25,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   { category: '認証・アカウント', item: '2段階認証（2FA）', description: 'セキュリティ強化', priority: '低', notes: '' },
   { category: '認証・アカウント', item: '複数デバイス管理', description: 'ログイン中のセッション一覧・切断', priority: '低', notes: '' },
   // クーポン機能
-  { category: 'クーポン機能', item: '有効期限', description: 'クーポンの使用期限設定', priority: '高', notes: '' },
+  { category: 'クーポン機能', item: '有効期限', description: 'クーポンの使用期限設定', priority: '高', notes: '当日/今週中/今月いっぱい/日付指定で実装済み' },
   { category: 'クーポン機能', item: 'QRコード表示', description: '店舗提示用QRコード', priority: '中', notes: '' },
   { category: 'クーポン機能', item: '一括配布', description: '属性・誕生月など条件指定での一括配布', priority: '中', notes: '' },
   { category: 'クーポン機能', item: 'クーポン種別', description: '割引率・無料特典など複数タイプ', priority: '低', notes: '' },

@@ -7,6 +7,7 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { fetchWeather, type WeatherData } from './weather'
@@ -18,6 +19,9 @@ export type TargetSegment =
   | 'all' | 'male' | 'female' | 'student' | 'other'
   | '10s' | '20s' | '30s' | '40s' | '50s' | '60plus'
 
+/** 有効期限の種類（週は月曜始まり） */
+export type ExpiryType = 'same_day' | 'end_of_week' | 'end_of_month' | 'date'
+
 export interface CouponTemplate {
   id: string
   title: string
@@ -28,6 +32,17 @@ export interface CouponTemplate {
   targetSegment: TargetSegment
   active: boolean
   createdAt: Date | null
+  /** 有効期限の種類（未設定時は当日） */
+  expiryType?: ExpiryType
+  /** expiryType が 'date' のときのみ使用（YYYY-MM-DD） */
+  expiryDate?: string
+}
+
+export const EXPIRY_LABELS: Record<ExpiryType, string> = {
+  same_day: '当日',
+  end_of_week: '今週中',
+  end_of_month: '今月いっぱい',
+  date: '日付を指定',
 }
 
 export const SEGMENT_LABELS: Record<TargetSegment, string> = {
@@ -85,6 +100,39 @@ function matchesSegment(seg: TargetSegment, attr: string, birth: string): boolea
   if (seg === 'all') return true
   if (['male', 'female', 'student', 'other'].includes(seg)) return attr === seg
   return getAgeDecade(birth) === seg
+}
+
+/** 配布日から有効期限の日付を計算（23:59:59.999） */
+function computeExpiryDate(
+  expiryType: ExpiryType,
+  expiryDateStr: string | undefined,
+  distributedDate: string,
+): Date {
+  const [y, m, d] = distributedDate.split('-').map(Number)
+  const dist = new Date(y, m - 1, d)
+
+  switch (expiryType) {
+    case 'same_day':
+      return new Date(y, m - 1, d, 23, 59, 59, 999)
+    case 'end_of_week': {
+      // 月曜始まり → 今週の日曜 23:59:59
+      const day = dist.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+      const daysUntilSunday = (7 - day) % 7
+      const sunday = new Date(dist)
+      sunday.setDate(sunday.getDate() + daysUntilSunday)
+      return new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 23, 59, 59, 999)
+    }
+    case 'end_of_month':
+      return new Date(y, m, 0, 23, 59, 59, 999) // 翌月0日 = 今月末
+    case 'date':
+      if (!expiryDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDateStr)) {
+        return new Date(y, m - 1, d, 23, 59, 59, 999)
+      }
+      const [ey, em, ed] = expiryDateStr.split('-').map(Number)
+      return new Date(ey, em - 1, ed, 23, 59, 59, 999)
+    default:
+      return new Date(y, m - 1, d, 23, 59, 59, 999)
+  }
 }
 
 /* ── 配信結果 ── */
@@ -156,7 +204,10 @@ export async function distributeCoupons(dailyLimit: number): Promise<Distributio
       const existing = await getDoc(doc(db, 'users', uid, 'coupons', couponDocId))
       if (existing.exists()) continue
 
-      // 配信書き込み
+      const expiryType = coupon.expiryType ?? 'same_day'
+      const expiryDate = coupon.expiryDate
+      const expiresAtDate = computeExpiryDate(expiryType, expiryDate, today)
+
       await setDoc(doc(db, 'users', uid, 'coupons', couponDocId), {
         couponId: coupon.id,
         title: coupon.title,
@@ -165,6 +216,7 @@ export async function distributeCoupons(dailyLimit: number): Promise<Distributio
         status: 'unused',
         distributedAt: serverTimestamp(),
         distributedDate: today,
+        expiresAt: Timestamp.fromDate(expiresAtDate),
         usedAt: null,
       })
 

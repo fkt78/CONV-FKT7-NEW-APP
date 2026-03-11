@@ -23,6 +23,7 @@ interface OwnedCoupon {
   status: 'unused' | 'used'
   distributedAt: Date | null
   usedAt: Date | null
+  expiresAt: Date | null
 }
 
 function toSafeNumber(val: unknown): number {
@@ -107,7 +108,13 @@ export default function CouponWallet() {
       status: data.status as 'unused' | 'used',
       distributedAt: (data.distributedAt as TimestampType | null)?.toDate() ?? null,
       usedAt: (data.usedAt as TimestampType | null)?.toDate() ?? null,
+      expiresAt: (data.expiresAt as TimestampType | null)?.toDate() ?? null,
     }
+  }
+
+  function isExpired(c: OwnedCoupon): boolean {
+    if (!c.expiresAt) return false
+    return new Date() > c.expiresAt
   }
 
   // onSnapshot にインデックス未作成のフォールバックが効かない場合でも
@@ -141,6 +148,10 @@ export default function CouponWallet() {
         }
         if (couponSnap.data().status === 'used') {
           throw new Error('このクーポンはすでに使用済みです')
+        }
+        const exp = couponSnap.data().expiresAt as TimestampType | null
+        if (exp && new Date() > exp.toDate()) {
+          throw new Error('このクーポンは期限切れです')
         }
 
         // ── WRITE フェーズ（get の後にまとめて実行） ──
@@ -225,24 +236,26 @@ export default function CouponWallet() {
         ) : (
           displayCoupons.map((c) => {
             const isUsed = c.status === 'used'
+            const expired = !isUsed && isExpired(c)
+            const canUse = !isUsed && !expired && !marking
             return (
               <button
                 key={c.id}
-                onClick={() => !isUsed && !marking && setPresenting(c)}
+                onClick={() => canUse && setPresenting(c)}
                 disabled={isUsed || marking}
                 className="w-full text-left group"
               >
                 <div className={`relative flex rounded-2xl overflow-hidden border transition ${
-                  isUsed
+                  isUsed || expired
                     ? 'border-[#e5e5ea] opacity-70'
                     : 'border-[#e5e5ea] hover:border-[#007AFF]/40'
                 } bg-white shadow-sm`}>
                   <div className={`w-12 flex flex-col items-center justify-center flex-shrink-0 relative ${
-                    isUsed
+                    isUsed || expired
                       ? 'bg-[#e5e5ea]'
                       : 'bg-[#007AFF]'
                   }`}>
-                    <span className={`text-lg ${isUsed ? 'grayscale opacity-60' : ''}`}>🎫</span>
+                    <span className={`text-lg ${isUsed || expired ? 'grayscale opacity-60' : ''}`}>🎫</span>
                     <div className="absolute -right-2 top-1/4 w-4 h-4 rounded-full bg-white" />
                     <div className="absolute -right-2 bottom-1/4 w-4 h-4 rounded-full bg-white" />
                   </div>
@@ -264,11 +277,16 @@ export default function CouponWallet() {
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-[#86868b] text-[10px]">
                         {formatDate(c.distributedAt)} 配信
+                        {c.expiresAt && (
+                          <span className="ml-1">〜{formatDate(c.expiresAt)}</span>
+                        )}
                       </span>
                       {isUsed ? (
                         <span className="text-[#86868b] text-[10px]">
                           {formatDateTime(c.usedAt)} 使用
                         </span>
+                      ) : expired ? (
+                        <span className="text-[#FF3B30] text-[10px]">期限切れ</span>
                       ) : (
                         <span className="text-[#007AFF] text-[10px] group-hover:text-[#0051D5] transition">
                           タップして使用 →
@@ -312,6 +330,9 @@ export default function CouponWallet() {
                 <div className="border-t border-dashed border-[#e5e5ea] pt-4">
                   <p className="text-[#86868b] text-[10px]">
                     {formatDate(presenting.distributedAt)} 配信
+                    {presenting.expiresAt && (
+                      <span> 〜 {formatDate(presenting.expiresAt)} まで有効</span>
+                    )}
                   </p>
                 </div>
               </div>

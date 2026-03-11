@@ -20,9 +20,11 @@ import {
   type CouponTemplate,
   type WeatherCondition,
   type TargetSegment,
+  type ExpiryType,
   type DistributionResult,
   SEGMENT_LABELS,
   CONDITION_LABELS,
+  EXPIRY_LABELS,
 } from '../lib/coupon'
 
 export default function CouponManager() {
@@ -39,6 +41,8 @@ export default function CouponManager() {
   const [cond, setCond] = useState<WeatherCondition>('any')
   const [threshold, setThreshold] = useState(10)
   const [segment, setSegment] = useState<TargetSegment>('all')
+  const [expiryType, setExpiryType] = useState<ExpiryType>('same_day')
+  const [expiryDate, setExpiryDate] = useState('')
   const [saving, setSaving] = useState(false)
 
   // weather & distribution
@@ -95,6 +99,8 @@ export default function CouponManager() {
     setCond('any')
     setThreshold(10)
     setSegment('all')
+    setExpiryType('same_day')
+    setExpiryDate('')
     setEditingId(null)
     setShowForm(false)
   }
@@ -107,6 +113,8 @@ export default function CouponManager() {
     setCond(c.weatherCondition)
     setThreshold(c.temperatureThreshold ?? 10)
     setSegment(c.targetSegment)
+    setExpiryType(c.expiryType ?? 'same_day')
+    setExpiryDate(c.expiryDate ?? '')
     setEditingId(c.id)
     setShowForm(true)
   }
@@ -120,6 +128,7 @@ export default function CouponManager() {
   /* ── 保存（新規 / 更新を自動分岐） ── */
   async function handleSave() {
     if (!title.trim()) return
+    if (expiryType === 'date' && !expiryDate) return
     setSaving(true)
     try {
       const payload = {
@@ -129,6 +138,8 @@ export default function CouponManager() {
         weatherCondition: cond,
         temperatureThreshold: cond === 'cold_below' || cond === 'hot_above' ? threshold : null,
         targetSegment: segment,
+        expiryType,
+        expiryDate: expiryType === 'date' ? expiryDate : null,
       }
 
       if (editingId) {
@@ -177,6 +188,12 @@ export default function CouponManager() {
     if (c.weatherCondition === 'cold_below') return `${c.temperatureThreshold}℃以下`
     if (c.weatherCondition === 'hot_above') return `${c.temperatureThreshold}℃以上`
     return CONDITION_LABELS[c.weatherCondition]
+  }
+
+  /* ── 有効期限バッジ文字列 ── */
+  function expiryBadge(c: CouponTemplate): string {
+    if (c.expiryType === 'date' && c.expiryDate) return `〜${c.expiryDate}`
+    return EXPIRY_LABELS[c.expiryType ?? 'same_day']
   }
 
   return (
@@ -330,6 +347,44 @@ export default function CouponManager() {
                 </select>
               </div>
             </div>
+
+            <div>
+              <label className="text-[#86868b] text-[10px] block mb-1.5">有効期限</label>
+              <div className="flex flex-wrap gap-2">
+                {(Object.entries(EXPIRY_LABELS) as [ExpiryType, string][]).map(([k, v]) => (
+                  <label
+                    key={k}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer transition text-sm ${
+                      expiryType === k
+                        ? 'border-[#007AFF] bg-[#007AFF]/10 text-[#007AFF]'
+                        : 'border-[#e5e5ea] bg-white text-[#86868b] hover:border-[#007AFF]/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="expiryType"
+                      value={k}
+                      checked={expiryType === k}
+                      onChange={() => setExpiryType(k)}
+                      className="sr-only"
+                    />
+                    {v}
+                  </label>
+                ))}
+              </div>
+              {expiryType === 'date' && (
+                <div className="mt-2">
+                  <input
+                    type="date"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                  />
+                </div>
+              )}
+            </div>
+
             {(cond === 'cold_below' || cond === 'hot_above') && (
               <div className="flex items-center gap-2">
                 <label className="text-[#86868b] text-xs">閾値:</label>
@@ -344,7 +399,7 @@ export default function CouponManager() {
             )}
             <button
               onClick={handleSave}
-              disabled={!title.trim() || saving}
+              disabled={!title.trim() || saving || (expiryType === 'date' && !expiryDate)}
               className="w-full bg-[#007AFF] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
             >
               {saving ? '保存中...' : editingId ? '更新する' : 'テンプレートを保存'}
@@ -380,6 +435,9 @@ export default function CouponManager() {
                         ¥{c.discountAmount}
                       </span>
                     )}
+                    <span className="text-[10px] bg-[#34C759]/15 text-[#34C759] px-2 py-0.5 rounded-full">
+                      {expiryBadge(c)}
+                    </span>
                     <span className="text-[10px] bg-[#5AC8FA]/15 text-[#007AFF] px-2 py-0.5 rounded-full">
                       {conditionBadge(c)}
                     </span>
