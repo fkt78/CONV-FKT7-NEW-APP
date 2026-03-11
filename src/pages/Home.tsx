@@ -180,6 +180,14 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => navigate('/settings/notifications')}
+            title="通知設定"
+            aria-label="通知設定"
+            className="touch-target flex items-center justify-center text-[#86868b] text-[17px] hover:text-[#007AFF] transition -m-2 p-2 rounded-xl"
+          >
+            🔔
+          </button>
+          <button
             onClick={() => navigate('/install-guide')}
             title="ホーム画面に追加"
             aria-label="ホーム画面に追加"

@@ -5,6 +5,7 @@ import AdminRoute from './components/AdminRoute'
 import HouseRulesAgreement from './components/HouseRulesAgreement'
 import VersionBadge from './components/VersionBadge'
 import PwaUpdatePrompt from './components/PwaUpdatePrompt'
+import NotificationRegistration from './components/NotificationRegistration'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import Home from './pages/Home'
@@ -14,6 +15,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfUse from './pages/TermsOfUse'
 import Tokushoho from './pages/Tokushoho'
 import Licenses from './pages/Licenses'
+import NotificationSettings from './pages/NotificationSettings'
 
 export default function App() {
   return (
@@ -23,6 +25,7 @@ export default function App() {
       <PwaUpdatePrompt />
       <BrowserRouter>
         <AuthProvider>
+          <NotificationRegistration />
           <Routes>
             <Route path="/install-guide" element={<InstallGuide />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -31,6 +34,14 @@ export default function App() {
             <Route path="/licenses" element={<Licenses />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route
+              path="/settings/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationSettings />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/"
               element={
