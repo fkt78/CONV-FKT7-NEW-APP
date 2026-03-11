@@ -8,7 +8,7 @@ export default function PrivacyPolicy() {
       </p>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">1. 収集する情報</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">1. 収集する情報</h2>
         <p>
           本アプリでは、以下の情報を収集することがあります。<br />
           ・氏名、メールアドレス、生年月、属性（性別等）<br />
@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">2. 利用目的</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">2. 利用目的</h2>
         <p>
           収集した情報は、以下の目的で利用します。<br />
           ・会員認証およびアカウント管理<br />
@@ -29,14 +29,14 @@ export default function PrivacyPolicy() {
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">3. 第三者提供</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">3. 第三者提供</h2>
         <p>
           お客様の個人情報を、法令に基づく場合を除き、ご本人の同意なく第三者に提供することはありません。
         </p>
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">4. 第三者サービスの利用</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">4. 第三者サービスの利用</h2>
         <p>
           本アプリは、認証・データベース・ストレージ等の機能提供のため、Googleが提供するFirebase（Firebase Authentication、Cloud Firestore、Cloud Storage等）を利用しています。お客様の情報の一部は、これらのサービスにより処理される場合があります。
         </p>
@@ -47,7 +47,7 @@ export default function PrivacyPolicy() {
             href="https://firebase.google.com/support/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-400 underline hover:text-amber-300"
+            className="text-[#007AFF] underline hover:text-[#0051D5]"
           >
             Firebase プライバシーとセキュリティ
           </a>
@@ -57,7 +57,7 @@ export default function PrivacyPolicy() {
             href="https://policies.google.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-400 underline hover:text-amber-300"
+            className="text-[#007AFF] underline hover:text-[#0051D5]"
           >
             Google プライバシーポリシー
           </a>
@@ -65,7 +65,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">5. Cookie・ローカルストレージ</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">5. Cookie・ローカルストレージ</h2>
         <p>
           本アプリでは、以下の目的でCookieおよびローカルストレージ（ブラウザの保存領域）を利用することがあります。
         </p>
@@ -80,7 +80,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">6. データの保存期間</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">6. データの保存期間</h2>
         <p>
           お客様の情報は、以下の方針に基づき保存します。<br />
           ・アカウント情報：退会または削除のご請求まで保存し、その後は合理的な期間内に削除します。<br />
@@ -90,41 +90,41 @@ export default function PrivacyPolicy() {
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">7. お客様の権利（開示・訂正・削除等）</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">7. お客様の権利（開示・訂正・削除等）</h2>
         <p>
           お客様は、当店が保有するご自身の個人情報について、開示、訂正、削除、利用停止等を請求する権利を有します。これらのご請求は、本アプリ内のチャット機能よりお申し付けください。ご本人確認のうえ、法令に従って対応いたします。
         </p>
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">8. プッシュ通知</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">8. プッシュ通知</h2>
         <p>
           本アプリでプッシュ通知機能を提供する場合、新着メッセージやお知らせ等の通知をお送りすることがあります。通知の受信は、端末の設定または本アプリ内の設定により、いつでも停止することができます。
         </p>
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">9. 安全管理</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">9. 安全管理</h2>
         <p>
           個人情報の漏洩、滅失、毀損の防止のため、適切な安全管理措置を講じます。また、Firebase等の第三者サービスにおいても、各事業者が定めるセキュリティ基準に従ってデータが取り扱われます。
         </p>
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">10. お問い合わせ</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">10. お問い合わせ</h2>
         <p>
           個人情報の取り扱いに関するお問い合わせは、本アプリ内のチャット機能よりご連絡ください。
         </p>
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">11. 改定</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">11. 改定</h2>
         <p>
           本プライバシーポリシーは、法令の変更やサービス内容の変更に伴い、必要に応じて改定することがあります。改定後のポリシーは、本アプリ上での表示をもって効力が生じるものとします。重要な変更がある場合は、本アプリ内でお知らせいたします。
         </p>
       </section>
 
-      <div className="text-white/60 text-xs mt-8 space-y-1">
+      <div className="text-[#86868b] text-xs mt-8 space-y-1">
         <p>制定日：2025年3月</p>
         <p>改定日：2025年3月（商用利用対応のため拡充）</p>
       </div>

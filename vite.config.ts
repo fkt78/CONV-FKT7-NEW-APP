@@ -1,7 +1,20 @@
 import { defineConfig } from 'vite'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+
+/** version.json からアプリバージョンを取得 */
+function getAppVersion(): string {
+  try {
+    const p = resolve(process.cwd(), 'version.json')
+    const data = JSON.parse(readFileSync(p, 'utf-8'))
+    return data.version ?? '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+}
 
 /** ビルド時のタイムスタンプから vYYYYMMDD.HHMM 形式のバージョンを生成 */
 function getBuildVersion(): string {
@@ -20,6 +33,7 @@ export default defineConfig({
     strictPort: true,
   },
   define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(getAppVersion()),
     'import.meta.env.VITE_BUILD_VERSION': JSON.stringify(getBuildVersion()),
   },
   plugins: [

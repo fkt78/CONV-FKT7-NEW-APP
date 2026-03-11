@@ -55,12 +55,12 @@ export default function VipNews() {
 
   if (loading) {
     return (
-      <div className="mx-4 mt-3 flex-shrink-0">
+      <div className="mx-4 mt-4 flex-shrink-0">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-amber-400/60 text-[10px] font-bold tracking-widest">VIP NEWS</span>
+          <span className="text-[#007AFF] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
         </div>
-        <div className="rounded-xl bg-[#1a1a2e] border border-amber-400/10 p-3 flex items-center justify-center">
-          <span className="w-4 h-4 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin" />
+        <div className="rounded-2xl bg-white border border-[#e5e5ea] p-4 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+          <span className="w-5 h-5 border-2 border-[#e5e5ea] border-t-[#007AFF] rounded-full animate-spin" />
         </div>
       </div>
     )
@@ -71,48 +71,49 @@ export default function VipNews() {
   const displayList = showAll ? newsList : newsList.slice(0, INITIAL_SHOW)
 
   return (
-    <div className="mx-4 mt-3 flex-shrink-0 space-y-2">
+    <div className="mx-4 mt-4 flex-shrink-0 space-y-2">
       {/* セクションラベル */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="text-amber-400 text-xs">📢</span>
-          <span className="text-amber-400/80 text-[10px] font-bold tracking-widest">VIP NEWS</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[#007AFF] text-sm">📢</span>
+          <span className="text-[#007AFF] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
         </div>
         {newsList.length > INITIAL_SHOW && (
           <button
             onClick={() => setShowAll(!showAll)}
-            className="text-white/30 text-[10px] hover:text-white/50 transition"
+            aria-label={showAll ? '折りたたむ' : `他 ${newsList.length - INITIAL_SHOW} 件を表示`}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center px-2 text-[#007AFF] text-[13px] hover:text-[#0051D5] transition rounded-xl"
           >
             {showAll ? '折りたたむ' : `他 ${newsList.length - INITIAL_SHOW} 件`}
           </button>
         )}
       </div>
 
-      {/* ニュースカード一覧 */}
+      {/* ニュースカード一覧（Apple風：白カード・ソフトシャドウ） */}
       {displayList.map((item) => {
         const isOpen = expanded === item.id
         return (
           <div
             key={item.id}
-            className="rounded-xl bg-gradient-to-r from-[#1a1a2e] to-[#16213e] border border-amber-400/10 overflow-hidden"
+            className="rounded-2xl bg-white border border-[#e5e5ea] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
           >
-            {/* カードヘッダー（タップで本文展開） */}
             <button
               onClick={() => setExpanded(isOpen ? null : item.id)}
-              className="w-full text-left px-3 py-2.5 flex items-center gap-2"
+              aria-label={isOpen ? `${item.title}を閉じる` : `${item.title}を開く`}
+              aria-expanded={isOpen}
+              className="w-full min-h-[44px] text-left px-4 py-3 flex items-center gap-2 hover:bg-[#f5f5f7] transition"
             >
-              {/* NEW バッジ（24時間以内） */}
               {item.createdAt && Date.now() - item.createdAt.getTime() < 86_400_000 && (
-                <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                <span className="text-[11px] bg-[#FF3B30] text-white px-2 py-0.5 rounded-lg font-semibold flex-shrink-0">
                   NEW
                 </span>
               )}
-              <span className="flex-1 text-white text-xs font-bold truncate">{item.title}</span>
+              <span className="flex-1 text-[#1d1d1f] text-[15px] font-semibold truncate">{item.title}</span>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {item.audioUrl && <span className="text-amber-400/50 text-[10px]">🎵</span>}
-                <span className="text-white/20 text-[10px]">{formatDate(item.createdAt)}</span>
+                {item.audioUrl && <span className="text-[#007AFF]/70 text-[13px]">🎵</span>}
+                <span className="text-[#86868b] text-[13px]">{formatDate(item.createdAt)}</span>
                 <svg
-                  className={`w-3 h-3 text-white/20 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                  className={`w-4 h-4 text-[#86868b] transition-transform ${isOpen ? 'rotate-180' : ''}`}
                   viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                 >
                   <polyline points="6 9 12 15 18 9" />
@@ -120,11 +121,10 @@ export default function VipNews() {
               </div>
             </button>
 
-            {/* 展開コンテンツ */}
             {isOpen && (
-              <div className="px-3 pb-3 space-y-2 border-t border-white/5">
+              <div className="px-4 pb-4 space-y-2 border-t border-[#e5e5ea]">
                 {item.content && (
-                  <p className="text-white/60 text-xs leading-relaxed pt-2 whitespace-pre-wrap">
+                  <p className="text-[#86868b] text-[15px] leading-relaxed pt-3 whitespace-pre-wrap">
                     {item.content}
                   </p>
                 )}

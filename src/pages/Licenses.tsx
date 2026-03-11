@@ -29,26 +29,26 @@ export default function Licenses() {
       </p>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">利用ライブラリ一覧</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">利用ライブラリ一覧</h2>
         <div className="space-y-3 mt-2">
           {LICENSES.map((item) => (
             <div
               key={item.name}
-              className="rounded-lg bg-white/5 border border-white/10 p-3"
+              className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] p-3"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold text-white">{item.name}</span>
-                <span className="text-amber-400/80 text-xs font-medium">{item.license}</span>
+                <span className="font-semibold text-[#1d1d1f]">{item.name}</span>
+                <span className="text-[#007AFF] text-xs font-medium">{item.license}</span>
               </div>
               {item.version && (
-                <p className="text-white/50 text-xs mt-1">バージョン: {item.version}</p>
+                <p className="text-[#86868b] text-xs mt-1">バージョン: {item.version}</p>
               )}
               {item.url && (
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-amber-400/70 text-xs underline hover:text-amber-400 mt-1 inline-block"
+                  className="text-[#007AFF] text-xs underline hover:text-[#0051D5] mt-1 inline-block"
                 >
                   プロジェクトページ
                 </a>
@@ -59,20 +59,20 @@ export default function Licenses() {
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">主なライセンスについて</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">主なライセンスについて</h2>
         <p>
-          <strong className="text-white/90">MIT License:</strong> 商用・非商用を問わず利用可能です。著作権表示および本ライセンスの複製を保持する限り、改変・再配布が許可されています。
+          <strong className="text-[#1d1d1f]">MIT License:</strong> 商用・非商用を問わず利用可能です。著作権表示および本ライセンスの複製を保持する限り、改変・再配布が許可されています。
         </p>
         <p className="mt-2">
-          <strong className="text-white/90">Apache-2.0:</strong> 同様に広く利用可能です。変更箇所の明示等、一定の表示義務があります。
+          <strong className="text-[#1d1d1f]">Apache-2.0:</strong> 同様に広く利用可能です。変更箇所の明示等、一定の表示義務があります。
         </p>
         <p className="mt-2">
-          <strong className="text-white/90">Firebase:</strong> Googleが提供するサービスです。利用にあたっては
+          <strong className="text-[#1d1d1f]">Firebase:</strong> Googleが提供するサービスです。利用にあたっては
           <a
             href="https://firebase.google.com/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-400 underline hover:text-amber-300 ml-1"
+            className="text-[#007AFF] underline hover:text-[#0051D5] ml-1"
           >
             Firebase利用規約
           </a>
@@ -81,14 +81,14 @@ export default function Licenses() {
       </section>
 
       <section>
-        <h2 className="text-amber-400 font-bold text-base mt-6 mb-2">ライセンス全文</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">ライセンス全文</h2>
         <p>
           各ライセンスの全文は、上記プロジェクトページまたは
           <a
             href="https://opensource.org/licenses"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-400 underline hover:text-amber-300 ml-1"
+            className="text-[#007AFF] underline hover:text-[#0051D5] ml-1"
           >
             Open Source Initiative
           </a>
@@ -96,7 +96,7 @@ export default function Licenses() {
         </p>
       </section>
 
-      <p className="text-white/60 text-xs mt-8">
+      <p className="text-[#86868b] text-xs mt-8">
         最終更新：2025年3月
       </p>
     </LegalPageLayout>

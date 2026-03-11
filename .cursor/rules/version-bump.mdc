@@ -1,0 +1,24 @@
+---
+description: コード変更時にバージョンを更新する
+alwaysApply: true
+---
+
+# バージョン更新ルール
+
+ソースコード（src/、vite.config.ts、package.json など）を編集した場合は、必ずバージョンを更新すること。
+
+## 手順
+
+編集後、以下を実行する:
+
+```bash
+npm run version:bump
+```
+
+これにより `version.json` のパッチバージョンが自動で 1 つ増える（例: 1.0.0 → 1.0.1）。
+
+## 対象外
+
+- version.json 自体の編集
+- README やドキュメントのみの変更
+- コメントのみの変更

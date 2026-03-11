@@ -54,43 +54,40 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
 
   return (
     <div
-      className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={onClose}
       aria-modal
       aria-labelledby="voice-credits-title"
     >
       <div
-        className="w-full max-w-lg max-h-[85vh] flex flex-col bg-[#0a0a0f] border-2 border-amber-400/30 rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl shadow-amber-400/10"
+        className="w-full max-w-lg max-h-[85vh] flex flex-col bg-white border border-[#e5e5ea] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 上部ボーダー */}
-        <div className="h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent flex-shrink-0" />
-        <div className="h-px bg-gradient-to-r from-transparent via-amber-400/30 to-transparent flex-shrink-0" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#007AFF]/30 to-transparent flex-shrink-0" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#5AC8FA]/20 to-transparent flex-shrink-0" />
 
-        {/* ヘッダー */}
-        <div className="px-5 py-4 border-b border-amber-400/20 flex-shrink-0">
+        <div className="px-5 py-4 border-b border-[#e5e5ea] flex-shrink-0">
           <h2
             id="voice-credits-title"
-            className="text-amber-400 font-bold text-lg tracking-wide"
+            className="text-[#1d1d1f] font-semibold text-lg tracking-wide"
           >
             音声クレジット（ライセンス情報）
           </h2>
         </div>
 
-        {/* スクロール可能な本文 */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
-          <p className="text-white/90 text-[14px] leading-relaxed">
+          <p className="text-[#1d1d1f] text-[14px] leading-relaxed">
             本アプリ内の音声ガイダンスは、無料の音声合成ソフト「VOICEVOX」および以下の音声ライブラリを使用して生成されています。
           </p>
           <ul className="space-y-4">
             {CREDITS.map((item, i) => (
-              <li key={i} className="border-l-2 border-amber-400/30 pl-4">
-                <p className="text-white font-medium text-[14px] mb-1">{item.name}</p>
+              <li key={i} className="border-l-4 border-[#007AFF] pl-4">
+                <p className="text-[#1d1d1f] font-medium text-[14px] mb-1">{item.name}</p>
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-amber-400 text-[13px] hover:text-amber-300 hover:underline transition"
+                  className="text-[#007AFF] text-[13px] hover:text-[#0051D5] hover:underline transition"
                 >
                   規約 →
                 </a>
@@ -99,11 +96,10 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
           </ul>
         </div>
 
-        {/* 閉じるボタン */}
-        <div className="px-5 py-4 border-t border-amber-400/10 flex-shrink-0 safe-area-bottom">
+        <div className="px-5 py-4 border-t border-[#e5e5ea] flex-shrink-0 safe-area-bottom">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold text-base rounded-lg hover:from-amber-400 hover:to-yellow-400 transition active:scale-[0.98]"
+            className="w-full py-3 bg-[#007AFF] text-white font-semibold text-base rounded-2xl hover:bg-[#0051D5] transition active:scale-[0.98]"
           >
             閉じる
           </button>

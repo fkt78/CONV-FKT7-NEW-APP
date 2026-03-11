@@ -214,32 +214,30 @@ export default function AdminDashboard() {
   const selectedUser = users.find((u) => u.uid === selectedUid) ?? null
 
   return (
-    <div className="h-screen bg-[#0f0f23] flex flex-col">
-      {/* 管理者ヘッダー */}
-      <header className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] border-b border-amber-400/10">
+    <div className="h-screen bg-[#f5f5f7] flex flex-col">
+      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e5ea] shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="text-amber-400 text-xl">♛</span>
+          <span className="text-[#007AFF] text-xl">♛</span>
           <div>
-            <span className="text-amber-400 font-bold text-sm tracking-widest">Admin Dashboard</span>
-            <span className="text-white/30 text-[10px] ml-2">店長</span>
+            <span className="text-[#1d1d1f] font-semibold text-sm tracking-wide">Admin Dashboard</span>
+            <span className="text-[#86868b] text-[10px] ml-2">店長</span>
           </div>
         </div>
         <button
           onClick={handleLogout}
-          className="text-white/40 text-xs hover:text-white transition"
+          className="text-[#007AFF] text-xs hover:text-[#0051D5] transition"
         >
           ログアウト
         </button>
       </header>
 
-      {/* タブバー */}
-      <div className="flex border-b border-white/5 bg-[#12122a] flex-shrink-0">
+      <div className="flex border-b border-[#e5e5ea] bg-white flex-shrink-0">
         <button
           onClick={() => setAdminTab('chat')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'chat'
-              ? 'text-amber-400 border-b-2 border-amber-400'
-              : 'text-white/30 hover:text-white/50'
+              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
           💬 チャット
@@ -248,8 +246,8 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('coupon')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'coupon'
-              ? 'text-amber-400 border-b-2 border-amber-400'
-              : 'text-white/30 hover:text-white/50'
+              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
           🎫 クーポン管理
@@ -258,8 +256,8 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('news')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'news'
-              ? 'text-amber-400 border-b-2 border-amber-400'
-              : 'text-white/30 hover:text-white/50'
+              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
           📢 お知らせ管理
@@ -268,8 +266,8 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('roadmap')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'roadmap'
-              ? 'text-amber-400 border-b-2 border-amber-400'
-              : 'text-white/30 hover:text-white/50'
+              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
           📋 実装予定
@@ -286,16 +284,16 @@ export default function AdminDashboard() {
       ) : adminTab === 'chat' ? (
         <div className="flex-1 flex overflow-hidden">
         {/* ── 左パネル：顧客リスト ── */}
-        <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-white/5 flex flex-col bg-[#12122a] ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
-          <div className="px-4 py-3 border-b border-white/5">
-            <h2 className="text-white/60 text-xs font-medium tracking-wide">
+        <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-[#e5e5ea] flex flex-col bg-white ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
+          <div className="px-4 py-3 border-b border-[#e5e5ea]">
+            <h2 className="text-[#86868b] text-xs font-medium tracking-wide">
               VIP顧客 ({sortedUsers.length}名)
             </h2>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {sortedUsers.length === 0 ? (
-              <p className="text-white/20 text-sm text-center py-10">
+              <p className="text-[#86868b] text-sm text-center py-10">
                 登録済みの顧客がいません
               </p>
             ) : (
@@ -308,43 +306,41 @@ export default function AdminDashboard() {
                   <button
                     key={user.uid}
                     onClick={() => selectUser(user.uid)}
-                    className={`w-full text-left px-4 py-3.5 border-b border-white/5 transition flex items-center gap-3 ${
+                    className={`w-full text-left px-4 py-3.5 border-b border-[#e5e5ea] transition flex items-center gap-3 ${
                       isSelected
-                        ? 'bg-amber-400/10 border-l-2 border-l-amber-400'
-                        : 'hover:bg-white/5'
+                        ? 'bg-[#007AFF]/10 border-l-4 border-l-[#007AFF]'
+                        : 'hover:bg-[#f5f5f7]'
                     }`}
                   >
-                    {/* アバター */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400/80 to-yellow-600/80 flex items-center justify-center">
-                        <span className="text-black font-bold text-sm">
+                      <div className="w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">
                           {user.fullName.charAt(0)}
                         </span>
                       </div>
                       {hasChat && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-[#12122a]" />
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
                       )}
                     </div>
 
-                    {/* 顧客情報 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-white text-sm font-medium truncate">
+                        <span className="text-[#1d1d1f] text-sm font-medium truncate">
                           {user.fullName}
                         </span>
                         {meta?.lastMessageAt && (
-                          <span className="text-white/20 text-[10px] flex-shrink-0 ml-2">
+                          <span className="text-[#86868b] text-[10px] flex-shrink-0 ml-2">
                             {formatTime(meta.lastMessageAt)}
                           </span>
                         )}
                       </div>
-                      <p className="text-white/30 text-xs truncate mt-0.5">
+                      <p className="text-[#86868b] text-xs truncate mt-0.5">
                         {meta?.lastMessage
                           ? meta.lastMessage
                           : `${ATTRIBUTE_LABELS[user.attribute] ?? user.attribute} · ${user.birthMonth}`}
                       </p>
                       {user.totalSavedAmount > 0 && (
-                        <span className="text-[9px] text-amber-400/60 mt-0.5 inline-block">
+                        <span className="text-[9px] text-[#007AFF] mt-0.5 inline-block">
                           👑 累計 ¥{user.totalSavedAmount.toLocaleString()}
                         </span>
                       )}
@@ -360,31 +356,29 @@ export default function AdminDashboard() {
         <div className={`flex-1 flex flex-col ${showChatPanel ? 'flex' : 'hidden md:flex'}`}>
           {selectedUser ? (
             <>
-              {/* チャットヘッダー（選択中の顧客情報） */}
-              <div className="flex items-center gap-3 px-4 py-3 bg-[#1a1a2e] border-b border-white/5">
-                {/* モバイル: 戻るボタン */}
+              <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
                 <button
                   onClick={() => setShowChatPanel(false)}
-                  className="md:hidden text-white/50 hover:text-white transition mr-1"
+                  className="md:hidden text-[#007AFF] hover:text-[#0051D5] transition mr-1"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 18 9 12 15 6" />
                   </svg>
                 </button>
 
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-black font-bold text-sm">
+                <div className="w-9 h-9 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-sm">
                     {selectedUser.fullName.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium">{selectedUser.fullName}</p>
+                  <p className="text-[#1d1d1f] text-sm font-medium">{selectedUser.fullName}</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-white/30 text-[10px]">
+                    <p className="text-[#86868b] text-[10px]">
                       {ATTRIBUTE_LABELS[selectedUser.attribute] ?? selectedUser.attribute} · {selectedUser.birthMonth}
                     </p>
                     {selectedUser.totalSavedAmount > 0 && (
-                      <span className="text-[9px] bg-amber-400/10 text-amber-400 px-1.5 py-0.5 rounded-full font-bold">
+                      <span className="text-[9px] bg-[#007AFF]/10 text-[#007AFF] px-1.5 py-0.5 rounded-full font-bold">
                         👑 ¥{selectedUser.totalSavedAmount.toLocaleString()}
                       </span>
                     )}
@@ -392,10 +386,9 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* メッセージ一覧 */}
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-[#f5f5f7]">
                 {messages.length === 0 ? (
-                  <p className="text-white/20 text-sm text-center py-10">
+                  <p className="text-[#86868b] text-sm text-center py-10">
                     まだメッセージはありません
                   </p>
                 ) : (
@@ -408,19 +401,18 @@ export default function AdminDashboard() {
                       <div key={msg.id}>
                         {showDivider && (
                           <div className="flex items-center justify-center my-4">
-                            <div className="flex-1 border-t border-white/5" />
-                            <span className="px-3 text-[10px] text-white/20">
+                            <div className="flex-1 border-t border-[#e5e5ea]" />
+                            <span className="px-3 text-[10px] text-[#86868b]">
                               {formatDateDivider(msg.createdAt)}
                             </span>
-                            <div className="flex-1 border-t border-white/5" />
+                            <div className="flex-1 border-t border-[#e5e5ea]" />
                           </div>
                         )}
 
                         <div className={`flex items-end gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                          {/* 顧客のアバター */}
                           {!isOwn && (
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400/80 to-yellow-600/80 flex items-center justify-center flex-shrink-0">
-                              <span className="text-black text-[10px] font-bold">
+                            <div className="w-7 h-7 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-[10px] font-bold">
                                 {selectedUser.fullName.charAt(0)}
                               </span>
                             </div>
@@ -428,20 +420,20 @@ export default function AdminDashboard() {
 
                           <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
                             {!isOwn && (
-                              <span className="text-[10px] text-white/30 mb-0.5 ml-1">
+                              <span className="text-[10px] text-[#86868b] mb-0.5 ml-1">
                                 {selectedUser.fullName}
                               </span>
                             )}
                             <div
                               className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${
                                 isOwn
-                                  ? 'bg-amber-400 text-black rounded-br-sm'
-                                  : 'bg-white/10 text-white rounded-bl-sm'
+                                  ? 'bg-[#007AFF] text-white rounded-br-sm'
+                                  : 'bg-white text-[#1d1d1f] rounded-bl-sm shadow-sm border border-[#e5e5ea]'
                               }`}
                             >
                               {msg.text}
                             </div>
-                            <span className={`text-[10px] text-white/20 mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
+                            <span className={`text-[10px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                               {formatMessageTime(msg.createdAt)}
                             </span>
                           </div>
@@ -453,8 +445,7 @@ export default function AdminDashboard() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* 返信入力バー */}
-              <div className="px-4 py-3 bg-[#1a1a2e] border-t border-white/5">
+              <div className="px-4 py-3 bg-white border-t border-[#e5e5ea]">
                 <div className="flex items-center gap-2">
                   <input
                     ref={inputRef}
@@ -463,12 +454,12 @@ export default function AdminDashboard() {
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={`${selectedUser.fullName}さんに返信...`}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-amber-400/40 transition"
+                    className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-full px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] transition"
                   />
                   <button
                     onClick={handleSend}
                     disabled={!text.trim() || sending}
-                    className="w-10 h-10 bg-amber-400 rounded-full flex items-center justify-center text-black disabled:opacity-30 transition hover:bg-amber-300"
+                    className="w-10 h-10 bg-[#007AFF] rounded-full flex items-center justify-center text-white disabled:opacity-30 transition hover:bg-[#0051D5]"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="22" y1="2" x2="11" y2="13" />
@@ -479,10 +470,10 @@ export default function AdminDashboard() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <span className="text-5xl text-amber-400/20 mb-4">♛</span>
-              <p className="text-white/30 text-sm">左のリストから顧客を選択してください</p>
-              <p className="text-white/15 text-xs mt-1">チャットが始まります</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center bg-[#f5f5f7]">
+              <span className="text-5xl text-[#007AFF]/30 mb-4">♛</span>
+              <p className="text-[#86868b] text-sm">左のリストから顧客を選択してください</p>
+              <p className="text-[#86868b]/70 text-xs mt-1">チャットが始まります</p>
             </div>
           )}
         </div>

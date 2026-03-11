@@ -118,62 +118,65 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f23] flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-[#f5f5f7] flex items-center justify-center p-5 safe-area-top safe-area-bottom">
       <div className="w-full max-w-md">
-        {/* ロゴ */}
         <div className="text-center mb-8">
-          <span className="text-5xl">♛</span>
-          <h1 className="text-amber-400 font-bold text-xl tracking-widest mt-2">
+          <span className="text-5xl" aria-hidden>♛</span>
+          <h1 className="text-[#1d1d1f] font-semibold text-[22px] tracking-wide mt-3">
             VIP Member
           </h1>
-          <p className="text-white/40 text-sm mt-1">会員登録</p>
+          <p className="text-[#86868b] text-[17px] mt-2">会員登録</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg p-3 text-center">
+            <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] text-[15px] rounded-2xl p-4 text-center">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-white/60 text-xs font-medium mb-1.5 tracking-wide">
-              お名前（フルネーム） <span className="text-amber-400">*</span>
+            <label htmlFor="reg-name" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
+              お名前（フルネーム） <span className="text-[#007AFF]">*</span>
             </label>
             <input
+              id="reg-name"
               type="text"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="山田 太郎"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 transition"
+              autoComplete="name"
+              className="w-full min-h-[44px] bg-white border border-[#e5e5ea] rounded-2xl px-4 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition shadow-sm"
             />
-            <p className="text-white/30 text-[11px] mt-1">
+            <p className="text-[#86868b] text-[13px] mt-1">
               ※ 店頭での身分証照合に使用します。本名を入力してください。
             </p>
           </div>
 
           <div>
-            <label className="block text-white/60 text-xs font-medium mb-1.5 tracking-wide">
-              生年月 <span className="text-amber-400">*</span>
+            <label htmlFor="reg-birth" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
+              生年月 <span className="text-[#007AFF]">*</span>
             </label>
             <input
+              id="reg-birth"
               type="month"
               required
               value={birthMonth}
               onChange={(e) => setBirthMonth(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 transition [color-scheme:dark]"
+              className="w-full min-h-[44px] bg-white border border-[#e5e5ea] rounded-2xl px-4 py-3 text-[17px] text-[#1d1d1f] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition shadow-sm"
             />
           </div>
 
           <div>
-            <label className="block text-white/60 text-xs font-medium mb-1.5 tracking-wide">
-              属性 <span className="text-amber-400">*</span>
+            <label htmlFor="reg-attribute" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
+              属性 <span className="text-[#007AFF]">*</span>
             </label>
             <select
+              id="reg-attribute"
               value={attribute}
               onChange={(e) => setAttribute(e.target.value as Attribute)}
-              className="w-full bg-[#1a1a2e] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 transition"
+              className="w-full min-h-[44px] bg-white border border-[#e5e5ea] rounded-2xl px-4 py-3 text-[17px] text-[#1d1d1f] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition shadow-sm"
             >
               {(Object.keys(ATTRIBUTE_LABELS) as Attribute[]).map((key) => (
                 <option key={key} value={key}>
@@ -184,83 +187,96 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-white/60 text-xs font-medium mb-1.5 tracking-wide">
-              メールアドレス <span className="text-amber-400">*</span>
+            <label htmlFor="reg-email" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
+              メールアドレス <span className="text-[#007AFF]">*</span>
             </label>
             <input
+              id="reg-email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 transition"
+              autoComplete="email"
+              className="w-full min-h-[44px] bg-white border border-[#e5e5ea] rounded-2xl px-4 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition shadow-sm"
             />
           </div>
 
           <div>
-            <label className="block text-white/60 text-xs font-medium mb-1.5 tracking-wide">
-              パスワード <span className="text-amber-400">*</span>
+            <label htmlFor="reg-password" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
+              パスワード <span className="text-[#007AFF]">*</span>
             </label>
             <input
+              id="reg-password"
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="6文字以上"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 transition"
+              autoComplete="new-password"
+              className="w-full min-h-[44px] bg-white border border-[#e5e5ea] rounded-2xl px-4 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition shadow-sm"
             />
           </div>
 
-          <label className="flex items-start gap-3 cursor-pointer group">
+          <label className="flex items-start gap-4 cursor-pointer group min-h-[44px]">
             <input
               type="checkbox"
               checked={agreeTerms}
               onChange={(e) => setAgreeTerms(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded border-white/30 bg-white/5 text-amber-500 focus:ring-amber-400/50 focus:ring-offset-0"
+              aria-label="利用規約およびプライバシーポリシーに同意する"
+              className="mt-1 w-[22px] h-[22px] flex-shrink-0 rounded border-[#e5e5ea] bg-white text-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/50 focus:ring-offset-0"
             />
-            <span className="text-white/80 text-sm leading-relaxed">
-              <Link to="/terms" className="text-amber-400 underline hover:text-amber-300" target="_blank">
+            <span className="text-[#1d1d1f] text-[15px] leading-relaxed">
+              <Link to="/terms" className="text-[#007AFF] underline hover:text-[#0051D5]" target="_blank">
                 利用規約
               </Link>
               および
-              <Link to="/privacy" className="text-amber-400 underline hover:text-amber-300" target="_blank">
+              <Link to="/privacy" className="text-[#007AFF] underline hover:text-[#0051D5]" target="_blank">
                 プライバシーポリシー
               </Link>
-              に同意する <span className="text-amber-400">*</span>
+              に同意する <span className="text-[#007AFF]">*</span>
             </span>
           </label>
 
           <button
             type="submit"
             disabled={loading || !agreeTerms}
-            className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-3 rounded-lg hover:from-amber-400 hover:to-yellow-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full min-h-[44px] bg-[#007AFF] text-white font-semibold text-[17px] py-3 rounded-2xl hover:bg-[#0051D5] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             {loading ? '確認中...' : '登録する'}
           </button>
         </form>
 
-        <p className="text-center text-white/40 text-sm mt-8">
+        <p className="text-center text-[#86868b] text-[15px] mt-8">
           すでにアカウントをお持ちの方は{' '}
-          <Link to="/login" className="text-amber-400 hover:underline">
+          <Link to="/login" className="text-[#007AFF] hover:underline">
             ログイン
           </Link>
         </p>
         <p className="text-center mt-4">
           <Link
             to="/install-guide"
-            className="text-amber-400/80 text-sm hover:text-amber-400 transition inline-flex items-center gap-1"
+            className="min-h-[44px] flex items-center justify-center text-[#007AFF] text-[15px] hover:text-[#0051D5] transition"
           >
             📱 ホーム画面に追加する方法
           </Link>
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 mt-6 pt-4 border-t border-white/10 text-[11px]">
-          <Link to="/privacy" className="text-white/40 hover:text-amber-400/80 transition">プライバシーポリシー</Link>
-          <span className="text-white/20">|</span>
-          <Link to="/terms" className="text-white/40 hover:text-amber-400/80 transition">利用規約</Link>
-          <span className="text-white/20">|</span>
-          <Link to="/tokushoho" className="text-white/40 hover:text-amber-400/80 transition">特商法表記</Link>
-          <span className="text-white/20">|</span>
-          <Link to="/licenses" className="text-white/40 hover:text-amber-400/80 transition">ライセンス</Link>
+        <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 mt-6 pt-4 border-t border-[#e5e5ea] text-[13px]">
+          <Link to="/privacy" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#007AFF] transition rounded-xl">
+            プライバシーポリシー
+          </Link>
+          <span className="text-[#e5e5ea]" aria-hidden>|</span>
+          <Link to="/terms" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#007AFF] transition rounded-xl">
+            利用規約
+          </Link>
+          <span className="text-[#e5e5ea]" aria-hidden>|</span>
+          <Link to="/tokushoho" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#007AFF] transition rounded-xl">
+            特商法表記
+          </Link>
+          <span className="text-[#e5e5ea]" aria-hidden>|</span>
+          <Link to="/licenses" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#007AFF] transition rounded-xl">
+            ライセンス
+          </Link>
         </div>
       </div>
     </div>

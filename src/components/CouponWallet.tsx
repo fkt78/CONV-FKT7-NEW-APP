@@ -182,20 +182,19 @@ export default function CouponWallet() {
 
   return (
     <>
-      {/* タブ切り替え */}
-      <div className="flex mx-4 rounded-lg bg-white/[0.03] p-0.5 flex-shrink-0 mb-2">
+      <div className="flex mx-4 rounded-xl bg-[#e5e5ea]/60 p-1 flex-shrink-0 mb-2">
         <button
           onClick={() => setTab('unused')}
-          className={`flex-1 py-1.5 rounded-md text-[11px] font-semibold transition ${
-            tab === 'unused' ? 'bg-[#1a1a2e] text-amber-400 shadow-sm' : 'text-white/30'
+          className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition ${
+            tab === 'unused' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-[#86868b]'
           }`}
         >
           未使用 ({visibleUnused.length})
         </button>
         <button
           onClick={() => setTab('history')}
-          className={`flex-1 py-1.5 rounded-md text-[11px] font-semibold transition ${
-            tab === 'history' ? 'bg-[#1a1a2e] text-amber-400 shadow-sm' : 'text-white/30'
+          className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition ${
+            tab === 'history' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-[#86868b]'
           }`}
         >
           使用履歴 ({usedCoupons.length})
@@ -207,19 +206,19 @@ export default function CouponWallet() {
         {/* インデックス構築中などのエラー表示 */}
         {((tab === 'unused' && unusedError) || (tab === 'history' && usedError)) ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-10 h-10 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin mb-4" />
-            <p className="text-white/40 text-sm">データを準備中です…</p>
-            <p className="text-white/20 text-xs mt-1">しばらくお待ちください</p>
+            <div className="w-10 h-10 border-2 border-[#e5e5ea] border-t-[#007AFF] rounded-full animate-spin mb-4" />
+            <p className="text-[#86868b] text-sm">データを準備中です…</p>
+            <p className="text-[#86868b]/70 text-xs mt-1">しばらくお待ちください</p>
           </div>
         ) : displayCoupons.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-amber-400/5 flex items-center justify-center mb-4">
-              <span className="text-3xl opacity-30">🎫</span>
+            <div className="w-16 h-16 rounded-full bg-[#007AFF]/10 flex items-center justify-center mb-4">
+              <span className="text-3xl opacity-50">🎫</span>
             </div>
-            <p className="text-white/30 text-sm">
+            <p className="text-[#86868b] text-sm">
               {tab === 'unused' ? 'クーポンはまだありません' : '使用履歴はありません'}
             </p>
-            <p className="text-white/20 text-xs mt-1">
+            <p className="text-[#86868b]/70 text-xs mt-1">
               {tab === 'unused' ? '店長からの配信をお待ちください' : 'クーポンを使うとここに表示されます'}
             </p>
           </div>
@@ -233,45 +232,45 @@ export default function CouponWallet() {
                 disabled={isUsed || marking}
                 className="w-full text-left group"
               >
-                <div className={`relative flex rounded-xl overflow-hidden border transition ${
+                <div className={`relative flex rounded-2xl overflow-hidden border transition ${
                   isUsed
-                    ? 'border-white/5 opacity-60'
-                    : 'border-amber-400/20 hover:border-amber-400/40'
-                } bg-gradient-to-r from-[#1a1a2e] to-[#16213e]`}>
+                    ? 'border-[#e5e5ea] opacity-70'
+                    : 'border-[#e5e5ea] hover:border-[#007AFF]/40'
+                } bg-white shadow-sm`}>
                   <div className={`w-12 flex flex-col items-center justify-center flex-shrink-0 relative ${
                     isUsed
-                      ? 'bg-gradient-to-b from-white/10 to-white/5'
-                      : 'bg-gradient-to-b from-amber-400 to-yellow-600'
+                      ? 'bg-[#e5e5ea]'
+                      : 'bg-[#007AFF]'
                   }`}>
-                    <span className={`text-lg ${isUsed ? 'grayscale opacity-50' : ''}`}>🎫</span>
-                    <div className="absolute -right-2 top-1/4 w-4 h-4 rounded-full bg-[#0f0f23]" />
-                    <div className="absolute -right-2 bottom-1/4 w-4 h-4 rounded-full bg-[#0f0f23]" />
+                    <span className={`text-lg ${isUsed ? 'grayscale opacity-60' : ''}`}>🎫</span>
+                    <div className="absolute -right-2 top-1/4 w-4 h-4 rounded-full bg-white" />
+                    <div className="absolute -right-2 bottom-1/4 w-4 h-4 rounded-full bg-white" />
                   </div>
 
-                  <div className="flex-1 p-3 pl-4 border-l border-dashed border-amber-400/20">
+                  <div className="flex-1 p-3 pl-4 border-l border-dashed border-[#e5e5ea]">
                     <div className="flex items-start justify-between gap-2">
-                      <p className={`font-bold text-sm ${isUsed ? 'text-white/40' : 'text-amber-400'}`}>
+                      <p className={`font-semibold text-sm ${isUsed ? 'text-[#86868b]' : 'text-[#1d1d1f]'}`}>
                         {c.title}
                       </p>
                       {c.discountAmount > 0 && (
-                        <span className={`text-xs font-bold flex-shrink-0 ${isUsed ? 'text-white/30' : 'text-amber-400'}`}>
+                        <span className={`text-xs font-bold flex-shrink-0 ${isUsed ? 'text-[#86868b]' : 'text-[#007AFF]'}`}>
                           ¥{c.discountAmount}
                         </span>
                       )}
                     </div>
                     {c.description && (
-                      <p className="text-white/40 text-xs mt-0.5 line-clamp-1">{c.description}</p>
+                      <p className="text-[#86868b] text-xs mt-0.5 line-clamp-1">{c.description}</p>
                     )}
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-white/20 text-[10px]">
+                      <span className="text-[#86868b] text-[10px]">
                         {formatDate(c.distributedAt)} 配信
                       </span>
                       {isUsed ? (
-                        <span className="text-white/25 text-[10px]">
+                        <span className="text-[#86868b] text-[10px]">
                           {formatDateTime(c.usedAt)} 使用
                         </span>
                       ) : (
-                        <span className="text-amber-400/60 text-[10px] group-hover:text-amber-400 transition">
+                        <span className="text-[#007AFF] text-[10px] group-hover:text-[#0051D5] transition">
                           タップして使用 →
                         </span>
                       )}
@@ -280,7 +279,7 @@ export default function CouponWallet() {
 
                   {isUsed && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-white/[0.07] text-4xl font-black tracking-widest rotate-[-15deg]">
+                      <span className="text-[#e5e5ea] text-4xl font-black tracking-widest rotate-[-15deg]">
                         USED
                       </span>
                     </div>
@@ -294,41 +293,41 @@ export default function CouponWallet() {
 
       {/* 使用確認オーバーレイ */}
       {presenting && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
           <div className="w-full max-w-sm">
-            <div className="rounded-2xl overflow-hidden border-2 border-amber-400/40 bg-gradient-to-br from-[#1a1a2e] to-[#0f0f23]">
-              <div className="bg-gradient-to-r from-amber-400 to-yellow-600 py-3 text-center">
+            <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl">
+              <div className="bg-[#007AFF] py-3 text-center">
                 <span className="text-2xl">🎫</span>
-                <p className="text-black font-bold text-xs tracking-widest mt-1">VIP COUPON</p>
+                <p className="text-white font-bold text-xs tracking-widest mt-1">VIP COUPON</p>
               </div>
 
               <div className="p-6 text-center space-y-4">
-                <h2 className="text-amber-400 font-bold text-xl">{presenting.title}</h2>
+                <h2 className="text-[#1d1d1f] font-semibold text-xl">{presenting.title}</h2>
                 {presenting.description && (
-                  <p className="text-white/60 text-sm">{presenting.description}</p>
+                  <p className="text-[#86868b] text-sm">{presenting.description}</p>
                 )}
                 {presenting.discountAmount > 0 && (
-                  <p className="text-amber-400 text-2xl font-black">¥{presenting.discountAmount}</p>
+                  <p className="text-[#007AFF] text-2xl font-bold">¥{presenting.discountAmount}</p>
                 )}
-                <div className="border-t border-dashed border-white/10 pt-4">
-                  <p className="text-white/20 text-[10px]">
+                <div className="border-t border-dashed border-[#e5e5ea] pt-4">
+                  <p className="text-[#86868b] text-[10px]">
                     {formatDate(presenting.distributedAt)} 配信
                   </p>
                 </div>
               </div>
 
               <div className="px-6 pb-6 space-y-3">
-                <p className="text-center text-white/30 text-xs">
+                <p className="text-center text-[#86868b] text-xs">
                   この画面を店員にお見せください
                 </p>
                 <button
                   onClick={() => handleUse(presenting)}
                   disabled={marking}
-                  className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-3 rounded-xl text-sm hover:from-amber-400 hover:to-yellow-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#007AFF] text-white font-semibold py-3 rounded-2xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {marking ? (
                     <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       処理中...
                     </span>
                   ) : '✓ 使用済みにする'}
@@ -336,7 +335,7 @@ export default function CouponWallet() {
                 <button
                   onClick={() => !marking && setPresenting(null)}
                   disabled={marking}
-                  className="w-full text-white/30 text-xs py-2 hover:text-white/50 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-full text-[#86868b] text-xs py-2 hover:text-[#1d1d1f] transition disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   キャンセル
                 </button>
@@ -349,7 +348,7 @@ export default function CouponWallet() {
       {/* Toast通知 */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] animate-[fadeInUp_0.3s_ease-out]">
-          <div className="bg-[#1a1a2e] border border-amber-400/20 text-white text-sm px-5 py-3 rounded-xl shadow-2xl shadow-black/50">
+          <div className="bg-[#1d1d1f] text-white text-sm px-5 py-3 rounded-2xl shadow-xl">
             {toast}
           </div>
         </div>

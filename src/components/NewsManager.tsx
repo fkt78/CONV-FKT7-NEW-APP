@@ -139,83 +139,76 @@ export default function NewsManager() {
     : (!removeAudio && editingAudioUrl) ? editingAudioUrl : ''
 
   return (
-    <div className="flex flex-col h-full">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 flex-shrink-0">
-        <h3 className="text-white/60 text-xs font-medium tracking-wide">
+    <div className="flex flex-col h-full bg-white">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e5e5ea] flex-shrink-0">
+        <h3 className="text-[#86868b] text-xs font-medium tracking-wide">
           VIP NEWS ({newsList.length}件)
         </h3>
         <button
           onClick={() => showForm ? resetForm() : setShowForm(true)}
-          className="text-amber-400 text-xs font-semibold hover:text-amber-300 transition"
+          className="text-[#007AFF] text-xs font-semibold hover:text-[#0051D5] transition"
         >
           {showForm ? '✕ 閉じる' : '＋ 新規投稿'}
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* 投稿/編集フォーム */}
         {showForm && (
-          <div className="mx-4 my-3 p-4 rounded-xl bg-[#16213e] border border-amber-400/20 space-y-3">
+          <div className="mx-4 my-3 p-4 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] space-y-3">
             {editingId && (
-              <p className="text-amber-400/70 text-[10px] font-medium tracking-wide">✏️ お知らせを編集中</p>
+              <p className="text-[#007AFF] text-[10px] font-medium tracking-wide">✏️ お知らせを編集中</p>
             )}
 
-            {/* タイトル */}
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="タイトル（例: 新商品入荷のお知らせ）"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/40"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF]"
             />
 
-            {/* 本文 */}
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="本文"
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/40 resize-none"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-none"
             />
 
-            {/* 音声ファイル */}
             <div className="space-y-2">
-              <label className="text-white/40 text-[10px] block">音声ファイル（任意）</label>
+              <label className="text-[#86868b] text-[10px] block">音声ファイル（任意）</label>
 
-              {/* 既存音声プレビュー */}
               {editingAudioUrl && !removeAudio && !audioFile && (
                 <div className="space-y-1">
                   <AudioPlayer src={editingAudioUrl} title="現在の音声" />
                   <button
                     onClick={() => setRemoveAudio(true)}
-                    className="text-red-400/60 text-[10px] hover:text-red-400 transition"
+                    className="text-red-500/80 text-[10px] hover:text-red-500 transition"
                   >
                     ✕ この音声を削除する
                   </button>
                 </div>
               )}
               {removeAudio && (
-                <p className="text-red-400/60 text-[10px]">
+                <p className="text-red-500/80 text-[10px]">
                   保存時に音声を削除します
-                  <button onClick={() => setRemoveAudio(false)} className="ml-2 text-white/40 hover:text-white/60">
+                  <button onClick={() => setRemoveAudio(false)} className="ml-2 text-[#007AFF] hover:text-[#0051D5]">
                     取り消す
                   </button>
                 </p>
               )}
 
-              {/* ファイル選択 */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 border border-dashed border-white/10 rounded-lg px-3 py-2.5 cursor-pointer hover:border-amber-400/30 transition"
+                className="flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 cursor-pointer hover:border-[#007AFF]/40 transition"
               >
-                <span className="text-white/30 text-xs">
+                <span className="text-[#86868b] text-xs">
                   {audioFile ? audioFile.name : '音声ファイルを選択 (.mp3 / .wav / .m4a)'}
                 </span>
                 {audioFile && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setAudioFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
-                    className="ml-auto text-white/20 hover:text-red-400 text-xs transition"
+                    className="ml-auto text-[#86868b] hover:text-red-500 text-xs transition"
                   >✕</button>
                 )}
               </div>
@@ -227,21 +220,19 @@ export default function NewsManager() {
                 onChange={(e) => setAudioFile(e.target.files?.[0] ?? null)}
               />
 
-              {/* 選択後プレビュー */}
               {audioFile && currentAudioToShow && (
                 <AudioPlayer src={currentAudioToShow} title={audioFile.name} />
               )}
 
-              {/* アップロード進捗 */}
               {upload && upload.state === 'running' && (
                 <div className="space-y-1">
-                  <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-1 rounded-full bg-[#e5e5ea] overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-amber-400 to-yellow-500 transition-all"
+                      className="h-full bg-[#007AFF] transition-all"
                       style={{ width: `${upload.percent}%` }}
                     />
                   </div>
-                  <p className="text-white/30 text-[10px]">アップロード中... {upload.percent}%</p>
+                  <p className="text-[#86868b] text-[10px]">アップロード中... {upload.percent}%</p>
                 </div>
               )}
             </div>
@@ -249,39 +240,38 @@ export default function NewsManager() {
             <button
               onClick={handleSave}
               disabled={!title.trim() || saving}
-              className="w-full bg-amber-400 text-black font-bold py-2 rounded-lg text-sm hover:bg-amber-300 transition disabled:opacity-50"
+              className="w-full bg-[#007AFF] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
             >
               {saving ? '保存中...' : editingId ? '更新する' : '投稿する'}
             </button>
           </div>
         )}
 
-        {/* ニュース一覧 */}
         <div className="px-4 pb-4 space-y-3">
           {newsList.length === 0 && !showForm && (
-            <p className="text-white/20 text-sm text-center py-10">お知らせはまだありません</p>
+            <p className="text-[#86868b] text-sm text-center py-10">お知らせはまだありません</p>
           )}
           {newsList.map((item) => (
-            <div key={item.id} className="rounded-xl bg-[#16213e] border border-white/5 p-3 space-y-2">
+            <div key={item.id} className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-bold truncate">{item.title}</p>
-                  <p className="text-white/40 text-xs mt-0.5 line-clamp-2">{item.content}</p>
+                  <p className="text-[#1d1d1f] text-sm font-bold truncate">{item.title}</p>
+                  <p className="text-[#86868b] text-xs mt-0.5 line-clamp-2">{item.content}</p>
                   {item.audioUrl && (
-                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-amber-400/60">
+                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-[#007AFF]">
                       🎵 音声あり
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-white/20 text-[10px]">{formatDate(item.createdAt)}</span>
+                  <span className="text-[#86868b] text-[10px]">{formatDate(item.createdAt)}</span>
                   <button
                     onClick={() => handleEdit(item)}
-                    className="text-[10px] px-2 py-1 rounded-md bg-white/5 text-white/40 hover:bg-amber-400/10 hover:text-amber-400 transition"
+                    className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#007AFF]/10 hover:text-[#007AFF] transition"
                   >✏️</button>
                   <button
                     onClick={() => handleDelete(item)}
-                    className="text-white/20 hover:text-red-400 transition text-xs p-1"
+                    className="text-[#86868b] hover:text-red-500 transition text-xs p-1"
                   >✕</button>
                 </div>
               </div>

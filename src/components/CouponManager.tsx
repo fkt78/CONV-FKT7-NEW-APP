@@ -180,79 +180,75 @@ export default function CouponManager() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* ── ヘッダー：天気 & 配信 ── */}
-      <div className="p-4 border-b border-white/5 space-y-4 flex-shrink-0">
-        {/* 天気パネル */}
-        <div className="flex items-center justify-between bg-[#16213e] rounded-xl p-3 border border-white/5">
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-4 border-b border-[#e5e5ea] space-y-4 flex-shrink-0">
+        <div className="flex items-center justify-between bg-[#f5f5f7] rounded-xl p-3 border border-[#e5e5ea]">
           <div className="flex items-center gap-3">
             <span className="text-3xl">{weather?.emoji ?? '🌐'}</span>
             <div>
-              <p className="text-white text-sm font-medium">三重県伊賀市</p>
+              <p className="text-[#1d1d1f] text-sm font-medium">三重県伊賀市</p>
               {weather ? (
-                <p className="text-white/50 text-xs">
+                <p className="text-[#86868b] text-xs">
                   {weather.description} / {weather.temperature}℃ / 降水 {weather.precipitation}mm
                 </p>
               ) : (
-                <p className="text-white/30 text-xs">天気未取得</p>
+                <p className="text-[#86868b]/70 text-xs">天気未取得</p>
               )}
             </div>
           </div>
           <button
             onClick={handleFetchWeather}
             disabled={weatherLoading}
-            className="text-xs bg-white/5 hover:bg-white/10 text-white/60 px-3 py-1.5 rounded-lg transition disabled:opacity-30"
+            className="text-xs bg-[#e5e5ea]/60 hover:bg-[#e5e5ea] text-[#007AFF] px-3 py-1.5 rounded-lg transition disabled:opacity-30"
           >
             {weatherLoading ? '取得中...' : '天気取得'}
           </button>
         </div>
 
-        {/* サイレント上限 & 配信ボタン */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
-            <span className="text-white/40 text-xs whitespace-nowrap">1日上限</span>
+          <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-lg px-3 py-2">
+            <span className="text-[#86868b] text-xs whitespace-nowrap">1日上限</span>
             <select
               value={dailyLimit}
               onChange={(e) => handleSaveLimit(Number(e.target.value))}
-              className="bg-transparent text-amber-400 text-sm font-bold focus:outline-none"
+              className="bg-transparent text-[#007AFF] text-sm font-bold focus:outline-none"
             >
               {[1, 2, 3, 5].map((n) => (
-                <option key={n} value={n} className="bg-[#1a1a2e]">{n}回</option>
+                <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
               ))}
             </select>
           </div>
           <button
             onClick={handleDistribute}
             disabled={distributing}
-            className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold py-2.5 rounded-lg text-sm hover:from-amber-400 hover:to-yellow-400 transition disabled:opacity-50"
+            className="flex-1 bg-[#007AFF] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
           >
             {distributing ? '配信処理中...' : '⚡ 天気判定＆クーポン配信'}
           </button>
         </div>
 
-        {/* 配信結果 */}
         {result && (
-          <div className="bg-[#16213e] rounded-xl p-3 border border-amber-400/20 space-y-2">
+          <div className="bg-[#007AFF]/5 rounded-xl p-3 border border-[#007AFF]/20 space-y-2">
             <div className="flex items-center gap-2 text-sm">
               <span>{result.weather.emoji}</span>
-              <span className="text-white font-medium">
+              <span className="text-[#1d1d1f] font-medium">
                 {result.weather.description} {result.weather.temperature}℃
               </span>
-              <span className="text-white/30">→</span>
-              <span className="text-amber-400 font-bold">{result.distributedCount}件配信</span>
+              <span className="text-[#86868b]">→</span>
+              <span className="text-[#007AFF] font-bold">{result.distributedCount}件配信</span>
               {result.skippedLimitCount > 0 && (
-                <span className="text-white/30 text-xs">({result.skippedLimitCount}件上限スキップ)</span>
+                <span className="text-[#86868b] text-xs">({result.skippedLimitCount}件上限スキップ)</span>
               )}
             </div>
             {result.matchedCoupons.length > 0 && (
-              <p className="text-white/40 text-[10px]">
+              <p className="text-[#86868b] text-[10px]">
                 合致: {result.matchedCoupons.map((c) => c.title).join(', ')}
               </p>
             )}
             {result.details.length > 0 && (
               <div className="max-h-24 overflow-y-auto space-y-0.5">
                 {result.details.map((d, i) => (
-                  <p key={i} className="text-white/30 text-[11px]">• {d}</p>
+                  <p key={i} className="text-[#86868b] text-[11px]">• {d}</p>
                 ))}
               </div>
             )}
@@ -260,15 +256,14 @@ export default function CouponManager() {
         )}
       </div>
 
-      {/* ── クーポンテンプレ一覧 ── */}
       <div className="flex-1 overflow-y-auto">
         <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-white/60 text-xs font-medium tracking-wide">
+          <h3 className="text-[#86868b] text-xs font-medium tracking-wide">
             クーポンテンプレート ({coupons.length}件)
           </h3>
           <button
             onClick={() => showForm ? resetForm() : handleNewForm()}
-            className="text-amber-400 text-xs font-semibold hover:text-amber-300 transition"
+            className="text-[#007AFF] text-xs font-semibold hover:text-[#0051D5] transition"
           >
             {showForm ? '✕ 閉じる' : '＋ 新規作成'}
           </button>
@@ -276,46 +271,46 @@ export default function CouponManager() {
 
         {/* 新規作成 / 編集フォーム */}
         {showForm && (
-          <div className="mx-4 mb-4 p-4 rounded-xl bg-[#16213e] border border-amber-400/20 space-y-3">
+          <div className="mx-4 mb-4 p-4 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] space-y-3">
             {editingId && (
-              <p className="text-amber-400/70 text-[10px] font-medium tracking-wide">✏️ テンプレートを編集中</p>
+              <p className="text-[#007AFF] text-[10px] font-medium tracking-wide">✏️ テンプレートを編集中</p>
             )}
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="クーポンタイトル（例: 雨の日ドリンク無料）"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/40"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF]"
             />
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               placeholder="内容（例: お好きなドリンク1杯サービス）"
               rows={2}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/40 resize-none"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-none"
             />
             <div className="flex items-center gap-2">
-              <label className="text-white/40 text-xs whitespace-nowrap">割引額</label>
+              <label className="text-[#86868b] text-xs whitespace-nowrap">割引額</label>
               <div className="flex items-center gap-1">
-                <span className="text-white/40 text-sm">¥</span>
+                <span className="text-[#86868b] text-sm">¥</span>
                 <input
                   type="number"
                   min={0}
                   value={discount}
                   onChange={(e) => setDiscount(Number(e.target.value))}
                   placeholder="0"
-                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-amber-400 text-sm font-bold focus:outline-none focus:border-amber-400/40"
+                  className="w-24 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#007AFF] text-sm font-bold focus:outline-none focus:border-[#007AFF]"
                 />
               </div>
-              <span className="text-white/30 text-[10px]">0 = 金額なし（サービス券等）</span>
+              <span className="text-[#86868b] text-[10px]">0 = 金額なし（サービス券等）</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-white/40 text-[10px] block mb-1">天気条件</label>
+                <label className="text-[#86868b] text-[10px] block mb-1">天気条件</label>
                 <select
                   value={cond}
                   onChange={(e) => setCond(e.target.value as WeatherCondition)}
-                  className="w-full bg-[#0f0f23] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-400/40"
+                  className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
                 >
                   {Object.entries(CONDITION_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>{v}</option>
@@ -323,11 +318,11 @@ export default function CouponManager() {
                 </select>
               </div>
               <div>
-                <label className="text-white/40 text-[10px] block mb-1">対象セグメント</label>
+                <label className="text-[#86868b] text-[10px] block mb-1">対象セグメント</label>
                 <select
                   value={segment}
                   onChange={(e) => setSegment(e.target.value as TargetSegment)}
-                  className="w-full bg-[#0f0f23] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-400/40"
+                  className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
                 >
                   {Object.entries(SEGMENT_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>{v}</option>
@@ -337,20 +332,20 @@ export default function CouponManager() {
             </div>
             {(cond === 'cold_below' || cond === 'hot_above') && (
               <div className="flex items-center gap-2">
-                <label className="text-white/40 text-xs">閾値:</label>
+                <label className="text-[#86868b] text-xs">閾値:</label>
                 <input
                   type="number"
                   value={threshold}
                   onChange={(e) => setThreshold(Number(e.target.value))}
-                  className="w-20 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-400/40"
+                  className="w-20 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
                 />
-                <span className="text-white/40 text-xs">℃</span>
+                <span className="text-[#86868b] text-xs">℃</span>
               </div>
             )}
             <button
               onClick={handleSave}
               disabled={!title.trim() || saving}
-              className="w-full bg-amber-400 text-black font-bold py-2 rounded-lg text-sm hover:bg-amber-300 transition disabled:opacity-50"
+              className="w-full bg-[#007AFF] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
             >
               {saving ? '保存中...' : editingId ? '更新する' : 'テンプレートを保存'}
             </button>
@@ -360,7 +355,7 @@ export default function CouponManager() {
         {/* テンプレートリスト */}
         <div className="px-4 space-y-2 pb-4">
           {coupons.length === 0 && !showForm && (
-            <p className="text-white/20 text-sm text-center py-10">
+            <p className="text-[#86868b] text-sm text-center py-10">
               クーポンテンプレートがありません
             </p>
           )}
@@ -369,26 +364,26 @@ export default function CouponManager() {
               key={c.id}
               className={`rounded-xl border p-3 transition ${
                 c.active
-                  ? 'bg-[#16213e] border-amber-400/15'
-                  : 'bg-white/[0.02] border-white/5 opacity-50'
+                  ? 'bg-white border-[#007AFF]/20 shadow-sm'
+                  : 'bg-[#f5f5f7] border-[#e5e5ea] opacity-60'
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium truncate">{c.title}</p>
+                  <p className="text-[#1d1d1f] text-sm font-medium truncate">{c.title}</p>
                   {c.description && (
-                    <p className="text-white/40 text-xs mt-0.5 truncate">{c.description}</p>
+                    <p className="text-[#86868b] text-xs mt-0.5 truncate">{c.description}</p>
                   )}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     {(c.discountAmount ?? 0) > 0 && (
-                      <span className="text-[10px] bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] bg-[#007AFF]/10 text-[#007AFF] px-2 py-0.5 rounded-full font-bold">
                         ¥{c.discountAmount}
                       </span>
                     )}
-                    <span className="text-[10px] bg-blue-400/10 text-blue-300 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] bg-[#5AC8FA]/15 text-[#007AFF] px-2 py-0.5 rounded-full">
                       {conditionBadge(c)}
                     </span>
-                    <span className="text-[10px] bg-purple-400/10 text-purple-300 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] bg-[#e5e5ea] text-[#86868b] px-2 py-0.5 rounded-full">
                       {SEGMENT_LABELS[c.targetSegment]}
                     </span>
                   </div>
@@ -396,7 +391,7 @@ export default function CouponManager() {
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     onClick={() => handleEdit(c)}
-                    className="text-[10px] px-2 py-1 rounded-md bg-white/5 text-white/40 hover:bg-amber-400/10 hover:text-amber-400 transition"
+                    className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#007AFF]/10 hover:text-[#007AFF] transition"
                     title="編集"
                   >
                     ✏️
@@ -405,15 +400,15 @@ export default function CouponManager() {
                     onClick={() => handleToggle(c.id, c.active)}
                     className={`text-[10px] px-2 py-1 rounded-md transition ${
                       c.active
-                        ? 'bg-green-400/10 text-green-400 hover:bg-green-400/20'
-                        : 'bg-white/5 text-white/30 hover:bg-white/10'
+                        ? 'bg-green-500/15 text-green-600 hover:bg-green-500/25'
+                        : 'bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#e5e5ea]'
                     }`}
                   >
                     {c.active ? 'ON' : 'OFF'}
                   </button>
                   <button
                     onClick={() => handleDelete(c.id)}
-                    className="text-white/20 hover:text-red-400 transition text-xs p-1"
+                    className="text-[#86868b] hover:text-red-500 transition text-xs p-1"
                   >
                     ✕
                   </button>
