@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponManager from '../components/CouponManager'
 import NewsManager from '../components/NewsManager'
 import RoadmapManager from '../components/RoadmapManager'
@@ -40,6 +41,9 @@ interface Message {
   senderId: string
   text: string
   createdAt: Date | null
+  attachmentUrl?: string
+  attachmentType?: AttachmentType
+  attachmentName?: string
 }
 
 function formatTime(date: Date | null): string {
@@ -101,12 +105,15 @@ export default function AdminDashboard() {
   const [selectedUid, setSelectedUid] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [showChatPanel, setShowChatPanel] = useState(false)
   const [adminTab, setAdminTab] = useState<AdminTab>('chat')
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('status', '==', 'active'))
@@ -146,12 +153,18 @@ export default function AdminDashboard() {
     )
     return onSnapshot(q, (snap) => {
       setMessages(
-        snap.docs.map((d) => ({
-          id: d.id,
-          senderId: d.data().senderId as string,
-          text: d.data().text as string,
-          createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
-        })),
+        snap.docs.map((d) => {
+          const data = d.data()
+          return {
+            id: d.id,
+            senderId: data.senderId as string,
+            text: (data.text as string) ?? '',
+            createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+            attachmentUrl: data.attachmentUrl as string | undefined,
+            attachmentType: data.attachmentType as AttachmentType | undefined,
+            attachmentName: data.attachmentName as string | undefined,
+          }
+        }),
       )
     })
   }, [selectedUid])
@@ -174,26 +187,54 @@ export default function AdminDashboard() {
     setShowChatPanel(true)
   }
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFileError(null)
+    const file = e.target.files?.[0]
+    if (!file) return
+    const err = validateFile(file)
+    if (err) {
+      setFileError(err)
+      return
+    }
+    setSelectedFile(file)
+    e.target.value = ''
+  }
+
   async function handleSend() {
     const trimmed = text.trim()
-    if (!trimmed || !selectedUid || !currentUser || sending) return
+    if ((!trimmed && !selectedFile) || !selectedUid || !currentUser || sending) return
 
     setSending(true)
-    setText('')
-    inputRef.current?.focus()
+    let attachmentUrl: string | undefined
+    let attachmentType: AttachmentType | undefined
+    let attachmentName: string | undefined
 
     try {
+      if (selectedFile) {
+        const result = await uploadChatAttachment(selectedUid, selectedFile)
+        attachmentUrl = result.url
+        attachmentType = result.type
+        attachmentName = result.name
+        setSelectedFile(null)
+      }
+
+      const displayText = trimmed || (attachmentType === 'image' ? '画像' : 'ファイル')
       const ts = serverTimestamp()
       await addDoc(collection(db, 'chats', selectedUid, 'messages'), {
         senderId: currentUser.uid,
         text: trimmed,
         createdAt: ts,
+        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
       })
       await setDoc(
         doc(db, 'chats', selectedUid),
-        { lastMessage: trimmed, lastMessageAt: ts },
+        { lastMessage: displayText, lastMessageAt: ts },
         { merge: true },
       )
+      setText('')
+      inputRef.current?.focus()
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : 'アップロードに失敗しました')
     } finally {
       setSending(false)
     }
@@ -440,7 +481,29 @@ export default function AdminDashboard() {
                                   : 'bg-white text-[#1d1d1f] rounded-bl-sm shadow-sm border border-[#e5e5ea]'
                               }`}
                             >
-                              {msg.text}
+                              {msg.attachmentUrl && (
+                                <div className="mb-2">
+                                  {msg.attachmentType === 'image' ? (
+                                    <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                      <img
+                                        src={msg.attachmentUrl}
+                                        alt={msg.attachmentName ?? '画像'}
+                                        className="max-w-[160px] max-h-[160px] rounded-lg object-cover"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a
+                                      href={msg.attachmentUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`text-xs underline ${isOwn ? 'text-white/90' : 'text-[#007AFF]'}`}
+                                    >
+                                      📎 {msg.attachmentName ?? 'ファイル'}
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              {msg.text && <span>{msg.text}</span>}
                             </div>
                             <span className={`text-[10px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                               {formatMessageTime(msg.createdAt)}
@@ -455,7 +518,40 @@ export default function AdminDashboard() {
               </div>
 
               <div className="px-4 py-3 bg-white border-t border-[#e5e5ea]">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  aria-label="ファイルを添付"
+                />
+                {fileError && (
+                  <p className="text-[#FF3B30] text-[10px] mb-2">{fileError}</p>
+                )}
+                {selectedFile && (
+                  <div className="flex items-center gap-2 mb-2 text-xs">
+                    <span className="text-[#86868b] truncate flex-1">{selectedFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFile(null)}
+                      className="text-[#FF3B30] text-[10px]"
+                    >
+                      削除
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="ファイルを添付"
+                    className="w-10 h-10 flex items-center justify-center text-[#86868b] hover:text-[#007AFF] transition flex-shrink-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                  </button>
                   <input
                     ref={inputRef}
                     type="text"
@@ -467,7 +563,7 @@ export default function AdminDashboard() {
                   />
                   <button
                     onClick={handleSend}
-                    disabled={!text.trim() || sending}
+                    disabled={(!text.trim() && !selectedFile) || sending}
                     className="w-10 h-10 bg-[#007AFF] rounded-full flex items-center justify-center text-white disabled:opacity-30 transition hover:bg-[#0051D5]"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

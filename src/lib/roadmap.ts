@@ -11,7 +11,7 @@ export interface RoadmapItem {
 export const ROADMAP_ITEMS: RoadmapItem[] = [
   // チャット機能
   { category: 'チャット機能', item: 'プッシュ通知', description: '新着メッセージ・クーポン・お知らせの通知（Firebase Cloud Messaging）', priority: '高', notes: 'アプリンク代替として重要' },
-  { category: 'チャット機能', item: '画像・ファイル送信', description: 'テキスト以外の添付（Firebase Storage連携）', priority: '高', notes: '' },
+  { category: 'チャット機能', item: '画像・ファイル送信', description: 'テキスト以外の添付（Firebase Storage連携）', priority: '高', notes: '画像/PDF対応・5MB制限で実装済み' },
   { category: 'チャット機能', item: '既読表示', description: 'メッセージの既読・未読状態の表示', priority: '中', notes: '' },
   { category: 'チャット機能', item: '入力中インジケーター', description: '相手が入力中であることを表示', priority: '低', notes: '' },
   { category: 'チャット機能', item: '未読バッジ', description: '未読メッセージ数の表示', priority: '中', notes: '' },

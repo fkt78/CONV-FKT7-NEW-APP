@@ -70,9 +70,15 @@ export const onChatMessageCreated = onDocumentCreated(
     const data = snap.data()
     const senderId = data?.senderId as string | undefined
     const text = (data?.text as string) ?? ''
-    if (!senderId || !text) return
+    const attachmentType = data?.attachmentType as string | undefined
+    if (!senderId) return
     if (senderId === chatId) return
-    await sendToUser(chatId, '新しいメッセージ', text.slice(0, 80), 'messages')
+    const body = text
+      ? text.slice(0, 80)
+      : attachmentType === 'image'
+        ? '画像が届きました'
+        : 'ファイルが届きました'
+    await sendToUser(chatId, '新しいメッセージ', body, 'messages')
   },
 )
 

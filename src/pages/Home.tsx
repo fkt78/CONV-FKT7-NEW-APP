@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponWallet from '../components/CouponWallet'
 import VipNews from '../components/VipNews'
 import VoiceCreditsPopup from '../components/VoiceCreditsPopup'
@@ -26,6 +27,9 @@ interface Message {
   senderId: string
   text: string
   createdAt: Date | null
+  attachmentUrl?: string
+  attachmentType?: AttachmentType
+  attachmentName?: string
 }
 
 interface UserData {
@@ -81,11 +85,14 @@ export default function Home() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [couponCount, setCouponCount] = useState(0)
   const [creditsOpen, setCreditsOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (!currentUser) return
@@ -102,12 +109,18 @@ export default function Home() {
     )
     return onSnapshot(q, (snap) => {
       setMessages(
-        snap.docs.map((d) => ({
-          id: d.id,
-          senderId: d.data().senderId as string,
-          text: d.data().text as string,
-          createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
-        })),
+        snap.docs.map((d) => {
+          const data = d.data()
+          return {
+            id: d.id,
+            senderId: data.senderId as string,
+            text: (data.text as string) ?? '',
+            createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+            attachmentUrl: data.attachmentUrl as string | undefined,
+            attachmentType: data.attachmentType as AttachmentType | undefined,
+            attachmentName: data.attachmentName as string | undefined,
+          }
+        }),
       )
     })
   }, [currentUser])
@@ -126,22 +139,45 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFileError(null)
+    const file = e.target.files?.[0]
+    if (!file) return
+    const err = validateFile(file)
+    if (err) {
+      setFileError(err)
+      return
+    }
+    setSelectedFile(file)
+    e.target.value = ''
+  }
+
   async function handleSend() {
     const trimmed = text.trim()
-    if (!trimmed || !currentUser || sending) return
+    if ((!trimmed && !selectedFile) || !currentUser || sending) return
 
     setSending(true)
-    setText('')
-    inputRef.current?.focus()
+    let attachmentUrl: string | undefined
+    let attachmentType: AttachmentType | undefined
+    let attachmentName: string | undefined
 
     try {
+      if (selectedFile) {
+        const result = await uploadChatAttachment(currentUser.uid, selectedFile)
+        attachmentUrl = result.url
+        attachmentType = result.type
+        attachmentName = result.name
+        setSelectedFile(null)
+      }
+
+      const displayText = trimmed || (attachmentType === 'image' ? '画像' : 'ファイル')
       const ts = serverTimestamp()
       await setDoc(
         doc(db, 'chats', currentUser.uid),
         {
           customerName: userData?.fullName ?? currentUser.displayName ?? '不明',
           customerUid: currentUser.uid,
-          lastMessage: trimmed,
+          lastMessage: displayText,
           lastMessageAt: ts,
         },
         { merge: true },
@@ -150,7 +186,12 @@ export default function Home() {
         senderId: currentUser.uid,
         text: trimmed,
         createdAt: ts,
+        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
       })
+      setText('')
+      inputRef.current?.focus()
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : 'アップロードに失敗しました')
     } finally {
       setSending(false)
     }
@@ -341,7 +382,29 @@ export default function Home() {
                               : 'bg-white text-[#1d1d1f] border border-[#e5e5ea] rounded-bl-sm shadow-[0_1px_4px_rgba(0,0,0,0.04)]'
                           }`}
                         >
-                          {msg.text}
+                          {msg.attachmentUrl && (
+                            <div className="mb-2">
+                              {msg.attachmentType === 'image' ? (
+                                <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                  <img
+                                    src={msg.attachmentUrl}
+                                    alt={msg.attachmentName ?? '画像'}
+                                    className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
+                                  />
+                                </a>
+                              ) : (
+                                <a
+                                  href={msg.attachmentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`text-sm underline ${isOwn ? 'text-white/90' : 'text-[#007AFF]'}`}
+                                >
+                                  📎 {msg.attachmentName ?? 'ファイル'}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {msg.text && <span>{msg.text}</span>}
                         </div>
                         <span className={`text-[13px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                           {formatTime(msg.createdAt)}
@@ -357,7 +420,40 @@ export default function Home() {
 
           {/* ── メッセージ入力バー（Apple風：白背景・青アクセント） ── */}
           <div className="px-4 py-3 bg-white border-t border-[#e5e5ea] flex-shrink-0 safe-area-bottom">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+              onChange={handleFileChange}
+              className="hidden"
+              aria-label="ファイルを添付"
+            />
+            {fileError && (
+              <p className="text-[#FF3B30] text-xs mb-2">{fileError}</p>
+            )}
+            {selectedFile && (
+              <div className="flex items-center gap-2 mb-2 text-sm">
+                <span className="text-[#86868b] truncate flex-1">{selectedFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  className="text-[#FF3B30] text-xs"
+                >
+                  削除
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="ファイルを添付"
+                className="touch-target w-11 h-11 flex items-center justify-center text-[#86868b] hover:text-[#007AFF] transition flex-shrink-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+              </button>
               <input
                 ref={inputRef}
                 type="text"
@@ -370,7 +466,7 @@ export default function Home() {
               />
               <button
                 onClick={handleSend}
-                disabled={!text.trim() || sending}
+                disabled={(!text.trim() && !selectedFile) || sending}
                 aria-label="送信"
                 className="touch-target w-11 h-11 bg-[#007AFF] rounded-full flex items-center justify-center text-white disabled:opacity-30 transition hover:bg-[#0051D5] active:scale-95 flex-shrink-0 shadow-sm"
               >
