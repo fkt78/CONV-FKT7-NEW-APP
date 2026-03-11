@@ -223,12 +223,21 @@ export default function AdminDashboard() {
             <span className="text-[#86868b] text-[10px] ml-2">店長</span>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="text-[#007AFF] text-xs hover:text-[#0051D5] transition"
-        >
-          ログアウト
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/')}
+            className="text-[#007AFF] text-xs hover:text-[#0051D5] transition"
+            aria-label="通常画面へ戻る"
+          >
+            戻る
+          </button>
+          <button
+            onClick={handleLogout}
+            className="text-[#86868b] text-xs hover:text-[#1d1d1f] transition"
+          >
+            ログアウト
+          </button>
+        </div>
       </header>
 
       <div className="flex border-b border-[#e5e5ea] bg-white flex-shrink-0">
