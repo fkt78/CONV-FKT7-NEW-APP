@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
 import HouseRulesAgreement from './components/HouseRulesAgreement'
 import VersionBadge from './components/VersionBadge'
+import PwaUpdatePrompt from './components/PwaUpdatePrompt'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import Home from './pages/Home'
@@ -19,6 +20,7 @@ export default function App() {
     <>
       <HouseRulesAgreement />
       <VersionBadge />
+      <PwaUpdatePrompt />
       <BrowserRouter>
         <AuthProvider>
           <Routes>

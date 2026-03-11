@@ -1,0 +1,65 @@
+import { useState, useEffect, useRef } from 'react'
+import { registerSW } from 'virtual:pwa-register'
+
+/** 新バージョン検出時に表示する更新プロンプト */
+export default function PwaUpdatePrompt() {
+  const [showPrompt, setShowPrompt] = useState(false)
+  const updateSWRef = useRef<(() => Promise<void>) | null>(null)
+
+  useEffect(() => {
+    const updateSW = registerSW({
+      onNeedRefresh() {
+        setShowPrompt(true)
+      },
+      onOfflineReady() {
+        // オフライン対応完了
+      },
+      onRegistered(registration: ServiceWorkerRegistration | undefined) {
+        // 定期的に更新をチェック（アプリを開いたままでも検出）
+        const interval = setInterval(async () => {
+          if (!registration?.installing && navigator.onLine) {
+            await registration?.update()
+          }
+        }, 60 * 60 * 1000) // 1時間ごと
+        return () => clearInterval(interval)
+      },
+    })
+    updateSWRef.current = updateSW
+  }, [])
+
+  async function handleUpdate() {
+    const updateSW = updateSWRef.current
+    if (updateSW) {
+      await updateSW()
+    }
+    setShowPrompt(false)
+  }
+
+  if (!showPrompt) return null
+
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[9999] bg-[#1d1d1f] text-white px-4 py-4 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.15)]"
+      role="alert"
+      aria-live="polite"
+    >
+      <p className="text-[15px] font-medium mb-3">
+        新しいバージョンが利用可能です
+      </p>
+      <div className="flex gap-3">
+        <button
+          onClick={handleUpdate}
+          className="flex-1 min-h-[44px] bg-[#007AFF] text-white font-semibold text-[15px] rounded-xl hover:bg-[#0051D5] active:scale-[0.98] transition"
+        >
+          更新する
+        </button>
+        <button
+          onClick={() => setShowPrompt(false)}
+          className="flex-1 min-h-[44px] bg-[#e5e5ea] text-[#1d1d1f] font-medium text-[15px] rounded-xl hover:bg-[#d1d1d6] active:scale-[0.98] transition"
+        >
+          あとで
+        </button>
+      </div>
+    </div>
+  )
+}
