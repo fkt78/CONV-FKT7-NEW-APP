@@ -343,7 +343,13 @@ export default function AdminDashboard() {
       ) : adminTab === 'news' ? (
         <NewsManager />
       ) : adminTab === 'users' ? (
-        <UserManager />
+        <UserManager
+          onOpenChat={(uid) => {
+            setAdminTab('chat')
+            setSelectedUid(uid)
+            setShowChatPanel(true)
+          }}
+        />
       ) : adminTab === 'chat' ? (
         <div className="flex-1 flex overflow-hidden">
         {/* ── 左パネル：顧客リスト ── */}

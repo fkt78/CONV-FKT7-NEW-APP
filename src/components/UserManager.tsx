@@ -5,8 +5,11 @@ import {
   where,
   getDocs,
   onSnapshot,
+  doc,
+  updateDoc,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { useAuth } from '../contexts/AuthContext'
 
 interface UserRecord {
   uid: string
@@ -31,6 +34,10 @@ const STATUS_LABELS: Record<string, string> = {
   blacklisted: 'ブラックリスト',
 }
 
+interface UserManagerProps {
+  onOpenChat?: (uid: string) => void
+}
+
 function escapeCsvField(value: string | number): string {
   const s = String(value)
   if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -39,9 +46,11 @@ function escapeCsvField(value: string | number): string {
   return s
 }
 
-export default function UserManager() {
+export default function UserManager({ onOpenChat }: UserManagerProps) {
+  const { currentUser } = useAuth()
   const [users, setUsers] = useState<UserRecord[]>([])
   const [exporting, setExporting] = useState(false)
+  const [updatingUid, setUpdatingUid] = useState<string | null>(null)
 
   useEffect(() => {
     const q = query(collection(db, 'users'))
@@ -130,6 +139,28 @@ export default function UserManager() {
     }
   }
 
+  async function handleStatusChange(user: UserRecord) {
+    if (user.uid === currentUser?.uid) {
+      alert('自分自身のステータスは変更できません')
+      return
+    }
+    const nextStatus = user.status === 'active' ? 'blacklisted' : 'active'
+    if (nextStatus === 'blacklisted') {
+      if (!confirm(`${user.fullName}さんをブラックリストに追加しますか？\nログインできなくなります。`)) return
+    } else {
+      if (!confirm(`${user.fullName}さんのアクセスを復元しますか？`)) return
+    }
+    setUpdatingUid(user.uid)
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { status: nextStatus })
+    } catch (err) {
+      console.error('ステータス変更エラー:', err)
+      alert('ステータスの変更に失敗しました')
+    } finally {
+      setUpdatingUid(null)
+    }
+  }
+
   const sortedUsers = [...users].sort((a, b) => {
     if (a.status !== b.status) return a.status === 'active' ? -1 : 1
     return b.totalSavedAmount - a.totalSavedAmount
@@ -164,6 +195,7 @@ export default function UserManager() {
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">属性</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">誕生月</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">ステータス</th>
+                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">操作</th>
                     <th className="text-right px-4 py-3 text-[#86868b] font-medium">使用回数</th>
                     <th className="text-right px-4 py-3 text-[#86868b] font-medium">累計節約</th>
                   </tr>
@@ -172,7 +204,26 @@ export default function UserManager() {
                   {sortedUsers.map((user) => (
                     <tr
                       key={user.uid}
-                      className="border-b border-[#e5e5ea] hover:bg-[#f5f5f7]/50"
+                      role={user.status === 'active' && onOpenChat ? 'button' : undefined}
+                      tabIndex={user.status === 'active' && onOpenChat ? 0 : undefined}
+                      onClick={
+                        user.status === 'active' && onOpenChat
+                          ? () => onOpenChat(user.uid)
+                          : undefined
+                      }
+                      onKeyDown={
+                        user.status === 'active' && onOpenChat
+                          ? (e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                onOpenChat(user.uid)
+                              }
+                            }
+                          : undefined
+                      }
+                      className={`border-b border-[#e5e5ea] hover:bg-[#f5f5f7]/50 ${
+                        user.status === 'active' && onOpenChat ? 'cursor-pointer' : ''
+                      }`}
                     >
                       <td className="px-4 py-3 text-[#1d1d1f] font-medium">{user.fullName}</td>
                       <td className="px-4 py-3 text-[#86868b] font-mono text-xs">{user.email}</td>
@@ -190,6 +241,39 @@ export default function UserManager() {
                         >
                           {STATUS_LABELS[user.status] ?? user.status}
                         </span>
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          {user.status === 'active' && onOpenChat && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenChat(user.uid)}
+                              className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition"
+                            >
+                              チャット
+                            </button>
+                          )}
+                          {user.uid !== currentUser?.uid ? (
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(user)}
+                              disabled={updatingUid === user.uid}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-lg transition disabled:opacity-50 ${
+                                user.status === 'active'
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                            >
+                              {updatingUid === user.uid
+                                ? '処理中...'
+                                : user.status === 'active'
+                                  ? 'ブラックリスト'
+                                  : '復元'}
+                            </button>
+                          ) : (
+                            <span className="text-[#86868b] text-xs">—</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right text-[#86868b] text-xs">
                         CSVで確認
