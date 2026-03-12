@@ -19,8 +19,9 @@ import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/
 import CouponManager from '../components/CouponManager'
 import NewsManager from '../components/NewsManager'
 import RoadmapManager from '../components/RoadmapManager'
+import UserManager from '../components/UserManager'
 
-type AdminTab = 'chat' | 'coupon' | 'news' | 'roadmap'
+type AdminTab = 'chat' | 'coupon' | 'news' | 'users' | 'roadmap'
 
 interface UserRecord {
   uid: string
@@ -313,6 +314,16 @@ export default function AdminDashboard() {
           📢 お知らせ管理
         </button>
         <button
+          onClick={() => setAdminTab('users')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'users'
+              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
+          }`}
+        >
+          👥 ユーザー管理
+        </button>
+        <button
           onClick={() => setAdminTab('roadmap')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'roadmap'
@@ -331,6 +342,8 @@ export default function AdminDashboard() {
         <CouponManager />
       ) : adminTab === 'news' ? (
         <NewsManager />
+      ) : adminTab === 'users' ? (
+        <UserManager />
       ) : adminTab === 'chat' ? (
         <div className="flex-1 flex overflow-hidden">
         {/* ── 左パネル：顧客リスト ── */}

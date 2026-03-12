@@ -10,7 +10,7 @@ export interface RoadmapItem {
 /** 今後実装すべき項目一覧 */
 export const ROADMAP_ITEMS: RoadmapItem[] = [
   // チャット機能
-  { category: 'チャット機能', item: 'プッシュ通知', description: '新着メッセージ・クーポン・お知らせの通知（Firebase Cloud Messaging）', priority: '高', notes: 'アプリンク代替として重要' },
+  { category: 'チャット機能', item: 'プッシュ通知', description: '新着メッセージ・クーポン・お知らせの通知（Firebase Cloud Messaging）', priority: '高', notes: '実装済み（FCM・通知設定・SW対応）' },
   { category: 'チャット機能', item: '画像・ファイル送信', description: 'テキスト以外の添付（Firebase Storage連携）', priority: '高', notes: '画像/PDF対応・5MB制限で実装済み' },
   { category: 'チャット機能', item: '既読表示', description: 'メッセージの既読・未読状態の表示', priority: '中', notes: '' },
   { category: 'チャット機能', item: '入力中インジケーター', description: '相手が入力中であることを表示', priority: '低', notes: '' },
@@ -31,7 +31,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   { category: 'クーポン機能', item: 'クーポン種別', description: '割引率・無料特典など複数タイプ', priority: '低', notes: '' },
   { category: 'クーポン機能', item: '使用条件', description: '最低購入金額などの条件表示', priority: '低', notes: '' },
   // 管理者機能
-  { category: '管理者機能', item: 'ユーザー管理', description: 'ブラックリスト・ステータス変更・詳細編集', priority: '高', notes: '' },
+  { category: '管理者機能', item: 'ユーザー管理', description: 'ブラックリスト・ステータス変更・詳細編集', priority: '高', notes: 'CSV出力（氏名・メール・属性・使用回数・累計節約額）実装済み' },
   { category: '管理者機能', item: 'チャット検索', description: '顧客名・メールでの検索', priority: '中', notes: '' },
   { category: '管理者機能', item: '分析・レポート', description: 'クーポン利用率・チャット数・エンゲージメント', priority: '中', notes: '' },
   { category: '管理者機能', item: 'データエクスポート', description: 'チャット履歴・顧客データのCSV出力', priority: '中', notes: '' },
