@@ -124,12 +124,13 @@ function computeExpiryDate(
     }
     case 'end_of_month':
       return new Date(y, m, 0, 23, 59, 59, 999) // 翌月0日 = 今月末
-    case 'date':
+    case 'date': {
       if (!expiryDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDateStr)) {
         return new Date(y, m - 1, d, 23, 59, 59, 999)
       }
       const [ey, em, ed] = expiryDateStr.split('-').map(Number)
       return new Date(ey, em - 1, ed, 23, 59, 59, 999)
+    }
     default:
       return new Date(y, m - 1, d, 23, 59, 59, 999)
   }

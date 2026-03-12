@@ -25,6 +25,7 @@ export default function VipNews() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const [now] = useState(() => Date.now())
 
   useEffect(() => {
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(10))
@@ -103,7 +104,7 @@ export default function VipNews() {
               aria-expanded={isOpen}
               className="w-full min-h-[44px] text-left px-4 py-3 flex items-center gap-2 hover:bg-[#f5f5f7] transition"
             >
-              {item.createdAt && Date.now() - item.createdAt.getTime() < 86_400_000 && (
+              {item.createdAt && now - item.createdAt.getTime() < 86_400_000 && (
                 <span className="text-[11px] bg-[#FF3B30] text-white px-2 py-0.5 rounded-lg font-semibold flex-shrink-0">
                   NEW
                 </span>

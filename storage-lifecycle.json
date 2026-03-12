@@ -1,0 +1,18 @@
+{
+  "rule": [
+    {
+      "action": { "type": "Delete" },
+      "condition": {
+        "age": 14,
+        "matchesPrefix": ["news_audio/"]
+      }
+    },
+    {
+      "action": { "type": "Delete" },
+      "condition": {
+        "age": 90,
+        "matchesPrefix": ["chats/"]
+      }
+    }
+  ]
+}
