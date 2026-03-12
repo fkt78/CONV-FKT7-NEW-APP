@@ -10,8 +10,6 @@ export interface RoadmapItem {
 /** 今後実装すべき項目一覧 */
 export const ROADMAP_ITEMS: RoadmapItem[] = [
   // チャット機能
-  { category: 'チャット機能', item: 'プッシュ通知', description: '新着メッセージ・クーポン・お知らせの通知（Firebase Cloud Messaging）', priority: '高', notes: '実装済み（FCM・通知設定・SW対応）' },
-  { category: 'チャット機能', item: '画像・ファイル送信', description: 'テキスト以外の添付（Firebase Storage連携）', priority: '高', notes: '画像/PDF対応・5MB制限で実装済み' },
   { category: 'チャット機能', item: '既読表示', description: 'メッセージの既読・未読状態の表示', priority: '中', notes: '' },
   { category: 'チャット機能', item: '入力中インジケーター', description: '相手が入力中であることを表示', priority: '低', notes: '' },
   { category: 'チャット機能', item: '未読バッジ', description: '未読メッセージ数の表示', priority: '中', notes: '' },
@@ -19,19 +17,17 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   { category: 'チャット機能', item: '定型文・テンプレート', description: '管理者向けクイックリプライ', priority: '中', notes: '' },
   { category: 'チャット機能', item: 'メッセージ削除・編集', description: '誤送信時の編集・削除', priority: '低', notes: '' },
   // 認証・アカウント
-  { category: '認証・アカウント', item: 'パスワードリセット', description: '「パスワードを忘れた」フロー', priority: '高', notes: 'Login画面に一部実装済み' },
   { category: '認証・アカウント', item: 'メール認証', description: '登録時のメールアドレス確認', priority: '中', notes: '' },
   { category: '認証・アカウント', item: 'プロフィール編集', description: '名前・アイコン・属性の変更', priority: '中', notes: '' },
   { category: '認証・アカウント', item: '2段階認証（2FA）', description: 'セキュリティ強化', priority: '低', notes: '' },
   { category: '認証・アカウント', item: '複数デバイス管理', description: 'ログイン中のセッション一覧・切断', priority: '低', notes: '' },
   // クーポン機能
-  { category: 'クーポン機能', item: '有効期限', description: 'クーポンの使用期限設定', priority: '高', notes: '当日/今週中/今月いっぱい/日付指定で実装済み' },
   { category: 'クーポン機能', item: 'QRコード表示', description: '店舗提示用QRコード', priority: '中', notes: '' },
   { category: 'クーポン機能', item: '一括配布', description: '属性・誕生月など条件指定での一括配布', priority: '中', notes: '' },
   { category: 'クーポン機能', item: 'クーポン種別', description: '割引率・無料特典など複数タイプ', priority: '低', notes: '' },
   { category: 'クーポン機能', item: '使用条件', description: '最低購入金額などの条件表示', priority: '低', notes: '' },
   // 管理者機能
-  { category: '管理者機能', item: 'ユーザー管理', description: 'ブラックリスト・ステータス変更・詳細編集', priority: '高', notes: 'CSV出力（氏名・メール・属性・使用回数・累計節約額）実装済み' },
+  { category: '管理者機能', item: 'ユーザー管理（詳細編集）', description: '氏名・属性・誕生月などの詳細編集', priority: '中', notes: '' },
   { category: '管理者機能', item: 'チャット検索', description: '顧客名・メールでの検索', priority: '中', notes: '' },
   { category: '管理者機能', item: '分析・レポート', description: 'クーポン利用率・チャット数・エンゲージメント', priority: '中', notes: '' },
   { category: '管理者機能', item: 'データエクスポート', description: 'チャット履歴・顧客データのCSV出力', priority: '中', notes: '' },
@@ -39,7 +35,6 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   { category: '管理者機能', item: '操作ログ', description: '管理者の操作履歴', priority: '低', notes: '' },
   // UX・UI
   { category: 'UX・UI', item: 'ダーク/ライトテーマ', description: 'テーマ切り替え', priority: '低', notes: '' },
-  { category: 'UX・UI', item: '通知設定', description: '通知ON/OFF・種類ごとの設定', priority: '中', notes: '' },
   { category: 'UX・UI', item: 'アクセシビリティ', description: 'スクリーンリーダー対応・コントラスト改善', priority: '中', notes: '' },
   { category: 'UX・UI', item: 'オフライン対応', description: 'オフライン時の表示・再送信', priority: '中', notes: '' },
   { category: 'UX・UI', item: 'スケルトンローディング', description: '読み込み中のプレースホルダー表示', priority: '低', notes: '' },
