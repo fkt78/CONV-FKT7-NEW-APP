@@ -48,7 +48,6 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   // セキュリティ・運用
   { category: 'セキュリティ・運用', item: 'レート制限', description: 'スパム防止の送信制限', priority: '中', notes: '' },
   { category: 'セキュリティ・運用', item: '不正利用検知', description: '異常な利用パターンの検知', priority: '低', notes: '' },
-  { category: 'セキュリティ・運用', item: 'Firestoreセキュリティルール', description: '適切な読み書き制限の見直し', priority: '高', notes: '' },
   { category: 'セキュリティ・運用', item: '監査ログ', description: '重要な操作の記録', priority: '低', notes: '' },
   // 技術・インフラ
   { category: '技術・インフラ', item: 'E2Eテスト', description: 'Playwright/Cypress等', priority: '中', notes: '' },
