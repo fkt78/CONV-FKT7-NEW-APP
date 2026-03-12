@@ -13,7 +13,7 @@ import {
   serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { auth, db } from '../lib/firebase'
 import { fetchWeather, type WeatherData } from '../lib/weather'
 import {
   distributeCoupons,
@@ -173,11 +173,30 @@ export default function CouponManager() {
     setDistributing(true)
     setResult(null)
     try {
+      // トークン更新（identitytoolkit 400 対策：期限切れセッションを事前検出）
+      const user = auth.currentUser
+      if (user) {
+        await user.getIdToken(true)
+      }
       const r = await distributeCoupons(dailyLimit)
       setResult(r)
       setWeather(r.weather)
-    } catch {
-      alert('配信処理中にエラーが発生しました')
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? ''
+      const msg = err instanceof Error ? err.message : ''
+      const isAuthError =
+        code.startsWith('auth/') ||
+        msg.includes('auth/') ||
+        msg.includes('TOKEN') ||
+        msg.includes('INVALID') ||
+        msg.includes('network')
+      if (isAuthError) {
+        alert(
+          'セッションが切れています。一度ログアウトして、再度ログインしてください。',
+        )
+      } else {
+        alert('配信処理中にエラーが発生しました')
+      }
     } finally {
       setDistributing(false)
     }
