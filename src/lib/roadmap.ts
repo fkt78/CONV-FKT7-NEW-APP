@@ -12,7 +12,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   // チャット機能
   { category: 'チャット機能', item: '入力中インジケーター', description: '相手が入力中であることを表示', priority: '低', notes: '' },
   { category: 'チャット機能', item: '未読バッジ', description: '未読メッセージ数の表示', priority: '中', notes: '' },
-  { category: 'チャット機能', item: 'メッセージ検索', description: '過去メッセージの検索機能', priority: '中', notes: '' },
+  { category: 'チャット機能', item: 'メッセージ検索', description: '過去メッセージの検索機能（チャット内検索・ハイライト・前後移動は実装済）', priority: '中', notes: '全チャット横断検索は Algolia 等の検討' },
   { category: 'チャット機能', item: '定型文・テンプレート', description: '管理者向けクイックリプライ', priority: '中', notes: '' },
   { category: 'チャット機能', item: 'メッセージ削除・編集', description: '誤送信時の編集・削除', priority: '低', notes: '' },
   // 認証・アカウント

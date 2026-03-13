@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
@@ -79,6 +79,27 @@ function formatDateDivider(date: Date | null): string {
   return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+function messageMatches(msg: Message, q: string): boolean {
+  if (!q.trim()) return true
+  const lower = q.trim().toLowerCase()
+  if (msg.text?.toLowerCase().includes(lower)) return true
+  if (msg.attachmentName?.toLowerCase().includes(lower)) return true
+  return false
+}
+
+function highlightMatch(text: string, query: string): ReactNode {
+  if (!query.trim()) return text
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.trim().toLowerCase() ? (
+      <mark key={i} className="bg-[#FFE500]/70 rounded px-0.5">{part}</mark>
+    ) : (
+      part
+    ),
+  )
+}
+
 export default function Home() {
   const { currentUser, userRole } = useAuth()
   const navigate = useNavigate()
@@ -92,9 +113,12 @@ export default function Home() {
   const [sending, setSending] = useState(false)
   const [couponCount, setCouponCount] = useState(0)
   const [creditsOpen, setCreditsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResultIndex, setSearchResultIndex] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
 
   useEffect(() => {
     if (!currentUser) return
@@ -158,6 +182,51 @@ export default function Home() {
       ),
     ).catch((err) => console.error('既読更新エラー:', err))
   }, [currentUser, messages])
+
+  const matchedIndices = searchQuery.trim()
+    ? messages
+        .map((m, i) => (messageMatches(m, searchQuery) ? i : -1))
+        .filter((i) => i >= 0)
+    : []
+  const matchCount = matchedIndices.length
+  const currentMatchIndex = Math.min(searchResultIndex, Math.max(0, matchCount - 1))
+
+  useEffect(() => {
+    setSearchResultIndex(0)
+  }, [searchQuery])
+
+  useEffect(() => {
+    if (searchQuery.trim() && matchCount > 0) {
+      const msg = messages[matchedIndices[0]]
+      if (msg) {
+        const timer = setTimeout(() => {
+          messageRefsMap.current.get(msg.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [searchQuery, matchCount])
+
+  const scrollToMatch = (index: number) => {
+    const idx = matchedIndices[index]
+    const msg = messages[idx]
+    if (!msg) return
+    messageRefsMap.current.get(msg.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function handleSearchPrev() {
+    if (matchCount <= 1) return
+    const next = currentMatchIndex <= 0 ? matchCount - 1 : currentMatchIndex - 1
+    setSearchResultIndex(next)
+    setTimeout(() => scrollToMatch(next), 50)
+  }
+
+  function handleSearchNext() {
+    if (matchCount <= 1) return
+    const next = currentMatchIndex >= matchCount - 1 ? 0 : currentMatchIndex + 1
+    setSearchResultIndex(next)
+    setTimeout(() => scrollToMatch(next), 50)
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     setFileError(null)
@@ -354,6 +423,49 @@ export default function Home() {
         </div>
       ) : (
         <>
+          {/* ── メッセージ検索 ── */}
+          {messages.length > 0 && (
+            <div className="px-4 py-2 bg-white border-b border-[#e5e5ea] flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[#86868b] text-xs flex-shrink-0" aria-hidden>🔍</span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="商品名・キーワードで検索"
+                  className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] transition"
+                  aria-label="メッセージを検索"
+                />
+                {matchCount > 0 && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className="text-[#86868b] text-[10px]">
+                      {currentMatchIndex + 1}/{matchCount}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleSearchPrev}
+                      aria-label="前の検索結果"
+                      className="w-7 h-7 rounded flex items-center justify-center text-[#007AFF] hover:bg-[#007AFF]/10 transition"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSearchNext}
+                      aria-label="次の検索結果"
+                      className="w-7 h-7 rounded flex items-center justify-center text-[#007AFF] hover:bg-[#007AFF]/10 transition"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                    </button>
+                  </div>
+                )}
+                {searchQuery.trim() && matchCount === 0 && (
+                  <span className="text-[#86868b] text-[10px] flex-shrink-0">該当なし</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ── メッセージ一覧 ── */}
           <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-3 min-h-0 mt-2">
             {messages.length === 0 ? (
@@ -378,7 +490,12 @@ export default function Home() {
                 const isRead = msg.readAt || hasReplyAfter
 
                 return (
-                  <div key={msg.id}>
+                  <div
+                    key={msg.id}
+                    ref={(el) => {
+                      if (el) messageRefsMap.current.set(msg.id, el)
+                    }}
+                  >
                     {showDivider && (
                       <div className="flex items-center justify-center my-4">
                         <div className="flex-1 border-t border-[#e5e5ea]" />
@@ -424,12 +541,21 @@ export default function Home() {
                                   rel="noopener noreferrer"
                                   className={`text-sm underline ${isOwn ? 'text-white/90' : 'text-[#007AFF]'}`}
                                 >
-                                  📎 {msg.attachmentName ?? 'ファイル'}
+                                  📎{' '}
+                                  {searchQuery.trim() && msg.attachmentName
+                                    ? highlightMatch(msg.attachmentName, searchQuery)
+                                    : (msg.attachmentName ?? 'ファイル')}
                                 </a>
                               )}
                             </div>
                           )}
-                          {msg.text && <span>{msg.text}</span>}
+                          {msg.text && (
+                            <span>
+                              {searchQuery.trim()
+                                ? highlightMatch(msg.text, searchQuery)
+                                : msg.text}
+                            </span>
+                          )}
                         </div>
                         <span className={`text-[13px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                           {formatTime(msg.createdAt)}
