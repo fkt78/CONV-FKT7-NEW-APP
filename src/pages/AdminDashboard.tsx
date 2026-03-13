@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
   collection,
+  collectionGroup,
   query,
   orderBy,
+  limit,
   onSnapshot,
+  getDocs,
   addDoc,
   doc,
   setDoc,
@@ -138,6 +141,12 @@ export default function AdminDashboard() {
   const [adminTab, setAdminTab] = useState<AdminTab>('chat')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResultIndex, setSearchResultIndex] = useState(0)
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('')
+  const [globalSearchResults, setGlobalSearchResults] = useState<
+    Array<{ chatId: string; fullName: string; messages: Array<Message & { chatId: string }> }>
+  >([])
+  const [globalSearchLoading, setGlobalSearchLoading] = useState(false)
+  const [showGlobalSearchResults, setShowGlobalSearchResults] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -278,6 +287,67 @@ export default function AdminDashboard() {
   function selectUser(uid: string) {
     setSelectedUid(uid)
     setShowChatPanel(true)
+  }
+
+  async function runGlobalSearch() {
+    const q = globalSearchQuery.trim()
+    if (!q) {
+      setShowGlobalSearchResults(false)
+      setGlobalSearchResults([])
+      return
+    }
+    setGlobalSearchLoading(true)
+    setShowGlobalSearchResults(true)
+    try {
+      const qRef = query(
+        collectionGroup(db, 'messages'),
+        orderBy('createdAt', 'desc'),
+        limit(500),
+      )
+      const snap = await getDocs(qRef)
+      const userMap = Object.fromEntries(users.map((u) => [u.uid, u.fullName]))
+      const matches: Array<Message & { chatId: string }> = []
+      snap.docs.forEach((d) => {
+        const chatId = d.ref.parent.parent?.id
+        if (!chatId) return
+        const data = d.data()
+        const msg: Message & { chatId: string } = {
+          id: d.id,
+          chatId,
+          senderId: data.senderId as string,
+          text: (data.text as string) ?? '',
+          createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+          readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+          attachmentUrl: data.attachmentUrl as string | undefined,
+          attachmentType: data.attachmentType as AttachmentType | undefined,
+          attachmentName: data.attachmentName as string | undefined,
+        }
+        if (messageMatches(msg, q)) matches.push(msg)
+      })
+      const byChat = new Map<string, Array<Message & { chatId: string }>>()
+      matches.forEach((m) => {
+        const arr = byChat.get(m.chatId) ?? []
+        arr.push(m)
+        byChat.set(m.chatId, arr)
+      })
+      const results = Array.from(byChat.entries()).map(([chatId, msgs]) => ({
+        chatId,
+        fullName: userMap[chatId] ?? '不明',
+        messages: msgs.sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)),
+      }))
+      setGlobalSearchResults(results)
+    } catch (err) {
+      console.error('全チャット検索エラー:', err)
+      setGlobalSearchResults([])
+    } finally {
+      setGlobalSearchLoading(false)
+    }
+  }
+
+  function clearGlobalSearch() {
+    setGlobalSearchQuery('')
+    setGlobalSearchResults([])
+    setShowGlobalSearchResults(false)
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -444,16 +514,78 @@ export default function AdminDashboard() {
         />
       ) : adminTab === 'chat' ? (
         <div className="flex-1 flex overflow-hidden">
-        {/* ── 左パネル：顧客リスト ── */}
+        {/* ── 左パネル：顧客リスト / 全チャット検索 ── */}
         <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-[#e5e5ea] flex flex-col bg-white ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
-          <div className="px-4 py-3 border-b border-[#e5e5ea]">
-            <h2 className="text-[#86868b] text-xs font-medium tracking-wide">
-              VIP顧客 ({sortedUsers.length}名)
-            </h2>
+          {/* 全チャット検索バー */}
+          <div className="px-4 py-3 border-b border-[#e5e5ea] space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="search"
+                value={globalSearchQuery}
+                onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && runGlobalSearch()}
+                placeholder="商品名で全チャット検索（例: クリスマスケーキ）"
+                className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-xs focus:outline-none focus:border-[#007AFF] transition"
+                aria-label="全チャット検索"
+              />
+              <button
+                type="button"
+                onClick={runGlobalSearch}
+                disabled={globalSearchLoading || !globalSearchQuery.trim()}
+                className="px-3 py-2 bg-[#007AFF] text-white text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-[#0051D5] transition"
+              >
+                {globalSearchLoading ? '検索中' : '検索'}
+              </button>
+            </div>
+            {showGlobalSearchResults && (
+              <button
+                type="button"
+                onClick={clearGlobalSearch}
+                className="text-[#007AFF] text-[10px] hover:underline"
+              >
+                ← 顧客一覧に戻る
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {sortedUsers.length === 0 ? (
+            {showGlobalSearchResults ? (
+              globalSearchLoading ? (
+                <p className="text-[#86868b] text-sm text-center py-10">検索中...</p>
+              ) : globalSearchResults.length === 0 ? (
+                <p className="text-[#86868b] text-sm text-center py-10">
+                  {globalSearchQuery.trim() ? '該当するメッセージがありません' : 'キーワードを入力して検索'}
+                </p>
+              ) : (
+                <div className="divide-y divide-[#e5e5ea]">
+                  {globalSearchResults.map(({ chatId, fullName, messages: msgs }) => (
+                    <button
+                      key={chatId}
+                      onClick={() => {
+                        setSelectedUid(chatId)
+                        setShowChatPanel(true)
+                        setSearchQuery(globalSearchQuery.trim())
+                        setShowGlobalSearchResults(false)
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-[#f5f5f7] transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-sm">{fullName.charAt(0)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#1d1d1f] text-sm font-medium truncate">{fullName}</p>
+                          <p className="text-[#86868b] text-[11px] truncate mt-0.5">
+                            {msgs[0]?.text?.slice(0, 40) ?? msgs[0]?.attachmentName ?? '（添付）'}
+                            {msgs.length > 1 && ` 他${msgs.length - 1}件`}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )
+            ) : sortedUsers.length === 0 ? (
               <p className="text-[#86868b] text-sm text-center py-10">
                 登録済みの顧客がいません
               </p>
