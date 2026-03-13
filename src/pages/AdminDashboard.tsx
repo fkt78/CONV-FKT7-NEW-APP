@@ -152,6 +152,7 @@ export default function AdminDashboard() {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
+  const messagesForChatRef = useRef<string | null>(null)
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('status', '==', 'active'))
@@ -186,11 +187,13 @@ export default function AdminDashboard() {
     if (!selectedUid) return
     setMessages([])
     setSearchQuery('')
+    messagesForChatRef.current = null
     const q = query(
       collection(db, 'chats', selectedUid, 'messages'),
       orderBy('createdAt', 'asc'),
     )
     return onSnapshot(q, (snap) => {
+      messagesForChatRef.current = selectedUid
       setMessages(
         snap.docs.map((d) => {
           const data = d.data()
@@ -216,6 +219,7 @@ export default function AdminDashboard() {
   // 受信メッセージを既読にする（顧客からのメッセージ）
   useEffect(() => {
     if (!currentUser || !selectedUid || messages.length === 0) return
+    if (messagesForChatRef.current !== selectedUid) return
     const toMark = messages.filter(
       (m) => m.senderId === selectedUid && !m.readAt,
     )
@@ -227,7 +231,11 @@ export default function AdminDashboard() {
           readBy: currentUser.uid,
         }),
       ),
-    ).catch((err) => console.error('既読更新エラー:', err))
+    ).catch((err) => {
+      if ((err as { code?: string })?.code !== 'not-found') {
+        console.error('既読更新エラー:', err)
+      }
+    })
   }, [currentUser, selectedUid, messages])
 
   const sortedUsers = [...users].sort((a, b) => {

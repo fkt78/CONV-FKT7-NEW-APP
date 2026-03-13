@@ -180,7 +180,11 @@ export default function Home() {
           readBy: currentUser.uid,
         }),
       ),
-    ).catch((err) => console.error('既読更新エラー:', err))
+    ).catch((err) => {
+      if ((err as { code?: string })?.code !== 'not-found') {
+        console.error('既読更新エラー:', err)
+      }
+    })
   }, [currentUser, messages])
 
   const matchedIndices = searchQuery.trim()
