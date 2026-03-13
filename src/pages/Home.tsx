@@ -371,6 +371,11 @@ export default function Home() {
                 const isOwn = msg.senderId === currentUser?.uid
                 const prevMsg = messages[i - 1] ?? null
                 const showDivider = !isSameDay(msg.createdAt, prevMsg?.createdAt ?? null)
+                // 返信があれば既読とみなす（未読のまま返信は不自然なため）
+                const hasReplyAfter = isOwn && currentUser && msg.createdAt && messages.some(
+                  (m) => m.senderId !== currentUser.uid && m.createdAt && m.createdAt > msg.createdAt!,
+                )
+                const isRead = msg.readAt || hasReplyAfter
 
                 return (
                   <div key={msg.id}>
@@ -430,7 +435,7 @@ export default function Home() {
                           {formatTime(msg.createdAt)}
                           {isOwn && (
                             <span className="ml-1 text-[11px] opacity-80">
-                              {msg.readAt ? '既読' : '未読'}
+                              {isRead ? '既読' : '未読'}
                             </span>
                           )}
                         </span>

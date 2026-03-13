@@ -485,6 +485,11 @@ export default function AdminDashboard() {
                     const isOwn = msg.senderId === currentUser?.uid
                     const prevMsg = messages[i - 1] ?? null
                     const showDivider = !isSameDay(msg.createdAt, prevMsg?.createdAt ?? null)
+                    // 返信があれば既読とみなす（未読のまま返信は不自然なため）
+                    const hasReplyAfter = isOwn && selectedUid && msg.createdAt && messages.some(
+                      (m) => m.senderId === selectedUid && m.createdAt && m.createdAt > msg.createdAt!,
+                    )
+                    const isRead = msg.readAt || hasReplyAfter
 
                     return (
                       <div key={msg.id}>
@@ -548,7 +553,7 @@ export default function AdminDashboard() {
                               {formatMessageTime(msg.createdAt)}
                               {isOwn && (
                                 <span className="ml-1 text-[9px] opacity-80">
-                                  {msg.readAt ? '既読' : '未読'}
+                                  {isRead ? '既読' : '未読'}
                                 </span>
                               )}
                             </span>
