@@ -10,7 +10,6 @@ export interface RoadmapItem {
 /** 今後実装すべき項目一覧 */
 export const ROADMAP_ITEMS: RoadmapItem[] = [
   // チャット機能
-  { category: 'チャット機能', item: '既読表示', description: 'メッセージの既読・未読状態の表示', priority: '中', notes: '' },
   { category: 'チャット機能', item: '入力中インジケーター', description: '相手が入力中であることを表示', priority: '低', notes: '' },
   { category: 'チャット機能', item: '未読バッジ', description: '未読メッセージ数の表示', priority: '中', notes: '' },
   { category: 'チャット機能', item: 'メッセージ検索', description: '過去メッセージの検索機能', priority: '中', notes: '' },

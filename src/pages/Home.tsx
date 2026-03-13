@@ -10,6 +10,7 @@ import {
   addDoc,
   doc,
   setDoc,
+  updateDoc,
   serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore'
@@ -27,6 +28,7 @@ interface Message {
   senderId: string
   text: string
   createdAt: Date | null
+  readAt: Date | null
   attachmentUrl?: string
   attachmentType?: AttachmentType
   attachmentName?: string
@@ -116,6 +118,7 @@ export default function Home() {
             senderId: data.senderId as string,
             text: (data.text as string) ?? '',
             createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+            readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
             attachmentUrl: data.attachmentUrl as string | undefined,
             attachmentType: data.attachmentType as AttachmentType | undefined,
             attachmentName: data.attachmentName as string | undefined,
@@ -138,6 +141,23 @@ export default function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // 受信メッセージを既読にする（店長からのメッセージ）
+  useEffect(() => {
+    if (!currentUser || messages.length === 0) return
+    const toMark = messages.filter(
+      (m) => m.senderId !== currentUser.uid && !m.readAt,
+    )
+    if (toMark.length === 0) return
+    Promise.all(
+      toMark.map((m) =>
+        updateDoc(doc(db, 'chats', currentUser.uid, 'messages', m.id), {
+          readAt: serverTimestamp(),
+          readBy: currentUser.uid,
+        }),
+      ),
+    ).catch((err) => console.error('既読更新エラー:', err))
+  }, [currentUser, messages])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     setFileError(null)
@@ -408,6 +428,11 @@ export default function Home() {
                         </div>
                         <span className={`text-[13px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                           {formatTime(msg.createdAt)}
+                          {isOwn && (
+                            <span className="ml-1 text-[11px] opacity-80">
+                              {msg.readAt ? '既読' : '未読'}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>

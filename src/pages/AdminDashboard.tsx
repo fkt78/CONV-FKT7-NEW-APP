@@ -9,6 +9,7 @@ import {
   addDoc,
   doc,
   setDoc,
+  updateDoc,
   where,
   serverTimestamp,
   type Timestamp,
@@ -42,6 +43,7 @@ interface Message {
   senderId: string
   text: string
   createdAt: Date | null
+  readAt: Date | null
   attachmentUrl?: string
   attachmentType?: AttachmentType
   attachmentName?: string
@@ -161,6 +163,7 @@ export default function AdminDashboard() {
             senderId: data.senderId as string,
             text: (data.text as string) ?? '',
             createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+            readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
             attachmentUrl: data.attachmentUrl as string | undefined,
             attachmentType: data.attachmentType as AttachmentType | undefined,
             attachmentName: data.attachmentName as string | undefined,
@@ -173,6 +176,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // 受信メッセージを既読にする（顧客からのメッセージ）
+  useEffect(() => {
+    if (!currentUser || !selectedUid || messages.length === 0) return
+    const toMark = messages.filter(
+      (m) => m.senderId === selectedUid && !m.readAt,
+    )
+    if (toMark.length === 0) return
+    Promise.all(
+      toMark.map((m) =>
+        updateDoc(doc(db, 'chats', selectedUid, 'messages', m.id), {
+          readAt: serverTimestamp(),
+          readBy: currentUser.uid,
+        }),
+      ),
+    ).catch((err) => console.error('既読更新エラー:', err))
+  }, [currentUser, selectedUid, messages])
 
   const sortedUsers = [...users].sort((a, b) => {
     const aTime = chatMeta[a.uid]?.lastMessageAt
@@ -526,6 +546,11 @@ export default function AdminDashboard() {
                             </div>
                             <span className={`text-[10px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                               {formatMessageTime(msg.createdAt)}
+                              {isOwn && (
+                                <span className="ml-1 text-[9px] opacity-80">
+                                  {msg.readAt ? '既読' : '未読'}
+                                </span>
+                              )}
                             </span>
                           </div>
                         </div>
