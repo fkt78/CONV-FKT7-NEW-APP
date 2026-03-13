@@ -558,16 +558,21 @@ export default function AdminDashboard() {
                 </p>
               ) : (
                 <div className="divide-y divide-[#e5e5ea]">
-                  {globalSearchResults.map(({ chatId, fullName, messages: msgs }) => (
+                  {globalSearchResults.map(({ chatId, fullName, messages: msgs }) => {
+                    const isSelected = selectedUid === chatId
+                    return (
                     <button
                       key={chatId}
                       onClick={() => {
                         setSelectedUid(chatId)
                         setShowChatPanel(true)
                         setSearchQuery(globalSearchQuery.trim())
-                        setShowGlobalSearchResults(false)
                       }}
-                      className="w-full text-left px-4 py-3 hover:bg-[#f5f5f7] transition"
+                      className={`w-full text-left px-4 py-3 transition flex items-center gap-3 ${
+                        isSelected
+                          ? 'bg-[#007AFF]/10 border-l-4 border-l-[#007AFF]'
+                          : 'hover:bg-[#f5f5f7]'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0">
@@ -582,7 +587,8 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               )
             ) : sortedUsers.length === 0 ? (
