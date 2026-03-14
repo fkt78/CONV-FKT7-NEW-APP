@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   collection,
   query,
+  where,
   orderBy,
   onSnapshot,
   addDoc,
@@ -17,11 +18,13 @@ import { auth, db } from '../lib/firebase'
 import { fetchWeather, type WeatherData } from '../lib/weather'
 import {
   distributeCoupons,
+  distributeCouponToUsers,
   type CouponTemplate,
   type WeatherCondition,
   type TargetSegment,
   type ExpiryType,
   type DistributionResult,
+  type IndividualDistributionResult,
   SEGMENT_LABELS,
   CONDITION_LABELS,
   EXPIRY_LABELS,
@@ -51,6 +54,14 @@ export default function CouponManager() {
   const [distributing, setDistributing] = useState(false)
   const [result, setResult] = useState<DistributionResult | null>(null)
 
+  // 個人配信
+  const [showIndividualModal, setShowIndividualModal] = useState(false)
+  const [individualCoupon, setIndividualCoupon] = useState<CouponTemplate | null>(null)
+  const [users, setUsers] = useState<Array<{ uid: string; fullName: string }>>([])
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
+  const [individualDistributing, setIndividualDistributing] = useState(false)
+  const [individualResult, setIndividualResult] = useState<IndividualDistributionResult | null>(null)
+
   /* ── リアルタイム購読 ── */
   useEffect(() => {
     return onSnapshot(
@@ -72,6 +83,20 @@ export default function CouponManager() {
       if (snap.exists()) setDailyLimit(snap.data().dailyLimit as number)
     })
   }, [])
+
+  /* ── 個人配信用: モーダル表示時にユーザー一覧を取得 ── */
+  useEffect(() => {
+    if (!showIndividualModal) return
+    const q = query(collection(db, 'users'), where('status', '==', 'active'))
+    return onSnapshot(q, (snap) => {
+      setUsers(
+        snap.docs.map((d) => ({
+          uid: d.id,
+          fullName: (d.data().fullName as string) ?? '',
+        })),
+      )
+    })
+  }, [showIndividualModal])
 
   /* ── 天気取得 ── */
   async function handleFetchWeather() {
@@ -199,6 +224,53 @@ export default function CouponManager() {
       }
     } finally {
       setDistributing(false)
+    }
+  }
+
+  /* ── 個人配信モーダルを開く ── */
+  function handleOpenIndividualModal(c: CouponTemplate) {
+    setIndividualCoupon(c)
+    setSelectedUserIds(new Set())
+    setIndividualResult(null)
+    setShowIndividualModal(true)
+  }
+
+  /* ── 個人配信モーダルを閉じる ── */
+  function handleCloseIndividualModal() {
+    setShowIndividualModal(false)
+    setIndividualCoupon(null)
+    setSelectedUserIds(new Set())
+    setIndividualResult(null)
+  }
+
+  /* ── ユーザー選択トグル ── */
+  function toggleUserSelection(uid: string) {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(uid)) next.delete(uid)
+      else next.add(uid)
+      return next
+    })
+  }
+
+  /* ── 全選択 / 全解除 ── */
+  function selectAllUsers(select: boolean) {
+    if (select) setSelectedUserIds(new Set(users.map((u) => u.uid)))
+    else setSelectedUserIds(new Set())
+  }
+
+  /* ── 個人配信実行 ── */
+  async function handleIndividualDistribute() {
+    if (!individualCoupon || selectedUserIds.size === 0) return
+    setIndividualDistributing(true)
+    setIndividualResult(null)
+    try {
+      const r = await distributeCouponToUsers(individualCoupon.id, Array.from(selectedUserIds))
+      setIndividualResult(r)
+    } catch (err) {
+      alert('配信処理中にエラーが発生しました')
+    } finally {
+      setIndividualDistributing(false)
     }
   }
 
@@ -467,6 +539,13 @@ export default function CouponManager() {
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
+                    onClick={() => handleOpenIndividualModal(c)}
+                    className="text-[10px] px-2 py-1 rounded-md bg-[#34C759]/15 text-[#34C759] hover:bg-[#34C759]/25 transition"
+                    title="選択した人に配信"
+                  >
+                    👤
+                  </button>
+                  <button
                     onClick={() => handleEdit(c)}
                     className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#007AFF]/10 hover:text-[#007AFF] transition"
                     title="編集"
@@ -495,6 +574,100 @@ export default function CouponManager() {
           ))}
         </div>
       </div>
+
+      {/* 個人配信モーダル */}
+      {showIndividualModal && individualCoupon && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-[#e5e5ea] flex-shrink-0">
+              <h3 className="text-[#1d1d1f] font-semibold text-base">個人に配信</h3>
+              <p className="text-[#007AFF] text-sm font-medium mt-1">{individualCoupon.title}</p>
+              <p className="text-[#86868b] text-xs mt-1">
+                配信したい人を選択して「配信」を押してください
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-[#e5e5ea] flex-shrink-0">
+              <button
+                onClick={() => selectAllUsers(true)}
+                className="text-xs text-[#007AFF] hover:text-[#0051D5] font-medium"
+              >
+                全選択
+              </button>
+              <span className="text-[#e5e5ea]">|</span>
+              <button
+                onClick={() => selectAllUsers(false)}
+                className="text-xs text-[#86868b] hover:text-[#1d1d1f] font-medium"
+              >
+                選択解除
+              </button>
+              <span className="text-[#86868b] text-xs ml-auto">
+                {selectedUserIds.size}人選択中
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-1">
+              {users.length === 0 ? (
+                <p className="text-[#86868b] text-sm text-center py-8">有効な会員がいません</p>
+              ) : (
+                users.map((u) => (
+                  <label
+                    key={u.uid}
+                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition ${
+                      selectedUserIds.has(u.uid) ? 'bg-[#007AFF]/10 border border-[#007AFF]/30' : 'bg-[#f5f5f7] border border-transparent hover:bg-[#e5e5ea]/60'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.has(u.uid)}
+                      onChange={() => toggleUserSelection(u.uid)}
+                      className="w-4 h-4 rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
+                    />
+                    <span className="text-[#1d1d1f] text-sm font-medium truncate">
+                      {u.fullName || '（名前未設定）'}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+
+            {individualResult && (
+              <div className="px-4 py-2 bg-[#007AFF]/5 border-t border-[#007AFF]/20 flex-shrink-0">
+                <p className="text-[#007AFF] text-sm font-bold">
+                  {individualResult.distributedCount}件配信
+                  {individualResult.skippedCount > 0 && (
+                    <span className="text-[#86868b] font-normal ml-1">
+                      （{individualResult.skippedCount}件スキップ）
+                    </span>
+                  )}
+                </p>
+                <div className="max-h-16 overflow-y-auto mt-1 space-y-0.5">
+                  {individualResult.details.map((d, i) => (
+                    <p key={i} className="text-[#86868b] text-[11px]">• {d}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 border-t border-[#e5e5ea] flex gap-2 flex-shrink-0">
+              <button
+                onClick={handleIndividualDistribute}
+                disabled={individualDistributing || selectedUserIds.size === 0}
+                className="flex-1 bg-[#007AFF] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {individualDistributing ? '配信中...' : `${selectedUserIds.size}人に配信`}
+              </button>
+              <button
+                onClick={handleCloseIndividualModal}
+                disabled={individualDistributing}
+                className="px-4 py-2.5 rounded-xl text-[#86868b] hover:bg-[#f5f5f7] transition disabled:opacity-50"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

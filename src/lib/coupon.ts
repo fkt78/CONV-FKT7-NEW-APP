@@ -237,3 +237,73 @@ export async function distributeCoupons(dailyLimit: number): Promise<Distributio
 
   return { weather, matchedCoupons: matched, distributedCount, skippedLimitCount, details }
 }
+
+/* ── 個人向け配信 ── */
+
+export interface IndividualDistributionResult {
+  distributedCount: number
+  skippedCount: number
+  details: string[]
+}
+
+/** 指定したクーポンを選択したユーザーに配信（天気・セグメント条件は無視） */
+export async function distributeCouponToUsers(
+  couponId: string,
+  userIds: string[],
+): Promise<IndividualDistributionResult> {
+  if (userIds.length === 0) {
+    return { distributedCount: 0, skippedCount: 0, details: ['対象ユーザーが選択されていません'] }
+  }
+
+  const couponSnap = await getDoc(doc(db, 'coupons', couponId))
+  if (!couponSnap.exists()) {
+    return { distributedCount: 0, skippedCount: 0, details: ['クーポンが見つかりません'] }
+  }
+
+  const coupon = {
+    id: couponSnap.id,
+    ...couponSnap.data(),
+  } as CouponTemplate & { fullName?: string }
+
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const expiryType = coupon.expiryType ?? 'same_day'
+  const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
+
+  let distributedCount = 0
+  let skippedCount = 0
+  const details: string[] = []
+
+  const userSnap = await getDocs(collection(db, 'users'))
+  const userMap = Object.fromEntries(userSnap.docs.map((d) => [d.id, d.data()]))
+
+  for (const uid of userIds) {
+    const u = userMap[uid]
+    const fullName = (u?.fullName as string) ?? '不明'
+
+    const couponDocId = `${couponId}_${today}`
+    const existing = await getDoc(doc(db, 'users', uid, 'coupons', couponDocId))
+    if (existing.exists()) {
+      skippedCount++
+      details.push(`${fullName}さん: 本日すでに配信済み`)
+      continue
+    }
+
+    await setDoc(doc(db, 'users', uid, 'coupons', couponDocId), {
+      couponId,
+      title: coupon.title,
+      description: coupon.description ?? '',
+      discountAmount: coupon.discountAmount ?? 0,
+      status: 'unused',
+      distributedAt: serverTimestamp(),
+      distributedDate: today,
+      expiresAt: Timestamp.fromDate(expiresAtDate),
+      usedAt: null,
+    })
+
+    distributedCount++
+    details.push(`${fullName}さんに「${coupon.title}」を配信`)
+  }
+
+  return { distributedCount, skippedCount, details }
+}
