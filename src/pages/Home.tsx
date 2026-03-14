@@ -21,7 +21,7 @@ import CouponWallet from '../components/CouponWallet'
 import VipNews from '../components/VipNews'
 import VoiceCreditsPopup from '../components/VoiceCreditsPopup'
 
-type HomeTab = 'chat' | 'coupon'
+type HomeTab = 'home' | 'chat' | 'coupon'
 
 interface Message {
   id: string
@@ -349,52 +349,20 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── プロフィールカード（Apple風：白カード・ソフトシャドウ） ── */}
-      <div className="mx-4 mt-4 rounded-2xl bg-white border border-[#e5e5ea] overflow-hidden flex-shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-        <div className="p-5 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span className="text-white font-semibold text-xl">
-              {displayName.charAt(0)}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[#1d1d1f] font-semibold text-[17px] truncate">{displayName}さん</p>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <span className="text-[13px] bg-[#007AFF]/10 text-[#007AFF] px-3 py-1 rounded-full font-medium">
-                VIP
-              </span>
-              {userData?.memberNumber != null && (
-                <span className="text-[13px] bg-[#f5f5f7] text-[#86868b] px-3 py-1 rounded-full font-mono">
-                  会員番号 #{String(userData.memberNumber).padStart(5, '0')}
-                </span>
-              )}
-              {userData?.attribute && (
-                <span className="text-[13px] bg-[#f5f5f7] text-[#86868b] px-3 py-1 rounded-full">
-                  {ATTRIBUTE_LABELS[userData.attribute] ?? userData.attribute}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        {/* 累計お得額 */}
-        {(userData?.totalSavedAmount ?? 0) > 0 && (
-          <div className="px-4 pb-4 pt-0">
-            <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-xl px-4 py-2.5">
-              <span className="text-[#007AFF] text-sm">👑</span>
-              <span className="text-[#86868b] text-[13px]">累計お得額</span>
-              <span className="text-[#007AFF] font-bold text-[15px] ml-auto">
-                ¥{(userData?.totalSavedAmount ?? 0).toLocaleString()}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── VIP NEWS ── */}
-      <VipNews />
-
-      {/* ── タブ切り替え（Apple風：白背景・アクティブは青） ── */}
-      <div className="flex mx-4 mt-4 rounded-2xl bg-white p-1.5 flex-shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#e5e5ea]">
+      {/* ── タブ切り替え（先に配置してモバイルで見やすく） ── */}
+      <div className="flex mx-4 mt-2 rounded-2xl bg-white p-1.5 flex-shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#e5e5ea]">
+        <button
+          onClick={() => setHomeTab('home')}
+          aria-label="ホーム"
+          aria-pressed={homeTab === 'home'}
+          className={`flex-1 min-h-[44px] rounded-xl text-[15px] font-medium tracking-wide transition ${
+            homeTab === 'home'
+              ? 'bg-[#007AFF] text-white shadow-sm'
+              : 'text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7]'
+          }`}
+        >
+          🏠 ホーム
+        </button>
         <button
           onClick={() => setHomeTab('chat')}
           aria-label="チャット"
@@ -426,9 +394,54 @@ export default function Home() {
         </button>
       </div>
 
-      {/* ── コンテンツ切り替え ── */}
-      {homeTab === 'coupon' ? (
-        <div className="flex-1 flex flex-col min-h-0 mt-2">
+      {/* ── コンテンツ（タブごとにフルスクリーン表示） ── */}
+      {homeTab === 'home' ? (
+        <div className="flex-1 overflow-y-auto min-h-0 mt-2 pb-4">
+          <div className="mx-4 mt-4 rounded-2xl bg-white border border-[#e5e5ea] overflow-hidden flex-shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+          <div className="p-5 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] flex items-center justify-center flex-shrink-0 shadow-sm">
+              <span className="text-white font-semibold text-xl">
+                {displayName.charAt(0)}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[#1d1d1f] font-semibold text-[17px] truncate">{displayName}さん</p>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="text-[13px] bg-[#007AFF]/10 text-[#007AFF] px-3 py-1 rounded-full font-medium">
+                  VIP
+                </span>
+                {userData?.memberNumber != null && (
+                  <span className="text-[13px] bg-[#f5f5f7] text-[#86868b] px-3 py-1 rounded-full font-mono">
+                    会員番号 #{String(userData.memberNumber).padStart(5, '0')}
+                  </span>
+                )}
+                {userData?.attribute && (
+                  <span className="text-[13px] bg-[#f5f5f7] text-[#86868b] px-3 py-1 rounded-full">
+                    {ATTRIBUTE_LABELS[userData.attribute] ?? userData.attribute}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          {/* 累計お得額 */}
+          {(userData?.totalSavedAmount ?? 0) > 0 && (
+            <div className="px-4 pb-4 pt-0">
+              <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-xl px-4 py-2.5">
+                <span className="text-[#007AFF] text-sm">👑</span>
+                <span className="text-[#86868b] text-[13px]">累計お得額</span>
+                <span className="text-[#007AFF] font-bold text-[15px] ml-auto">
+                  ¥{(userData?.totalSavedAmount ?? 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+          <div className="mx-4 mt-4">
+            <VipNews />
+          </div>
+        </div>
+      ) : homeTab === 'coupon' ? (
+        <div className="flex-1 flex flex-col min-h-0 mt-2 overflow-hidden">
           <CouponWallet />
         </div>
       ) : (
