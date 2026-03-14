@@ -176,7 +176,9 @@ export async function distributeCoupons(dailyLimit: number): Promise<Distributio
 
   // アクティブユーザー取得
   const uSnap = await getDocs(query(collection(db, 'users'), where('status', '==', 'active')))
-  const today = new Date().toISOString().split('T')[0]
+  // ローカル日付を使用（UTCだと日本時間0:00〜9:00頃に配布日が1日前になる問題を回避）
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   let distributedCount = 0
   let skippedLimitCount = 0
