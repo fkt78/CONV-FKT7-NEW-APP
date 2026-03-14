@@ -1,4 +1,5 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
+import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { initializeApp } from 'firebase-admin/app'
@@ -94,6 +95,66 @@ export const onCouponDistributed = onDocumentCreated(
     await sendToUser(uid, 'クーポンが届きました', title, 'coupons')
   },
 )
+
+/** 新規ユーザー登録時：会員番号を自動採番 */
+export const onUserCreated = onDocumentCreated('users/{uid}', async (event) => {
+  const uid = event.params.uid
+  const snap = event.data
+  if (!snap) return
+  const data = snap.data()
+  if (data?.memberNumber != null) return
+
+  const counterRef = db.collection('settings').doc('memberNumberCounter')
+  const userRef = db.collection('users').doc(uid)
+
+  const nextNumber = await db.runTransaction(async (tx) => {
+    const counterSnap = await tx.get(counterRef)
+    const next = counterSnap.exists ? ((counterSnap.data()?.next as number) ?? 1) : 1
+    tx.set(counterRef, { next: next + 1 }, { merge: true })
+    tx.update(userRef, { memberNumber: next })
+    return next
+  })
+
+  console.log('Assigned memberNumber', nextNumber, 'to', uid)
+})
+
+/** 既存ユーザーに会員番号を一括割り当て（管理者のみ） */
+export const assignMemberNumbers = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'ログインが必要です')
+  const adminUid = request.auth.uid
+  const adminSnap = await db.collection('users').doc(adminUid).get()
+  const role = adminSnap.data()?.role
+  if (role !== 'admin') throw new HttpsError('permission-denied', '管理者のみ実行できます')
+
+  const usersSnap = await db.collection('users')
+    .where('status', '==', 'active')
+    .get()
+
+  const withoutNumber = usersSnap.docs
+    .filter((d) => d.data().memberNumber == null)
+    .sort((a, b) => {
+      const aAt = (a.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
+      const bAt = (b.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
+      return aAt - bAt
+    })
+
+  if (withoutNumber.length === 0) {
+    return { assigned: 0, message: '割り当て対象のユーザーがいません' }
+  }
+
+  const counterRef = db.collection('settings').doc('memberNumberCounter')
+
+  for (const d of withoutNumber) {
+    await db.runTransaction(async (tx) => {
+      const c = await tx.get(counterRef)
+      const n = c.exists ? ((c.data()?.next as number) ?? 1) : 1
+      tx.set(counterRef, { next: n + 1 }, { merge: true })
+      tx.update(db.collection('users').doc(d.id), { memberNumber: n })
+    })
+  }
+
+  return { assigned: withoutNumber.length, message: `${withoutNumber.length}名に会員番号を割り当てました` }
+})
 
 /** お知らせ投稿時（全ユーザーに通知） */
 export const onNewsCreated = onDocumentCreated('news/{newsId}', async (event) => {

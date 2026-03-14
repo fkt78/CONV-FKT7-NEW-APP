@@ -26,7 +26,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   { category: 'クーポン機能', item: 'クーポン種別', description: '割引率・無料特典など複数タイプ', priority: '低', notes: '' },
   { category: 'クーポン機能', item: '使用条件', description: '最低購入金額などの条件表示', priority: '低', notes: '' },
   // 管理者機能
-  { category: '管理者機能', item: 'ユーザー管理（詳細編集）', description: '氏名・属性・誕生月などの詳細編集', priority: '中', notes: '' },
+  { category: '管理者機能', item: 'ユーザー管理（詳細編集）', description: '氏名・属性・誕生月などの詳細編集', priority: '中', notes: '会員番号は実装済（自動採番・一括割り当て）' },
   { category: '管理者機能', item: 'チャット検索', description: '顧客名・メールでの検索', priority: '中', notes: '' },
   { category: '管理者機能', item: '分析・レポート', description: 'クーポン利用率・チャット数・エンゲージメント', priority: '中', notes: '' },
   { category: '管理者機能', item: 'データエクスポート', description: 'チャット履歴・顧客データのCSV出力', priority: '中', notes: '' },

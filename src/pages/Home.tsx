@@ -40,6 +40,7 @@ interface UserData {
   attribute: string
   birthMonth: string
   totalSavedAmount?: number
+  memberNumber?: number | null
 }
 
 const ATTRIBUTE_LABELS: Record<string, string> = {
@@ -362,6 +363,11 @@ export default function Home() {
               <span className="text-[13px] bg-[#007AFF]/10 text-[#007AFF] px-3 py-1 rounded-full font-medium">
                 VIP
               </span>
+              {userData?.memberNumber != null && (
+                <span className="text-[13px] bg-[#f5f5f7] text-[#86868b] px-3 py-1 rounded-full font-mono">
+                  会員番号 #{String(userData.memberNumber).padStart(5, '0')}
+                </span>
+              )}
               {userData?.attribute && (
                 <span className="text-[13px] bg-[#f5f5f7] text-[#86868b] px-3 py-1 rounded-full">
                   {ATTRIBUTE_LABELS[userData.attribute] ?? userData.attribute}

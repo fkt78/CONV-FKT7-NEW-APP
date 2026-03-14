@@ -34,6 +34,7 @@ interface UserRecord {
   attribute: string
   birthMonth: string
   totalSavedAmount: number
+  memberNumber: number | null
 }
 
 interface ChatMeta {
@@ -143,7 +144,7 @@ export default function AdminDashboard() {
   const [searchResultIndex, setSearchResultIndex] = useState(0)
   const [globalSearchQuery, setGlobalSearchQuery] = useState('')
   const [globalSearchResults, setGlobalSearchResults] = useState<
-    Array<{ chatId: string; fullName: string; messages: Array<Message & { chatId: string }> }>
+    Array<{ chatId: string; fullName: string; memberNumber: number | null; messages: Array<Message & { chatId: string }> }>
   >([])
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false)
   const [showGlobalSearchResults, setShowGlobalSearchResults] = useState(false)
@@ -165,6 +166,7 @@ export default function AdminDashboard() {
           attribute: d.data().attribute as string,
           birthMonth: d.data().birthMonth as string,
           totalSavedAmount: (d.data().totalSavedAmount as number) ?? 0,
+          memberNumber: (d.data().memberNumber as number) ?? null,
         })),
       )
     })
@@ -313,7 +315,7 @@ export default function AdminDashboard() {
         limit(500),
       )
       const snap = await getDocs(qRef)
-      const userMap = Object.fromEntries(users.map((u) => [u.uid, u.fullName]))
+      const userMap = Object.fromEntries(users.map((u) => [u.uid, { fullName: u.fullName, memberNumber: u.memberNumber }]))
       const matches: Array<Message & { chatId: string }> = []
       snap.docs.forEach((d) => {
         const chatId = d.ref.parent.parent?.id
@@ -338,11 +340,15 @@ export default function AdminDashboard() {
         arr.push(m)
         byChat.set(m.chatId, arr)
       })
-      const results = Array.from(byChat.entries()).map(([chatId, msgs]) => ({
-        chatId,
-        fullName: userMap[chatId] ?? '不明',
-        messages: msgs.sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)),
-      }))
+      const results = Array.from(byChat.entries()).map(([chatId, msgs]) => {
+        const u = userMap[chatId] as { fullName: string; memberNumber: number | null } | undefined
+        return {
+          chatId,
+          fullName: u?.fullName ?? '不明',
+          memberNumber: u?.memberNumber ?? null,
+          messages: msgs.sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)),
+        }
+      })
       setGlobalSearchResults(results)
     } catch (err) {
       console.error('全チャット検索エラー:', err)
@@ -566,7 +572,7 @@ export default function AdminDashboard() {
                 </p>
               ) : (
                 <div className="divide-y divide-[#e5e5ea]">
-                  {globalSearchResults.map(({ chatId, fullName, messages: msgs }) => {
+                  {globalSearchResults.map(({ chatId, fullName, memberNumber, messages: msgs }) => {
                     const isSelected = selectedUid === chatId
                     return (
                     <button
@@ -587,7 +593,14 @@ export default function AdminDashboard() {
                           <span className="text-white font-bold text-sm">{fullName.charAt(0)}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[#1d1d1f] text-sm font-medium truncate">{fullName}</p>
+                          <p className="text-[#1d1d1f] text-sm font-medium truncate">
+                            {memberNumber != null && (
+                              <span className="text-[#86868b] font-mono text-[10px] mr-1.5">
+                                #{String(memberNumber).padStart(5, '0')}
+                              </span>
+                            )}
+                            {fullName}
+                          </p>
                           <p className="text-[#86868b] text-[11px] truncate mt-0.5">
                             {msgs[0]?.text?.slice(0, 40) ?? msgs[0]?.attachmentName ?? '（添付）'}
                             {msgs.length > 1 && ` 他${msgs.length - 1}件`}
@@ -630,11 +643,16 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#1d1d1f] text-sm font-medium truncate">
-                          {user.fullName}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#1d1d1f] text-sm font-medium truncate">
+                              {user.memberNumber != null && (
+                                <span className="text-[#86868b] font-mono text-[10px] mr-1.5">
+                                  #{String(user.memberNumber).padStart(5, '0')}
+                                </span>
+                              )}
+                              {user.fullName}
+                            </span>
                         {meta?.lastMessageAt && (
                           <span className="text-[#86868b] text-[10px] flex-shrink-0 ml-2">
                             {formatTime(meta.lastMessageAt)}
@@ -679,7 +697,14 @@ export default function AdminDashboard() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-[#1d1d1f] text-sm font-medium">{selectedUser.fullName}</p>
+                  <p className="text-[#1d1d1f] text-sm font-medium">
+                    {selectedUser.memberNumber != null && (
+                      <span className="text-[#86868b] font-mono text-[10px] mr-1.5">
+                        #{String(selectedUser.memberNumber).padStart(5, '0')}
+                      </span>
+                    )}
+                    {selectedUser.fullName}
+                  </p>
                   <div className="flex items-center gap-2">
                     <p className="text-[#86868b] text-[10px]">
                       {ATTRIBUTE_LABELS[selectedUser.attribute] ?? selectedUser.attribute} · {selectedUser.birthMonth}

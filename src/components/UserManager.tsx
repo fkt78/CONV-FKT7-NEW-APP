@@ -8,7 +8,7 @@ import {
   doc,
   updateDoc,
 } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { db, functions, httpsCallable } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 
 interface UserRecord {
@@ -20,6 +20,7 @@ interface UserRecord {
   status: string
   totalSavedAmount: number
   usedCouponCount: number
+  memberNumber: number | null
 }
 
 const ATTRIBUTE_LABELS: Record<string, string> = {
@@ -51,6 +52,7 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
   const [users, setUsers] = useState<UserRecord[]>([])
   const [exporting, setExporting] = useState(false)
   const [updatingUid, setUpdatingUid] = useState<string | null>(null)
+  const [assigningNumbers, setAssigningNumbers] = useState(false)
 
   useEffect(() => {
     const q = query(collection(db, 'users'))
@@ -67,6 +69,7 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
             status: (data.status as string) ?? 'active',
             totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
             usedCouponCount: 0,
+            memberNumber: (data.memberNumber as number) ?? null,
           }
         }),
       )
@@ -99,10 +102,12 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
           status: (data.status as string) ?? 'active',
           totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
           usedCouponCount: usedSnap.size,
+          memberNumber: (data.memberNumber as number) ?? null,
         })
       }
 
       const header = [
+        '会員番号',
         'uid',
         '氏名',
         'メール',
@@ -113,6 +118,7 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
         'クーポン使用回数',
       ]
       const csvRows = rows.map((r) => [
+        escapeCsvField(r.memberNumber ?? ''),
         escapeCsvField(r.uid),
         escapeCsvField(r.fullName),
         escapeCsvField(r.email),
@@ -136,6 +142,26 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
       alert('CSVの出力に失敗しました')
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleAssignMemberNumbers() {
+    const withoutNumber = users.filter((u) => u.memberNumber == null && u.status === 'active')
+    if (withoutNumber.length === 0) {
+      alert('会員番号が未割り当てのユーザーがいません')
+      return
+    }
+    if (!confirm(`${withoutNumber.length}名に会員番号を割り当てますか？`)) return
+    setAssigningNumbers(true)
+    try {
+      const assign = httpsCallable<unknown, { assigned: number; message: string }>(functions, 'assignMemberNumbers')
+      const res = await assign()
+      alert(res.data.message)
+    } catch (err) {
+      console.error('会員番号割り当てエラー:', err)
+      alert((err as { message?: string })?.message ?? '会員番号の割り当てに失敗しました')
+    } finally {
+      setAssigningNumbers(false)
     }
   }
 
@@ -170,13 +196,24 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
     <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f5f7]">
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e5ea]">
         <h2 className="text-[#1d1d1f] text-sm font-semibold">ユーザー管理</h2>
-        <button
-          onClick={handleExportCsv}
+        <div className="flex items-center gap-2">
+          {users.some((u) => u.memberNumber == null && u.status === 'active') && (
+            <button
+              onClick={handleAssignMemberNumbers}
+              disabled={assigningNumbers}
+              className="px-4 py-2 bg-[#34C759] text-white text-sm font-medium rounded-lg hover:bg-[#2DB84D] transition disabled:opacity-50"
+            >
+              {assigningNumbers ? '割り当て中...' : '会員番号を振る'}
+            </button>
+          )}
+          <button
+            onClick={handleExportCsv}
           disabled={exporting || users.length === 0}
           className="px-4 py-2 bg-[#007AFF] text-white text-sm font-medium rounded-lg hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {exporting ? '出力中...' : 'CSV出力'}
-        </button>
+            {exporting ? '出力中...' : 'CSV出力'}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4">
@@ -190,6 +227,7 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#f5f5f7] border-b border-[#e5e5ea]">
+                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">会員番号</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">氏名</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">メール</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">属性</th>
@@ -225,6 +263,9 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
                         user.status === 'active' && onOpenChat ? 'cursor-pointer' : ''
                       }`}
                     >
+                      <td className="px-4 py-3 text-[#86868b] font-mono text-xs">
+                        {user.memberNumber != null ? `#${String(user.memberNumber).padStart(5, '0')}` : '—'}
+                      </td>
                       <td className="px-4 py-3 text-[#1d1d1f] font-medium">{user.fullName}</td>
                       <td className="px-4 py-3 text-[#86868b] font-mono text-xs">{user.email}</td>
                       <td className="px-4 py-3 text-[#86868b]">
