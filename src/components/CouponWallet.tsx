@@ -114,12 +114,15 @@ export default function CouponWallet() {
 
   function isExpired(c: OwnedCoupon): boolean {
     if (!c.expiresAt) return false
-    return new Date() > c.expiresAt
+    const expMs = c.expiresAt.getTime()
+    if (Number.isNaN(expMs)) return false
+    return Date.now() > expMs
   }
 
   // onSnapshot にインデックス未作成のフォールバックが効かない場合でも
   // processedIds に入っているIDは未使用リストから除外する
   const visibleUnused = unusedCoupons.filter((c) => !processedIds.current.has(c.id))
+  const validUnusedCount = visibleUnused.filter((c) => !isExpired(c)).length
 
   async function handleUse(coupon: OwnedCoupon) {
     if (!currentUser || marking) return
@@ -200,7 +203,7 @@ export default function CouponWallet() {
             tab === 'unused' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-[#86868b]'
           }`}
         >
-          未使用 ({visibleUnused.length})
+          未使用 ({validUnusedCount})
         </button>
         <button
           onClick={() => setTab('history')}

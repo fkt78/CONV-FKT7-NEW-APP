@@ -5,6 +5,7 @@ import AdminRoute from './components/AdminRoute'
 import HouseRulesAgreement from './components/HouseRulesAgreement'
 import VersionBadge from './components/VersionBadge'
 import PwaUpdatePrompt from './components/PwaUpdatePrompt'
+import AppBadge from './components/AppBadge'
 import NotificationRegistration from './components/NotificationRegistration'
 import Register from './pages/Register'
 import Login from './pages/Login'
@@ -25,6 +26,7 @@ export default function App() {
       <PwaUpdatePrompt />
       <BrowserRouter>
         <AuthProvider>
+          <AppBadge />
           <NotificationRegistration />
           <Routes>
             <Route path="/install-guide" element={<InstallGuide />} />

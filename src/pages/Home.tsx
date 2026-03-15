@@ -153,23 +153,38 @@ export default function Home() {
     })
   }, [currentUser])
 
-  // 未使用クーポン数をバッジ表示用にカウント
+  // 未使用クーポン数（有効期限内のみ）をバッジ表示用にカウント
   useEffect(() => {
     if (!currentUser) return
     const q = query(
       collection(db, 'users', currentUser.uid, 'coupons'),
       where('status', '==', 'unused'),
     )
-    return onSnapshot(q, (snap) => setCouponCount(snap.size))
+    return onSnapshot(q, (snap) => {
+      const now = Date.now()
+      const validCount = snap.docs.filter((d) => {
+        const exp = d.data().expiresAt
+        if (!exp) return true
+        const expMs = exp.toDate?.()?.getTime?.()
+        if (typeof expMs !== 'number' || Number.isNaN(expMs)) return true
+        return now <= expMs
+      }).length
+      setCouponCount(validCount)
+    })
   }, [currentUser])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // 受信メッセージを既読にする（店長からのメッセージ）
+  // 未読メッセージ数（店長からの受信で未読のもの）
+  const unreadMessageCount = messages.filter(
+    (m) => currentUser && m.senderId !== currentUser.uid && !m.readAt,
+  ).length
+
+  // 受信メッセージを既読にする（チャットタブを表示しているときのみ）
   useEffect(() => {
-    if (!currentUser || messages.length === 0) return
+    if (!currentUser || messages.length === 0 || homeTab !== 'chat') return
     const toMark = messages.filter(
       (m) => m.senderId !== currentUser.uid && !m.readAt,
     )
@@ -186,7 +201,7 @@ export default function Home() {
         console.error('既読更新エラー:', err)
       }
     })
-  }, [currentUser, messages])
+  }, [currentUser, messages, homeTab])
 
   const matchedIndices = searchQuery.trim()
     ? messages
@@ -365,15 +380,20 @@ export default function Home() {
         </button>
         <button
           onClick={() => setHomeTab('chat')}
-          aria-label="チャット"
+          aria-label={`チャット${unreadMessageCount > 0 ? `（未読${unreadMessageCount}件）` : ''}`}
           aria-pressed={homeTab === 'chat'}
-          className={`flex-1 min-h-[44px] rounded-xl text-[15px] font-medium tracking-wide transition ${
+          className={`flex-1 min-h-[44px] rounded-xl text-[15px] font-medium tracking-wide transition relative ${
             homeTab === 'chat'
               ? 'bg-[#007AFF] text-white shadow-sm'
               : 'text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7]'
           }`}
         >
           💬 チャット
+          {unreadMessageCount > 0 && homeTab !== 'chat' && (
+            <span className="absolute top-1.5 right-3 min-w-[20px] h-5 px-1.5 bg-[#FF3B30] text-white text-[12px] font-semibold rounded-full flex items-center justify-center">
+              {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setHomeTab('coupon')}
@@ -388,7 +408,7 @@ export default function Home() {
           🎫 クーポン
           {couponCount > 0 && homeTab !== 'coupon' && (
             <span className="absolute top-1.5 right-3 min-w-[20px] h-5 px-1.5 bg-[#FF3B30] text-white text-[12px] font-semibold rounded-full flex items-center justify-center">
-              {couponCount}
+              {couponCount > 99 ? '99+' : couponCount}
             </span>
           )}
         </button>
