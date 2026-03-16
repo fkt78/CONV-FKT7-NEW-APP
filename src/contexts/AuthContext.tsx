@@ -48,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserStatus(null)
             setUserRole(null)
           }
-        } catch {
+        } catch (err) {
+          console.error('[AuthContext] ユーザー情報取得失敗', err)
           setUserStatus(null)
           setUserRole(null)
         }

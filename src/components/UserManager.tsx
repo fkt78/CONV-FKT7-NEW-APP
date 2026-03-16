@@ -3,10 +3,12 @@ import {
   collection,
   query,
   where,
+  orderBy,
   getDocs,
   onSnapshot,
   doc,
   updateDoc,
+  type Timestamp,
 } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
@@ -47,12 +49,27 @@ function escapeCsvField(value: string | number): string {
   return s
 }
 
+interface UserCoupon {
+  id: string
+  title: string
+  discountAmount: number
+  status: 'unused' | 'used'
+  distributedAt: Date | null
+  distributedDate: string
+  expiresAt: Date | null
+  usedAt: Date | null
+  isExpired?: boolean
+}
+
 export default function UserManager({ onOpenChat }: UserManagerProps) {
   const { currentUser } = useAuth()
   const [users, setUsers] = useState<UserRecord[]>([])
   const [exporting, setExporting] = useState(false)
   const [updatingUid, setUpdatingUid] = useState<string | null>(null)
   const [assigningNumbers, setAssigningNumbers] = useState(false)
+  const [couponModalUser, setCouponModalUser] = useState<UserRecord | null>(null)
+  const [userCoupons, setUserCoupons] = useState<UserCoupon[]>([])
+  const [loadingCoupons, setLoadingCoupons] = useState(false)
 
   useEffect(() => {
     const q = query(collection(db, 'users'))
@@ -192,6 +209,50 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
     return b.totalSavedAmount - a.totalSavedAmount
   })
 
+  async function handleOpenCouponModal(user: UserRecord) {
+    setCouponModalUser(user)
+    setLoadingCoupons(true)
+    setUserCoupons([])
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, 'users', user.uid, 'coupons'),
+          orderBy('distributedAt', 'desc'),
+        ),
+      )
+      const now = Date.now()
+      setUserCoupons(
+        snap.docs.map((d) => {
+          const data = d.data()
+          const exp = data.expiresAt as Timestamp | null
+          const expAt = exp?.toDate?.() ?? null
+          const isExpired = expAt && now > expAt.getTime()
+          return {
+            id: d.id,
+            title: (data.title as string) ?? '',
+            discountAmount: (data.discountAmount as number) ?? 0,
+            status: data.status as 'unused' | 'used',
+            distributedAt: (data.distributedAt as Timestamp | null)?.toDate?.() ?? null,
+            distributedDate: (data.distributedDate as string) ?? '',
+            expiresAt: expAt,
+            usedAt: (data.usedAt as Timestamp | null)?.toDate?.() ?? null,
+            isExpired: isExpired ?? false,
+          }
+        }),
+      )
+    } catch (err) {
+      console.error('クーポン取得エラー:', err)
+      setUserCoupons([])
+    } finally {
+      setLoadingCoupons(false)
+    }
+  }
+
+  function formatDate(d: Date | null): string {
+    if (!d) return '—'
+    return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f5f7]">
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e5ea]">
@@ -294,6 +355,13 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
                               チャット
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCouponModal(user)}
+                            className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20 transition"
+                          >
+                            クーポン
+                          </button>
                           {user.uid !== currentUser?.uid ? (
                             <button
                               type="button"
@@ -317,7 +385,7 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right text-[#86868b] text-xs">
-                        CSVで確認
+                        —
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-[#007AFF]">
                         ¥{(user.totalSavedAmount ?? 0).toLocaleString()}
@@ -330,6 +398,99 @@ export default function UserManager({ onOpenChat }: UserManagerProps) {
           </div>
         )}
       </div>
+
+      {/* クーポン一覧モーダル */}
+      {couponModalUser && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-[#e5e5ea] flex-shrink-0">
+              <h3 className="text-[#1d1d1f] font-semibold text-base">
+                {couponModalUser.fullName}さん のクーポン一覧
+              </h3>
+              <p className="text-[#86868b] text-xs mt-1">
+                {couponModalUser.memberNumber != null
+                  ? `会員番号 #${String(couponModalUser.memberNumber).padStart(5, '0')}`
+                  : ''}
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0 p-4">
+              {loadingCoupons ? (
+                <div className="flex items-center justify-center py-12">
+                  <span className="w-8 h-8 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : userCoupons.length === 0 ? (
+                <p className="text-[#86868b] text-sm text-center py-8">配信されたクーポンはありません</p>
+              ) : (
+                <div className="space-y-2">
+                  {[...userCoupons]
+                    .sort((a, b) => {
+                      const order = (c: UserCoupon) =>
+                        c.status === 'used' ? 2 : c.isExpired ? 1 : 0
+                      const diff = order(a) - order(b)
+                      if (diff !== 0) return diff
+                      const aT = a.distributedAt?.getTime() ?? 0
+                      const bT = b.distributedAt?.getTime() ?? 0
+                      return bT - aT
+                    })
+                    .map((c) => {
+                    const statusLabel =
+                      c.status === 'used'
+                        ? '使用済'
+                        : c.isExpired
+                          ? '期限切れ'
+                          : '未使用'
+                    const statusClass =
+                      c.status === 'used'
+                        ? 'bg-[#86868b]/20 text-[#86868b]'
+                        : c.isExpired
+                          ? 'bg-[#FF3B30]/15 text-[#FF3B30]'
+                          : 'bg-[#34C759]/15 text-[#34C759]'
+                    return (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7]/50"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#1d1d1f] font-medium text-sm truncate">{c.title}</p>
+                          <p className="text-[#86868b] text-xs mt-0.5">
+                            {c.distributedDate} 配信
+                            {c.expiresAt && (
+                              <span> 〜 {formatDate(c.expiresAt)}</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {c.discountAmount > 0 && (
+                            <span className="text-[#007AFF] font-bold text-sm">¥{c.discountAmount}</span>
+                          )}
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusClass}`}>
+                            {statusLabel}
+                          </span>
+                          {c.status === 'used' && c.usedAt && (
+                            <span className="text-[#86868b] text-[10px]">
+                              {formatDate(c.usedAt)} 使用
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-[#e5e5ea] flex-shrink-0">
+              <button
+                onClick={() => setCouponModalUser(null)}
+                className="w-full py-2.5 rounded-xl text-[#86868b] hover:bg-[#f5f5f7] transition font-medium text-sm"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

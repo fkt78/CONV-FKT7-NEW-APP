@@ -234,6 +234,22 @@ export default function InstallGuide() {
             <br />
             アプリのようにサクサク使えます ♛
           </p>
+
+          {/* LINEでリンクが開けない場合の案内 */}
+          <div className="mt-8 p-4 rounded-2xl bg-[#007AFF]/5 border border-[#007AFF]/20">
+            <h3 className="text-[#1d1d1f] font-semibold text-[15px] mb-2 flex items-center gap-2">
+              <span>💬</span>
+              LINEでリンクが開けない場合
+            </h3>
+            <p className="text-[#86868b] text-[14px] leading-relaxed mb-3">
+              LINEのアプリ内ブラウザでは開けない場合があります。以下の方法をお試しください。
+            </p>
+            <ul className="text-[#1d1d1f] text-[14px] space-y-2 list-disc list-inside">
+              <li>リンクを長押しで「ブラウザで開く」を選択</li>
+              <li>LINE設定 → LINE Labs → 「リンクをデフォルトのブラウザで開く」をON</li>
+              <li>URLをコピーしてSafariやChromeに貼り付けて開く</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  signOut,
 } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
@@ -25,13 +26,28 @@ export default function Login() {
     setInfo('')
     setLoading(true)
 
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password.trim()
+    if (!trimmedEmail || !trimmedPassword) {
+      setError('メールアドレスとパスワードを入力してください。')
+      setLoading(false)
+      return
+    }
+
     try {
-      const credential = await signInWithEmailAndPassword(auth, email, password)
+      const credential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
       const uid = credential.user.uid
 
-      const snap = await getDoc(doc(db, 'users', uid))
-      if (snap.exists() && snap.data().status === 'blacklisted') {
-        await auth.signOut()
+      let isBlacklisted = false
+      try {
+        const snap = await getDoc(doc(db, 'users', uid))
+        isBlacklisted = snap.exists() && snap.data()?.status === 'blacklisted'
+      } catch (docErr) {
+        console.error('[Login] ユーザー情報取得失敗', docErr)
+        // ネットワークエラー等でもログインは継続（ブラックリスト判定はスキップ）
+      }
+      if (isBlacklisted) {
+        await signOut(auth)
         setError('アカウントが停止されています。')
         return
       }
@@ -39,14 +55,29 @@ export default function Login() {
       navigate('/')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
+      const message = (err as { message?: string }).message
+      console.error('[Login]', code, message)
+
       if (
         code === 'auth/user-not-found' ||
         code === 'auth/wrong-password' ||
         code === 'auth/invalid-credential'
       ) {
         setError('メールアドレスまたはパスワードが正しくありません。')
+      } else if (code === 'auth/network-request-failed') {
+        setError('ネットワークに接続できません。通信環境を確認して、しばらく経ってから再度お試しください。')
+      } else if (code === 'auth/too-many-requests') {
+        setError('ログイン試行が多すぎます。しばらく時間をおいてから再度お試しください。')
+      } else if (code === 'auth/invalid-email') {
+        setError('メールアドレスの形式が正しくありません。')
+      } else if (code === 'auth/user-disabled') {
+        setError('このアカウントは無効化されています。')
+      } else if (code === 'auth/operation-not-allowed') {
+        setError('ログイン機能が利用できません。管理者にお問い合わせください。')
+      } else if (code === 'auth/internal-error') {
+        setError('サーバーエラーが発生しました。しばらく経ってから再度お試しください。')
       } else {
-        setError('エラーが発生しました。もう一度お試しください。')
+        setError('エラーが発生しました。通信環境を確認して、もう一度お試しください。')
       }
     } finally {
       setLoading(false)
@@ -65,8 +96,16 @@ export default function Login() {
     try {
       await sendPasswordResetEmail(auth, email.trim())
       setInfo('パスワードリセットのメールを送信しました。メールをご確認ください。')
-    } catch {
-      setError('メール送信に失敗しました。メールアドレスをご確認ください。')
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      console.error('[Login] パスワードリセット失敗', code, err)
+      if (code === 'auth/network-request-failed') {
+        setError('ネットワークに接続できません。通信環境を確認して再度お試しください。')
+      } else if (code === 'auth/user-not-found') {
+        setError('このメールアドレスは登録されていません。')
+      } else {
+        setError('メール送信に失敗しました。メールアドレスをご確認ください。')
+      }
     } finally {
       setResetLoading(false)
     }
@@ -148,6 +187,9 @@ export default function Login() {
           </div>
         </form>
 
+        <p className="text-center text-[#86868b] text-[13px] mt-6 px-4">
+          ログインできない場合：プライベート閲覧モードを解除する、Wi-Fiやモバイルデータの接続を確認する、アプリを再起動してからお試しください。
+        </p>
         <p className="text-center text-[#86868b] text-[15px] mt-8">
           アカウントをお持ちでない方は{' '}
           <Link to="/register" className="text-[#007AFF] hover:underline font-medium">
