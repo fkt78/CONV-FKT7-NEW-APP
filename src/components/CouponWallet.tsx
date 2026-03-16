@@ -123,6 +123,16 @@ export default function CouponWallet() {
   // processedIds に入っているIDは未使用リストから除外する
   const visibleUnused = unusedCoupons.filter((c) => !processedIds.current.has(c.id))
   const validUnusedCount = visibleUnused.filter((c) => !isExpired(c)).length
+  // 使えるものを上に、期限切れを下に並べる
+  const sortedUnused = [...visibleUnused].sort((a, b) => {
+    const aExpired = isExpired(a)
+    const bExpired = isExpired(b)
+    if (aExpired && !bExpired) return 1
+    if (!aExpired && bExpired) return -1
+    const aTime = a.distributedAt?.getTime() ?? 0
+    const bTime = b.distributedAt?.getTime() ?? 0
+    return bTime - aTime
+  })
 
   async function handleUse(coupon: OwnedCoupon) {
     if (!currentUser || marking) return
@@ -192,7 +202,7 @@ export default function CouponWallet() {
     }
   }
 
-  const displayCoupons = tab === 'unused' ? visibleUnused : usedCoupons
+  const displayCoupons = tab === 'unused' ? sortedUnused : usedCoupons
 
   return (
     <>
