@@ -7,24 +7,27 @@ export default function PwaUpdatePrompt() {
   const updateSWRef = useRef<(() => Promise<void>) | null>(null)
 
   useEffect(() => {
-    const updateSW = registerSW({
-      onNeedRefresh() {
-        setShowPrompt(true)
-      },
-      onOfflineReady() {
-        // オフライン対応完了
-      },
-      onRegistered(registration: ServiceWorkerRegistration | undefined) {
-        // 定期的に更新をチェック（アプリを開いたままでも検出）
-        const interval = setInterval(async () => {
-          if (!registration?.installing && navigator.onLine) {
-            await registration?.update()
-          }
-        }, 60 * 60 * 1000) // 1時間ごと
-        return () => clearInterval(interval)
-      },
-    })
-    updateSWRef.current = updateSW
+    try {
+      const updateSW = registerSW({
+        onNeedRefresh() {
+          setShowPrompt(true)
+        },
+        onOfflineReady() {
+          // オフライン対応完了
+        },
+        onRegistered(registration: ServiceWorkerRegistration | undefined) {
+          const interval = setInterval(async () => {
+            if (!registration?.installing && navigator.onLine) {
+              await registration?.update()
+            }
+          }, 60 * 60 * 1000)
+          return () => clearInterval(interval)
+        },
+      })
+      updateSWRef.current = updateSW
+    } catch (err) {
+      console.warn('[PwaUpdatePrompt] SW registration skipped', err)
+    }
   }, [])
 
   async function handleUpdate() {

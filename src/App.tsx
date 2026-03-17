@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import ErrorBoundary from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
 import HouseRulesAgreement from './components/HouseRulesAgreement'
@@ -20,7 +21,7 @@ import NotificationSettings from './pages/NotificationSettings'
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <HouseRulesAgreement />
       <VersionBadge />
       <PwaUpdatePrompt />
@@ -60,10 +61,10 @@ export default function App() {
                 </AdminRoute>
               }
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+    </ErrorBoundary>
   )
 }

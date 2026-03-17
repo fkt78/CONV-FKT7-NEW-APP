@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import {
-  isPushSupported,
-  registerForPushNotifications,
-  removePushToken,
-  getNotificationSettings,
-  saveNotificationSettings,
-  DEFAULT_NOTIFICATION_SETTINGS,
-  type NotificationSettings,
-} from '../lib/messaging'
+import type { NotificationSettings as NotificationSettingsType } from '../lib/messaging'
 
 export default function NotificationSettings() {
   const { currentUser } = useAuth()
@@ -17,7 +9,13 @@ export default function NotificationSettings() {
   const [supported, setSupported] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS)
+  const [settings, setSettings] = useState<NotificationSettingsType>({
+    enabled: true,
+    messages: true,
+    coupons: true,
+    news: true,
+    sound: true,
+  })
   const [permission, setPermission] = useState<NotificationPermission | null>(null)
 
   useEffect(() => {
@@ -25,16 +23,22 @@ export default function NotificationSettings() {
     let cancelled = false
 
     async function load() {
-      const sup = await isPushSupported()
-      if (cancelled) return
-      setSupported(sup)
-      setPermission(Notification.permission)
+      try {
+        const mod = await import('../lib/messaging')
+        const sup = await mod.isPushSupported()
+        if (cancelled) return
+        setSupported(sup)
+        setPermission(Notification.permission)
 
-      if (sup) {
-        const s = await getNotificationSettings(currentUser!.uid)
-        if (!cancelled) setSettings(s)
+        if (sup) {
+          const s = await mod.getNotificationSettings(currentUser!.uid)
+          if (!cancelled) setSettings(s)
+        }
+      } catch {
+        setSupported(false)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     }
 
     load()
@@ -46,8 +50,9 @@ export default function NotificationSettings() {
     const perm = await Notification.requestPermission()
     setPermission(perm)
     if (perm === 'granted') {
+      const mod = await import('../lib/messaging')
       const reg = await navigator.serviceWorker.ready
-      await registerForPushNotifications(currentUser.uid, reg)
+      await mod.registerForPushNotifications(currentUser.uid, reg)
     }
   }
 
@@ -57,24 +62,26 @@ export default function NotificationSettings() {
     setSettings(next)
     setSaving(true)
     try {
-      await saveNotificationSettings(currentUser.uid, next)
-      if (!enabled) await removePushToken(currentUser.uid)
+      const mod = await import('../lib/messaging')
+      await mod.saveNotificationSettings(currentUser.uid, next)
+      if (!enabled) await mod.removePushToken(currentUser.uid)
       else if (permission === 'granted') {
         const reg = await navigator.serviceWorker.ready
-        await registerForPushNotifications(currentUser.uid, reg)
+        await mod.registerForPushNotifications(currentUser.uid, reg)
       }
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleSettingChange<K extends keyof NotificationSettings>(key: K, value: NotificationSettings[K]) {
+  async function handleSettingChange<K extends keyof NotificationSettingsType>(key: K, value: NotificationSettingsType[K]) {
     if (!currentUser) return
     const next = { ...settings, [key]: value }
     setSettings(next)
     setSaving(true)
     try {
-      await saveNotificationSettings(currentUser.uid, next)
+      const mod = await import('../lib/messaging')
+      await mod.saveNotificationSettings(currentUser.uid, next)
     } finally {
       setSaving(false)
     }

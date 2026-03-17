@@ -32,6 +32,9 @@ export default defineConfig({
     port: 8005,
     strictPort: true,
   },
+  build: {
+    target: 'es2020',
+  },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(getAppVersion()),
     'import.meta.env.VITE_BUILD_VERSION': JSON.stringify(getBuildVersion()),
