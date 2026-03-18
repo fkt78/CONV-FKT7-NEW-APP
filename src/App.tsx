@@ -22,10 +22,10 @@ import NotificationSettings from './pages/NotificationSettings'
 export default function App() {
   return (
     <ErrorBoundary>
-      <HouseRulesAgreement />
-      <VersionBadge />
-      <PwaUpdatePrompt />
       <BrowserRouter>
+        <HouseRulesAgreement />
+        <VersionBadge />
+        <PwaUpdatePrompt />
         <AuthProvider>
           <AppBadge />
           <NotificationRegistration />
@@ -63,8 +63,8 @@ export default function App() {
             />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+        </AuthProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   )
 }
