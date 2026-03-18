@@ -118,8 +118,8 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] flex items-center justify-center p-5 safe-area-top safe-area-bottom">
-      <div className="w-full max-w-md">
+    <div className="min-h-dvh bg-[#f5f5f7] flex flex-col overflow-y-auto p-5 safe-area-top safe-area-bottom">
+      <div className="w-full max-w-md mx-auto flex-1 py-6">
         <div className="text-center mb-8">
           <span className="text-5xl" aria-hidden>♛</span>
           <h1 className="text-[#1d1d1f] font-semibold text-[22px] tracking-wide mt-3">
@@ -241,7 +241,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading || !agreeTerms}
-            className="w-full min-h-[44px] bg-[#007AFF] text-white font-semibold text-[17px] py-3 rounded-2xl hover:bg-[#0051D5] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            className="w-full min-h-[52px] bg-[#007AFF] text-white font-semibold text-[17px] py-3 rounded-2xl hover:bg-[#0051D5] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm mt-2 mb-4"
           >
             {loading ? '確認中...' : '登録する'}
           </button>
