@@ -25,12 +25,20 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback
+      const err = this.state.error
+      const errMsg = err?.message ?? String(err)
       return (
         <div className="min-h-dvh bg-[#f5f5f7] flex flex-col items-center justify-center p-6">
           <p className="text-[#1d1d1f] font-medium text-base mb-2">読み込みに失敗しました</p>
+          {errMsg && (
+            <p className="text-[#e53935] text-xs text-center mb-3 font-mono break-all max-w-full">
+              {errMsg}
+            </p>
+          )}
           <p className="text-[#86868b] text-sm text-center mb-6">
             ブラウザを更新するか、別のブラウザでお試しください。
           </p>
+          <a href="/debug.html" className="text-[#007AFF] text-sm mb-4">診断ページ</a>
           <button
             onClick={() => window.location.reload()}
             className="min-h-[44px] px-6 bg-[#007AFF] text-white font-semibold rounded-xl"
