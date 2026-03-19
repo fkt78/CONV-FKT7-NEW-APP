@@ -16,6 +16,7 @@ interface NewsItem {
   content: string
   audioUrl: string
   createdAt: Date | null
+  expiresAt: Date | null
 }
 
 const INITIAL_SHOW = 2
@@ -31,14 +32,18 @@ export default function VipNews() {
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(10))
     return onSnapshot(q, (snap) => {
       setLoading(false)
+      const now = Date.now()
       setNewsList(
-        snap.docs.map((d) => ({
-          id: d.id,
-          title: d.data().title as string,
-          content: d.data().content as string,
-          audioUrl: (d.data().audioUrl as string) ?? '',
-          createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
-        })),
+        snap.docs
+          .map((d) => ({
+            id: d.id,
+            title: d.data().title as string,
+            content: d.data().content as string,
+            audioUrl: (d.data().audioUrl as string) ?? '',
+            createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
+            expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
+          }))
+          .filter((item) => !item.expiresAt || item.expiresAt.getTime() > now),
       )
     }, (err) => {
       console.error('VipNews購読エラー:', err)

@@ -9,11 +9,10 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
-  type Timestamp,
+  Timestamp,
 } from 'firebase/firestore'
-import { ref, deleteObject } from 'firebase/storage'
-import { db, storage } from '../lib/firebase'
-import { uploadAudio, type UploadProgress } from '../lib/newsStorage'
+import { db } from '../lib/firebase'
+import { uploadAudio, deleteAudio, type UploadProgress } from '../lib/newsStorage'
 import AudioPlayer from './AudioPlayer'
 
 interface NewsItem {
@@ -22,6 +21,7 @@ interface NewsItem {
   content: string
   audioUrl: string
   createdAt: Date | null
+  expiresAt: Date | null
 }
 
 export default function NewsManager() {
@@ -33,6 +33,7 @@ export default function NewsManager() {
   // フォームフィールド
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [expiresAt, setExpiresAt] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [removeAudio, setRemoveAudio] = useState(false)
   const [upload, setUpload] = useState<UploadProgress | null>(null)
@@ -50,6 +51,7 @@ export default function NewsManager() {
             content: d.data().content as string,
             audioUrl: (d.data().audioUrl as string) ?? '',
             createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
+            expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
           })),
         )
       },
@@ -60,6 +62,7 @@ export default function NewsManager() {
   function resetForm() {
     setTitle('')
     setContent('')
+    setExpiresAt('')
     setAudioFile(null)
     setRemoveAudio(false)
     setUpload(null)
@@ -72,6 +75,7 @@ export default function NewsManager() {
   function handleEdit(item: NewsItem) {
     setTitle(item.title)
     setContent(item.content)
+    setExpiresAt(item.expiresAt ? item.expiresAt.toISOString().slice(0, 16) : '')
     setAudioFile(null)
     setRemoveAudio(false)
     setUpload(null)
@@ -89,14 +93,14 @@ export default function NewsManager() {
 
       // 旧音声削除
       if (editingId && removeAudio && editingAudioUrl) {
-        try { await deleteObject(ref(storage, editingAudioUrl)) } catch { /* 無視 */ }
+        await deleteAudio(editingAudioUrl)
         audioUrl = ''
       }
 
       // 新音声アップロード
       if (audioFile) {
         if (editingId && editingAudioUrl && !removeAudio) {
-          try { await deleteObject(ref(storage, editingAudioUrl)) } catch { /* 無視 */ }
+          await deleteAudio(editingAudioUrl)
         }
         audioUrl = await uploadAudio(audioFile, (p) => setUpload(p))
       }
@@ -105,6 +109,9 @@ export default function NewsManager() {
         title: title.trim(),
         content: content.trim(),
         audioUrl,
+        expiresAt: expiresAt.trim()
+          ? Timestamp.fromDate(new Date(expiresAt.trim()))
+          : null,
       }
 
       if (editingId) {
@@ -115,7 +122,8 @@ export default function NewsManager() {
       resetForm()
     } catch (err) {
       console.error('ニュース保存エラー:', err)
-      alert('保存に失敗しました')
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`保存に失敗しました${msg ? `: ${msg}` : ''}`)
     } finally {
       setSaving(false)
     }
@@ -123,9 +131,7 @@ export default function NewsManager() {
 
   async function handleDelete(item: NewsItem) {
     if (!confirm(`「${item.title}」を削除しますか？`)) return
-    if (item.audioUrl) {
-      try { await deleteObject(ref(storage, item.audioUrl)) } catch { /* 無視 */ }
-    }
+    if (item.audioUrl) await deleteAudio(item.audioUrl)
     await deleteDoc(doc(db, 'news', item.id))
   }
 
@@ -174,6 +180,17 @@ export default function NewsManager() {
               rows={3}
               className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-none"
             />
+
+            <div>
+              <label className="text-[#86868b] text-[10px] block mb-1">音声・お知らせの公開期限（任意）</label>
+              <input
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+              />
+              <p className="text-[#86868b] text-[10px] mt-0.5">設定すると、期限を過ぎると自動で非表示になります</p>
+            </div>
 
             <div className="space-y-2">
               <label className="text-[#86868b] text-[10px] block">音声ファイル（任意）</label>
@@ -265,6 +282,9 @@ export default function NewsManager() {
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-[#86868b] text-[10px]">{formatDate(item.createdAt)}</span>
+                  {item.expiresAt && (
+                    <span className="text-[#FF9500] text-[10px]">〜{formatDate(item.expiresAt)}</span>
+                  )}
                   <button
                     onClick={() => handleEdit(item)}
                     className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#007AFF]/10 hover:text-[#007AFF] transition"
