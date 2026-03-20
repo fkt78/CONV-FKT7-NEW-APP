@@ -335,7 +335,35 @@ export default function CouponWallet() {
               <div className="p-6 text-center space-y-4">
                 <h2 className="text-[#1d1d1f] font-semibold text-xl">{presenting.title}</h2>
                 {presenting.description && (
-                  <p className="text-[#86868b] text-sm">{presenting.description}</p>
+                  <div className="text-[#86868b] text-sm text-left space-y-1.5">
+                    {presenting.description.split('\n').map((line, i) => {
+                      const trimmed = line.trim()
+                      if (!trimmed) return <div key={i} className="h-2" />
+                      const bulletMatch = trimmed.match(/^[-•*・]\s+(.+)$/)
+                      const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)$/)
+                      if (bulletMatch) {
+                        return (
+                          <div key={i} className="flex gap-2">
+                            <span className="flex-shrink-0 text-[#007AFF]">•</span>
+                            <span>{bulletMatch[1]}</span>
+                          </div>
+                        )
+                      }
+                      if (numberedMatch) {
+                        return (
+                          <div key={i} className="flex gap-2">
+                            <span className="flex-shrink-0 font-medium">{numberedMatch[1]}.</span>
+                            <span>{numberedMatch[2]}</span>
+                          </div>
+                        )
+                      }
+                      return (
+                        <p key={i} className="leading-relaxed">
+                          {trimmed}
+                        </p>
+                      )
+                    })}
+                  </div>
                 )}
                 {presenting.discountAmount > 0 && (
                   <p className="text-[#007AFF] text-2xl font-bold">¥{presenting.discountAmount}</p>

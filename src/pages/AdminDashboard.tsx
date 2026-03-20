@@ -41,6 +41,7 @@ interface UserRecord {
 interface ChatMeta {
   lastMessage: string
   lastMessageAt: Date | null
+  unreadFromCustomer?: boolean
 }
 
 interface Message {
@@ -186,6 +187,7 @@ export default function AdminDashboard() {
         meta[d.id] = {
           lastMessage: (d.data().lastMessage as string) ?? '',
           lastMessageAt: (d.data().lastMessageAt as Timestamp | null)?.toDate() ?? null,
+          unreadFromCustomer: (d.data().unreadFromCustomer as boolean) ?? false,
         }
       })
       setChatMeta(meta)
@@ -233,14 +235,15 @@ export default function AdminDashboard() {
       (m) => m.senderId === selectedUid && !m.readAt,
     )
     if (toMark.length === 0) return
-    Promise.all(
-      toMark.map((m) =>
+    Promise.all([
+      ...toMark.map((m) =>
         updateDoc(doc(db, 'chats', selectedUid, 'messages', m.id), {
           readAt: serverTimestamp(),
           readBy: currentUser.uid,
         }),
       ),
-    ).catch((err) => {
+      setDoc(doc(db, 'chats', selectedUid), { unreadFromCustomer: false }, { merge: true }),
+    ]).catch((err) => {
       if ((err as { code?: string })?.code !== 'not-found') {
         console.error('既読更新エラー:', err)
       }
@@ -687,7 +690,7 @@ export default function AdminDashboard() {
               sortedUsers.map((user) => {
                 const meta = chatMeta[user.uid]
                 const isSelected = selectedUid === user.uid
-                const hasChat = !!meta?.lastMessageAt
+                const hasUnread = !!meta?.unreadFromCustomer
 
                 return (
                   <button
@@ -705,8 +708,8 @@ export default function AdminDashboard() {
                           {user.fullName.charAt(0)}
                         </span>
                       </div>
-                      {hasChat && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                      {hasUnread && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" title="未読メッセージあり" />
                       )}
                     </div>
 

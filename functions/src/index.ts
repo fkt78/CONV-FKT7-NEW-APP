@@ -73,7 +73,10 @@ export const onChatMessageCreated = onDocumentCreated(
     const text = (data?.text as string) ?? ''
     const attachmentType = data?.attachmentType as string | undefined
     if (!senderId) return
-    if (senderId === chatId) return
+    if (senderId === chatId) {
+      await db.collection('chats').doc(chatId).set({ unreadFromCustomer: true }, { merge: true })
+      return
+    }
     const body = text
       ? text.slice(0, 80)
       : attachmentType === 'image'

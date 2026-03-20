@@ -393,9 +393,9 @@ export default function CouponManager() {
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              placeholder="内容（例: お好きなドリンク1杯サービス）"
-              rows={2}
-              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-none"
+              placeholder="内容（改行・箇条書き（- や 1. で始める）がそのまま反映されます）"
+              rows={5}
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-y"
             />
             <div className="flex items-center gap-2">
               <label className="text-[#86868b] text-xs whitespace-nowrap">割引額</label>
