@@ -15,11 +15,13 @@ import { db } from '../lib/firebase'
 
 export interface MessageTemplate {
   id: string
-  title: string
   content: string
-  category: string
-  order: number
   createdAt: Date | null
+}
+
+function contentPreview(content: string, maxLen = 50) {
+  const firstLine = content.trim().split('\n')[0] ?? ''
+  return firstLine.length > maxLen ? `${firstLine.slice(0, maxLen)}...` : firstLine || '（空）'
 }
 
 export default function MessageTemplateManager() {
@@ -27,9 +29,7 @@ export default function MessageTemplateManager() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [category, setCategory] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -41,10 +41,7 @@ export default function MessageTemplateManager() {
             const data = d.data()
             return {
               id: d.id,
-              title: (data.title as string) ?? '',
               content: (data.content as string) ?? '',
-              category: (data.category as string) ?? '',
-              order: (data.order as number) ?? 0,
               createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
             }
           }),
@@ -55,30 +52,22 @@ export default function MessageTemplateManager() {
   }, [])
 
   function resetForm() {
-    setTitle('')
     setContent('')
-    setCategory('')
     setEditingId(null)
     setShowForm(false)
   }
 
   function handleEdit(item: MessageTemplate) {
-    setTitle(item.title)
     setContent(item.content)
-    setCategory(item.category)
     setEditingId(item.id)
     setShowForm(true)
   }
 
   async function handleSave() {
-    if (!title.trim() || !content.trim()) return
+    if (!content.trim()) return
     setSaving(true)
     try {
-      const payload = {
-        title: title.trim(),
-        content: content.trim(),
-        category: category.trim(),
-      }
+      const payload = { content: content.trim() }
 
       if (editingId) {
         await updateDoc(doc(db, 'messageTemplates', editingId), payload)
@@ -98,11 +87,9 @@ export default function MessageTemplateManager() {
   }
 
   async function handleDelete(item: MessageTemplate) {
-    if (!confirm(`「${item.title}」を削除しますか？`)) return
+    if (!confirm(`このテンプレートを削除しますか？\n「${contentPreview(item.content, 30)}」`)) return
     await deleteDoc(doc(db, 'messageTemplates', item.id))
   }
-
-  const categories = [...new Set(templates.map((t) => t.category).filter(Boolean))].sort()
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -126,39 +113,11 @@ export default function MessageTemplateManager() {
             )}
 
             <div>
-              <label className="text-[#86868b] text-[10px] block mb-1">タイトル（一覧で表示される名前）</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="例: お問い合わせありがとうございます"
-                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF]"
-              />
-            </div>
-
-            <div>
-              <label className="text-[#86868b] text-[10px] block mb-1">カテゴリ（任意・例: 挨拶, 返品対応）</label>
-              <input
-                type="text"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="例: 挨拶"
-                list="category-list"
-                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF]"
-              />
-              <datalist id="category-list">
-                {categories.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-            </div>
-
-            <div>
-              <label className="text-[#86868b] text-[10px] block mb-1">本文（チャットに挿入される内容）</label>
+              <label className="text-[#86868b] text-[10px] block mb-1">返信文</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="お問い合わせいただきありがとうございます。&#10;担当者が確認の上、ご連絡いたします。"
+                placeholder={'お問い合わせいただきありがとうございます。\n担当者が確認の上、ご連絡いたします。'}
                 rows={5}
                 className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-none"
               />
@@ -166,7 +125,7 @@ export default function MessageTemplateManager() {
 
             <button
               onClick={handleSave}
-              disabled={!title.trim() || !content.trim() || saving}
+              disabled={!content.trim() || saving}
               className="w-full bg-[#007AFF] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
             >
               {saving ? '保存中...' : editingId ? '更新する' : '作成する'}
@@ -193,13 +152,7 @@ export default function MessageTemplateManager() {
             <div key={item.id} className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  {item.category && (
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] bg-[#e5e5ea] text-[#86868b] mb-1">
-                      {item.category}
-                    </span>
-                  )}
-                  <p className="text-[#1d1d1f] text-sm font-bold truncate">{item.title}</p>
-                  <p className="text-[#86868b] text-xs mt-0.5 line-clamp-3 whitespace-pre-wrap">{item.content}</p>
+                  <p className="text-[#1d1d1f] text-sm line-clamp-3 whitespace-pre-wrap">{item.content}</p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button

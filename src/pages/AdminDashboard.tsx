@@ -149,10 +149,7 @@ export default function AdminDashboard() {
             const data = d.data()
             return {
               id: d.id,
-              title: (data.title as string) ?? '',
               content: (data.content as string) ?? '',
-              category: (data.category as string) ?? '',
-              order: (data.order as number) ?? 0,
               createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
             }
           }),
@@ -1126,11 +1123,7 @@ export default function AdminDashboard() {
                                 onClick={() => insertTemplate(t)}
                                 className="w-full text-left px-3 py-2.5 hover:bg-[#f5f5f7] text-sm block"
                               >
-                                {t.category && (
-                                  <span className="text-[10px] text-[#86868b] block">{t.category}</span>
-                                )}
-                                <span className="text-[#1d1d1f] font-medium">{t.title}</span>
-                                <span className="text-[#86868b] text-xs line-clamp-2 block mt-0.5">
+                                <span className="text-[#1d1d1f] line-clamp-2 whitespace-pre-wrap">
                                   {t.content}
                                 </span>
                               </button>
@@ -1209,16 +1202,20 @@ export default function AdminDashboard() {
               </p>
               {messageTemplates.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {messageTemplates.slice(0, 5).map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setBroadcastText((prev) => (prev ? `${prev}\n${t.content}` : t.content))}
-                      className="px-2 py-1 rounded-lg bg-[#f5f5f7] text-[#007AFF] text-xs hover:bg-[#e5e5ea] transition"
-                    >
-                      📝 {t.title}
-                    </button>
-                  ))}
+                  {messageTemplates.slice(0, 5).map((t) => {
+                    const preview = t.content.trim().split('\n')[0]?.slice(0, 20) ?? ''
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setBroadcastText((prev) => (prev ? `${prev}\n${t.content}` : t.content))}
+                        className="px-2 py-1 rounded-lg bg-[#f5f5f7] text-[#007AFF] text-xs hover:bg-[#e5e5ea] transition truncate max-w-[180px]"
+                        title={t.content}
+                      >
+                        📝 {preview}{preview.length >= 20 ? '...' : ''}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
               <textarea
