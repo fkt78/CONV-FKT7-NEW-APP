@@ -35,6 +35,7 @@ interface UserRecord {
   birthMonth: string
   totalSavedAmount: number
   memberNumber: number | null
+  role?: string
 }
 
 interface ChatMeta {
@@ -148,6 +149,11 @@ export default function AdminDashboard() {
   >([])
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false)
   const [showGlobalSearchResults, setShowGlobalSearchResults] = useState(false)
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false)
+  const [broadcastText, setBroadcastText] = useState('')
+  const [broadcastSending, setBroadcastSending] = useState(false)
+  const [broadcastProgress, setBroadcastProgress] = useState<{ current: number; total: number } | null>(null)
+  const [sendTargetUids, setSendTargetUids] = useState<string[] | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -167,6 +173,7 @@ export default function AdminDashboard() {
           birthMonth: d.data().birthMonth as string,
           totalSavedAmount: (d.data().totalSavedAmount as number) ?? 0,
           memberNumber: (d.data().memberNumber as number) ?? null,
+          role: d.data().role as string | undefined,
         })),
       )
     })
@@ -424,6 +431,58 @@ export default function AdminDashboard() {
     }
   }
 
+  /** 全員 or 選択メンバーに一斉送信 */
+  async function handleBroadcastSend() {
+    const trimmed = broadcastText.trim()
+    if (!trimmed || !currentUser || broadcastSending) return
+
+    const targets = sendTargetUids
+      ? users.filter((u) => sendTargetUids.includes(u.uid))
+      : users.filter((u) => u.role !== 'admin' && u.uid !== currentUser.uid)
+
+    if (targets.length === 0) {
+      alert('送信対象の会員がいません')
+      return
+    }
+
+    setBroadcastSending(true)
+    setBroadcastProgress({ current: 0, total: targets.length })
+
+    try {
+      const ts = serverTimestamp()
+      for (let i = 0; i < targets.length; i++) {
+        const uid = targets[i].uid
+        await addDoc(collection(db, 'chats', uid, 'messages'), {
+          senderId: currentUser.uid,
+          text: trimmed,
+          createdAt: ts,
+        })
+        await setDoc(
+          doc(db, 'chats', uid),
+          { lastMessage: trimmed.slice(0, 50), lastMessageAt: ts },
+          { merge: true },
+        )
+        setBroadcastProgress({ current: i + 1, total: targets.length })
+      }
+      setBroadcastText('')
+      setShowBroadcastModal(false)
+      setSendTargetUids(null)
+    } catch (err) {
+      console.error('一斉送信エラー:', err)
+      alert(`送信に失敗しました: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setBroadcastSending(false)
+      setBroadcastProgress(null)
+      setSendTargetUids(null)
+    }
+  }
+
+  function openBroadcastModal(targetUids: string[] | null = null) {
+    setSendTargetUids(targetUids)
+    setBroadcastText('')
+    setShowBroadcastModal(true)
+  }
+
   async function handleLogout() {
     await signOut(auth)
     navigate('/login')
@@ -525,13 +584,21 @@ export default function AdminDashboard() {
             setSelectedUid(uid)
             setShowChatPanel(true)
           }}
+          onSendToSelected={(uids) => openBroadcastModal(uids)}
         />
       ) : adminTab === 'chat' ? (
         <div className="flex-1 flex overflow-hidden">
         {/* ── 左パネル：顧客リスト / 全チャット検索 ── */}
         <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-[#e5e5ea] flex flex-col bg-white ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
-          {/* 全チャット検索バー */}
+          {/* 全チャット検索バー・一斉送信 */}
           <div className="px-4 py-3 border-b border-[#e5e5ea] space-y-2">
+            <button
+              type="button"
+              onClick={() => openBroadcastModal(null)}
+              className="w-full py-2.5 bg-[#007AFF] text-white text-xs font-semibold rounded-lg hover:bg-[#0051D5] transition flex items-center justify-center gap-2"
+            >
+              📢 全員に一斉送信
+            </button>
             <div className="flex items-center gap-2">
               <input
                 type="search"
@@ -931,6 +998,58 @@ export default function AdminDashboard() {
         </div>
         </div>
       ) : null}
+
+      {/* 全員に一斉送信モーダル */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="px-4 py-3 border-b border-[#e5e5ea] flex items-center justify-between">
+              <h3 className="text-[#1d1d1f] font-semibold text-base">
+                {sendTargetUids ? `選択したメンバーに送信（${sendTargetUids.length}名）` : '全員に一斉送信'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => !broadcastSending && (setShowBroadcastModal(false), setSendTargetUids(null))}
+                disabled={broadcastSending}
+                className="w-8 h-8 flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] disabled:opacity-50"
+                aria-label="閉じる"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <p className="text-[#86868b] text-sm">
+                {sendTargetUids
+                  ? `選択した${sendTargetUids.length}名の会員に同じメッセージを送信します。`
+                  : `管理者以外の全アクティブ会員に同じメッセージを送信します。（${users.filter((u) => u.role !== 'admin' && u.uid !== currentUser?.uid).length}名）`}
+              </p>
+              <textarea
+                value={broadcastText}
+                onChange={(e) => setBroadcastText(e.target.value)}
+                placeholder="送信するメッセージを入力..."
+                rows={5}
+                disabled={broadcastSending}
+                className="w-full bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl px-4 py-3 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] resize-none disabled:opacity-60"
+              />
+              {broadcastProgress && (
+                <p className="text-[#007AFF] text-sm">
+                  送信中... {broadcastProgress.current} / {broadcastProgress.total}
+                </p>
+              )}
+            </div>
+            <div className="px-4 py-3 border-t border-[#e5e5ea]">
+              <button
+                type="button"
+                onClick={handleBroadcastSend}
+                disabled={!broadcastText.trim() || broadcastSending}
+                className="w-full py-3 bg-[#007AFF] text-white font-semibold rounded-xl disabled:opacity-50 hover:bg-[#0051D5] transition"
+              >
+                {broadcastSending ? '送信中...' : '送信する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
