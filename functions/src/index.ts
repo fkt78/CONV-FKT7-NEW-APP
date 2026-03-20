@@ -122,6 +122,29 @@ export const onUserCreated = onDocumentCreated('users/{uid}', async (event) => {
   console.log('Assigned memberNumber', nextNumber, 'to', uid)
 })
 
+/** ブラックリスト照合（未認証でも呼び出し可能） */
+export const checkBlacklist = onCall(async (request) => {
+  const { fullName, email } = request.data as { fullName?: string; email?: string }
+  if (!fullName && !email) {
+    throw new HttpsError('invalid-argument', '照合するデータがありません')
+  }
+
+  const blRef = db.collection('blacklist')
+  const checks: Array<Promise<FirebaseFirestore.QuerySnapshot>> = []
+
+  if (fullName) {
+    checks.push(blRef.where('fullName', '==', fullName).limit(1).get())
+  }
+  if (email) {
+    checks.push(blRef.where('email', '==', email).limit(1).get())
+  }
+
+  const results = await Promise.all(checks)
+  const isBlacklisted = results.some((snap) => !snap.empty)
+
+  return { isBlacklisted }
+})
+
 /** 既存ユーザーに会員番号を一括割り当て（管理者のみ） */
 export const assignMemberNumbers = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'ログインが必要です')

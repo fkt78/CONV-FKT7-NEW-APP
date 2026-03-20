@@ -4,16 +4,8 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
 } from 'firebase/auth'
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { auth, db, functions, httpsCallable } from '../lib/firebase'
 
 type Attribute = 'male' | 'female' | 'student' | 'other'
 
@@ -37,19 +29,15 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
 
   /**
-   * ブラックリスト照合 — フィールド名は Firestore ドキュメントに合わせて 'fullName' / 'email'
-   * Firestore の読み取りに失敗した場合は例外をそのまま throw し、
-   * 呼び出し元で「登録不可」として処理する（エラー握り潰し禁止）
+   * ブラックリスト照合 — Cloud Function 経由で照合（blacklist の中身をクライアントに公開しない）
    */
   async function checkBlacklist(name: string, emailAddr: string): Promise<boolean> {
-    const blRef = collection(db, 'blacklist')
-
-    const [nameSnap, emailSnap] = await Promise.all([
-      getDocs(query(blRef, where('fullName', '==', name))),
-      getDocs(query(blRef, where('email', '==', emailAddr))),
-    ])
-
-    return !nameSnap.empty || !emailSnap.empty
+    const fn = httpsCallable<{ fullName?: string; email?: string }, { isBlacklisted: boolean }>(
+      functions,
+      'checkBlacklist',
+    )
+    const { data } = await fn({ fullName: name || undefined, email: emailAddr || undefined })
+    return data.isBlacklisted
   }
 
   async function handleSubmit(e: FormEvent) {
