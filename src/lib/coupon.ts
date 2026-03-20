@@ -22,6 +22,9 @@ export type TargetAttribute = 'all' | 'male' | 'female' | 'student' | 'other'
 /** 年代（空文字は指定なし＝全年代） */
 export type TargetAgeRange = '' | '10s' | '20s' | '30s' | '40s' | '50s' | '60plus'
 
+/** 年代の選択肢（空以外） */
+export const AGE_RANGE_KEYS = ['10s', '20s', '30s', '40s', '50s', '60plus'] as const
+
 /** @deprecated 後方互換用。新規は targetAttribute + targetAgeRange を使用 */
 export type TargetSegment =
   | 'all' | 'male' | 'female' | 'student' | 'other'
@@ -39,9 +42,11 @@ export interface CouponTemplate {
   temperatureThreshold: number | null
   /** 対象属性（新仕様） */
   targetAttribute?: TargetAttribute
-  /** 対象年代（新仕様・空は全年代） */
+  /** 対象年代（新仕様・複数選択可・空配列は全年代） */
+  targetAgeRanges?: TargetAgeRange[]
+  /** @deprecated 後方互換。targetAgeRanges を優先 */
   targetAgeRange?: TargetAgeRange
-  /** @deprecated 後方互換。targetAttribute + targetAgeRange を優先 */
+  /** @deprecated 後方互換。targetAttribute + targetAgeRanges を優先 */
   targetSegment?: TargetSegment
   active: boolean
   createdAt: Date | null
@@ -146,41 +151,51 @@ function matchesWeather(
   }
 }
 
-/** 新仕様: 属性×年代でマッチ判定 */
+/** 新仕様: 属性×年代（複数可）でマッチ判定 */
 function matchesTarget(
   targetAttr: TargetAttribute,
-  targetAge: TargetAgeRange,
+  targetAges: TargetAgeKey[],
   userAttr: string,
   userBirth: string,
 ): boolean {
   if (targetAttr !== 'all' && userAttr !== targetAttr) return false
-  if (targetAge !== '' && getAgeDecade(userBirth) !== targetAge) return false
-  return true
+  if (targetAges.length === 0) return true
+  const userAge = getAgeDecade(userBirth)
+  return targetAges.includes(userAge as TargetAgeKey)
 }
+
+type TargetAgeKey = Exclude<TargetAgeRange, ''>
 
 /** クーポンから対象を取得（新フィールド優先、旧 targetSegment から変換） */
-export function getTargetFromCoupon(c: CouponTemplate): { attr: TargetAttribute; age: TargetAgeRange } {
+export function getTargetFromCoupon(c: CouponTemplate): { attr: TargetAttribute; ages: TargetAgeKey[] } {
+  const ages: TargetAgeKey[] = []
+  if (Array.isArray(c.targetAgeRanges) && c.targetAgeRanges.length > 0) {
+    ages.push(...c.targetAgeRanges.filter((a): a is TargetAgeKey =>
+      (AGE_RANGE_KEYS as readonly string[]).includes(a)))
+  } else if (c.targetAgeRange && (AGE_RANGE_KEYS as readonly string[]).includes(c.targetAgeRange)) {
+    ages.push(c.targetAgeRange as TargetAgeKey)
+  } else if (c.targetSegment && ['10s', '20s', '30s', '40s', '50s', '60plus'].includes(c.targetSegment)) {
+    ages.push(c.targetSegment as TargetAgeKey)
+  }
+
   if (c.targetAttribute != null) {
-    return {
-      attr: c.targetAttribute,
-      age: (c.targetAgeRange ?? '') as TargetAgeRange,
-    }
+    return { attr: c.targetAttribute, ages }
   }
   const seg = c.targetSegment
-  if (!seg) return { attr: 'all', age: '' }
+  if (!seg) return { attr: 'all', ages }
   if (['male', 'female', 'student', 'other'].includes(seg)) {
-    return { attr: seg as TargetAttribute, age: '' }
+    return { attr: seg as TargetAttribute, ages }
   }
-  return { attr: 'all', age: seg as Exclude<TargetAgeRange, ''> }
+  return { attr: 'all', ages }
 }
 
-/** 対象セグメントの表示ラベル（例: 女性の30代） */
+/** 対象セグメントの表示ラベル（例: 女性の10代・20代・30代） */
 export function formatTargetLabel(c: CouponTemplate): string {
-  const { attr, age } = getTargetFromCoupon(c)
+  const { attr, ages } = getTargetFromCoupon(c)
   const attrLabel = ATTRIBUTE_LABELS[attr]
-  if (age === '') return attrLabel
-  const ageLabel = AGE_RANGE_LABELS[age]
-  return attr === 'all' ? ageLabel : `${attrLabel}の${ageLabel}`
+  if (ages.length === 0) return attrLabel
+  const ageLabels = ages.map((a) => AGE_RANGE_LABELS[a]).join('・')
+  return attr === 'all' ? ageLabels : `${attrLabel}の${ageLabels}`
 }
 
 /** 配布日から有効期限の日付を計算（23:59:59.999） */
@@ -272,7 +287,7 @@ export async function distributeCoupons(dailyLimit: number): Promise<Distributio
 
       // セグメント照合（新: 属性×年代、旧: targetSegment）
       const t = getTargetFromCoupon(coupon)
-      if (!matchesTarget(t.attr, t.age, u.attribute as string, u.birthMonth as string))
+      if (!matchesTarget(t.attr, t.ages, u.attribute as string, u.birthMonth as string))
         continue
 
       // サイレント上限チェック

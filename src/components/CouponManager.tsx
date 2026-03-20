@@ -30,6 +30,7 @@ import {
   type IndividualDistributionResult,
   ATTRIBUTE_LABELS,
   AGE_RANGE_LABELS,
+  AGE_RANGE_KEYS,
   CONDITION_LABELS,
   EXPIRY_LABELS,
 } from '../lib/coupon'
@@ -48,7 +49,7 @@ export default function CouponManager() {
   const [cond, setCond] = useState<WeatherCondition>('any')
   const [threshold, setThreshold] = useState(10)
   const [targetAttribute, setTargetAttribute] = useState<TargetAttribute>('all')
-  const [targetAgeRange, setTargetAgeRange] = useState<TargetAgeRange>('')
+  const [targetAgeRanges, setTargetAgeRanges] = useState<TargetAgeRange[]>([])
   const [expiryType, setExpiryType] = useState<ExpiryType>('same_day')
   const [expiryDate, setExpiryDate] = useState('')
   const [autoDistribute, setAutoDistribute] = useState(false)
@@ -137,7 +138,7 @@ export default function CouponManager() {
     setCond('any')
     setThreshold(10)
     setTargetAttribute('all')
-    setTargetAgeRange('')
+    setTargetAgeRanges([])
     setExpiryType('same_day')
     setExpiryDate('')
     setAutoDistribute(false)
@@ -158,7 +159,7 @@ export default function CouponManager() {
     setThreshold(c.temperatureThreshold ?? 10)
     const t = getTargetFromCoupon(c)
     setTargetAttribute(t.attr)
-    setTargetAgeRange(t.age)
+    setTargetAgeRanges(t.ages)
     setExpiryType(c.expiryType ?? 'same_day')
     setExpiryDate(c.expiryDate ?? '')
     setAutoDistribute(c.autoDistribute ?? false)
@@ -190,7 +191,7 @@ export default function CouponManager() {
         weatherCondition: cond,
         temperatureThreshold: cond === 'cold_below' || cond === 'hot_above' ? threshold : null,
         targetAttribute: targetAttribute,
-        targetAgeRange: targetAgeRange,
+        targetAgeRanges: targetAgeRanges,
         expiryType,
         expiryDate: expiryType === 'date' ? expiryDate : null,
         autoDistribute,
@@ -500,17 +501,34 @@ export default function CouponManager() {
                 </select>
               </div>
               <div>
-                <label className="text-[#86868b] text-[10px] block mb-1">対象（年代）</label>
-                <select
-                  value={targetAgeRange}
-                  onChange={(e) => setTargetAgeRange(e.target.value as TargetAgeRange)}
-                  className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
-                >
-                  <option value="">指定なし（全年代）</option>
-                  {Object.entries(AGE_RANGE_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
+                <label className="text-[#86868b] text-[10px] block mb-1">対象（年代・複数選択可）</label>
+                <div className="flex flex-wrap gap-2">
+                  {AGE_RANGE_KEYS.map((key) => (
+                    <label
+                      key={key}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer transition text-sm ${
+                        targetAgeRanges.includes(key)
+                          ? 'border-[#007AFF] bg-[#007AFF]/10 text-[#007AFF]'
+                          : 'border-[#e5e5ea] bg-white text-[#86868b] hover:border-[#007AFF]/40'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={targetAgeRanges.includes(key)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setTargetAgeRanges((prev) => [...prev, key])
+                          } else {
+                            setTargetAgeRanges((prev) => prev.filter((a) => a !== key))
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      {AGE_RANGE_LABELS[key]}
+                    </label>
                   ))}
-                </select>
+                </div>
+                <p className="text-[#86868b] text-[10px] mt-1">未選択＝全年代</p>
               </div>
             </div>
 

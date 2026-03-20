@@ -208,6 +208,7 @@ interface CouponTemplate {
   weatherCondition: WeatherCondition
   temperatureThreshold: number | null
   targetAttribute?: TargetAttribute
+  targetAgeRanges?: TargetAgeRange[]
   targetAgeRange?: TargetAgeRange
   targetSegment?: TargetSegment
   expiryType?: ExpiryType
@@ -268,22 +269,34 @@ function getAgeDecade(birthMonth: string): TargetAgeRange {
   return '60plus'
 }
 
-function getTargetFromCoupon(c: CouponTemplate): { attr: TargetAttribute; age: TargetAgeRange } {
+const AGE_KEYS: string[] = ['10s', '20s', '30s', '40s', '50s', '60plus']
+
+function getTargetFromCoupon(c: CouponTemplate): { attr: TargetAttribute; ages: TargetAgeRange[] } {
+  const ages: TargetAgeRange[] = []
+  if (Array.isArray(c.targetAgeRanges) && c.targetAgeRanges.length > 0) {
+    ages.push(...c.targetAgeRanges.filter((a): a is Exclude<TargetAgeRange, ''> => AGE_KEYS.includes(a)))
+  } else if (c.targetAgeRange && AGE_KEYS.includes(c.targetAgeRange)) {
+    ages.push(c.targetAgeRange)
+  } else if (c.targetSegment && AGE_KEYS.includes(c.targetSegment)) {
+    ages.push(c.targetSegment as TargetAgeRange)
+  }
+
   if (c.targetAttribute != null) {
-    return { attr: c.targetAttribute, age: (c.targetAgeRange ?? '') as TargetAgeRange }
+    return { attr: c.targetAttribute, ages }
   }
   const seg = c.targetSegment
-  if (!seg) return { attr: 'all', age: '' }
+  if (!seg) return { attr: 'all', ages }
   if (['male', 'female', 'student', 'other'].includes(seg)) {
-    return { attr: seg as TargetAttribute, age: '' }
+    return { attr: seg as TargetAttribute, ages }
   }
-  return { attr: 'all', age: seg as TargetAgeRange }
+  return { attr: 'all', ages }
 }
 
-function matchesTarget(targetAttr: TargetAttribute, targetAge: TargetAgeRange, userAttr: string, userBirth: string): boolean {
+function matchesTarget(targetAttr: TargetAttribute, targetAges: TargetAgeRange[], userAttr: string, userBirth: string): boolean {
   if (targetAttr !== 'all' && userAttr !== targetAttr) return false
-  if (targetAge !== '' && getAgeDecade(userBirth) !== targetAge) return false
-  return true
+  if (targetAges.length === 0) return true
+  const userAge = getAgeDecade(userBirth)
+  return targetAges.includes(userAge)
 }
 
 function computeExpiryDate(expiryType: ExpiryType, expiryDateStr: string | undefined, distributedDate: string): Date {
@@ -375,7 +388,7 @@ export const scheduledCouponDistribution = onSchedule(
           const birth = u.birthMonth as string
           if (!isBirthMonthDay(birth ?? '', dayOfMonthForBirth, now)) continue
           const t = getTargetFromCoupon(coupon)
-          if (!matchesTarget(t.attr, t.age, u.attribute ?? '', birth ?? '01-2000')) continue
+          if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', birth ?? '01-2000')) continue
 
           const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
           const logSnap = await logRef.get()
@@ -414,7 +427,7 @@ export const scheduledCouponDistribution = onSchedule(
           const u = uDoc.data()
           const uid = uDoc.id
           const t = getTargetFromCoupon(coupon)
-          if (!matchesTarget(t.attr, t.age, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
+          if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
 
           const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
           const logSnap = await logRef.get()
