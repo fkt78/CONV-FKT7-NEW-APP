@@ -14,6 +14,7 @@ import {
   doc,
   setDoc,
   updateDoc,
+  deleteDoc,
   where,
   serverTimestamp,
   type Timestamp,
@@ -29,8 +30,9 @@ import CouponManager from '../components/CouponManager'
 import NewsManager from '../components/NewsManager'
 import RoadmapManager from '../components/RoadmapManager'
 import UserManager from '../components/UserManager'
+import MessageTemplateManager, { type MessageTemplate } from '../components/MessageTemplateManager'
 
-type AdminTab = 'chat' | 'coupon' | 'news' | 'users' | 'roadmap'
+type AdminTab = 'chat' | 'coupon' | 'news' | 'users' | 'roadmap' | 'templates'
 
 interface UserRecord {
   uid: string
@@ -94,6 +96,11 @@ export default function AdminDashboard() {
   const [broadcastSending, setBroadcastSending] = useState(false)
   const [broadcastProgress, setBroadcastProgress] = useState<{ current: number; total: number } | null>(null)
   const [sendTargetUids, setSendTargetUids] = useState<string[] | null>(null)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState('')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [messageTemplates, setMessageTemplates] = useState<MessageTemplate[]>([])
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -131,6 +138,28 @@ export default function AdminDashboard() {
       })
       setChatMeta(meta)
     })
+  }, [])
+
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'messageTemplates'), orderBy('createdAt', 'desc')),
+      (snap) => {
+        setMessageTemplates(
+          snap.docs.map((d) => {
+            const data = d.data()
+            return {
+              id: d.id,
+              title: (data.title as string) ?? '',
+              content: (data.content as string) ?? '',
+              category: (data.category as string) ?? '',
+              order: (data.order as number) ?? 0,
+              createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+            }
+          }),
+        )
+      },
+      (err) => console.error('messageTemplates購読エラー:', err),
+    )
   }, [])
 
   useEffect(() => {
@@ -398,6 +427,51 @@ export default function AdminDashboard() {
     }
   }
 
+  const chatId = selectedUid ?? ''
+  const canEditMessage = () => true
+
+  async function handleEditMessage(msg: Message) {
+    setEditingMessageId(msg.id)
+    setEditingText(msg.text ?? '')
+    setOpenMenuId(null)
+  }
+
+  async function handleSaveEdit() {
+    if (!editingMessageId || !chatId) return
+    const trimmed = editingText.trim()
+    try {
+      await updateDoc(doc(db, 'chats', chatId, 'messages', editingMessageId), {
+        text: trimmed,
+        editedAt: serverTimestamp(),
+      })
+      setEditingMessageId(null)
+      setEditingText('')
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : '編集に失敗しました')
+    }
+  }
+
+  function handleCancelEdit() {
+    setEditingMessageId(null)
+    setEditingText('')
+  }
+
+  async function handleDeleteMessage(msg: Message) {
+    if (!chatId || !window.confirm('このメッセージを削除しますか？')) return
+    setOpenMenuId(null)
+    try {
+      await deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id))
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : '削除に失敗しました')
+    }
+  }
+
+  function insertTemplate(template: MessageTemplate) {
+    setText((prev) => (prev ? `${prev}\n${template.content}` : template.content))
+    setShowTemplatePicker(false)
+    inputRef.current?.focus()
+  }
+
   /** 全員 or 選択メンバーに一斉送信 */
   async function handleBroadcastSend() {
     const trimmed = broadcastText.trim()
@@ -541,10 +615,22 @@ export default function AdminDashboard() {
         >
           📋 実装予定
         </button>
+        <button
+          onClick={() => setAdminTab('templates')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'templates'
+              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
+          }`}
+        >
+          📝 テンプレート
+        </button>
       </div>
 
       {/* メインエリア */}
-      {adminTab === 'roadmap' ? (
+      {adminTab === 'templates' ? (
+        <MessageTemplateManager />
+      ) : adminTab === 'roadmap' ? (
         <RoadmapManager />
       ) : adminTab === 'coupon' ? (
         <CouponManager />
@@ -847,6 +933,7 @@ export default function AdminDashboard() {
                                 {selectedUser.fullName}
                               </span>
                             )}
+                            <div className="flex items-end gap-1">
                             <div
                               className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${
                                 isOwn
@@ -854,6 +941,42 @@ export default function AdminDashboard() {
                                   : 'bg-white text-[#1d1d1f] rounded-bl-sm shadow-sm border border-[#e5e5ea]'
                               }`}
                             >
+                              {editingMessageId === msg.id ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={editingText}
+                                    onChange={(e) => setEditingText(e.target.value)}
+                                    className={`w-full min-h-[50px] bg-transparent border-none outline-none resize-none text-inherit ${
+                                      isOwn ? 'placeholder-white/70' : 'placeholder-[#86868b]'
+                                    }`}
+                                    placeholder="メッセージを入力..."
+                                    autoFocus
+                                    rows={2}
+                                  />
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={handleCancelEdit}
+                                      className={`text-xs px-2 py-1 rounded ${
+                                        isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-[#e5e5ea] hover:bg-[#d1d1d6]'
+                                      }`}
+                                    >
+                                      キャンセル
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleSaveEdit}
+                                      disabled={!editingText.trim()}
+                                      className={`text-xs px-2 py-1 rounded ${
+                                        isOwn ? 'bg-white/30 hover:bg-white/40' : 'bg-[#007AFF] text-white hover:bg-[#0051D5]'
+                                      } disabled:opacity-50`}
+                                    >
+                                      保存
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                              <>
                               {msg.attachmentUrl && (
                                 <div className="mb-2">
                                   {msg.attachmentType === 'image' ? (
@@ -886,6 +1009,48 @@ export default function AdminDashboard() {
                                     : msg.text}
                                 </span>
                               )}
+                              </>
+                              )}
+                            </div>
+                            {canEditMessage() && editingMessageId !== msg.id && (
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
+                                  aria-label="メッセージの操作"
+                                  className={`p-1 rounded hover:bg-black/10 ${
+                                    isOwn ? 'text-white/80 hover:text-white' : 'text-[#86868b] hover:text-[#1d1d1f]'
+                                  }`}
+                                >
+                                  ⋮
+                                </button>
+                                {openMenuId === msg.id && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-10"
+                                      aria-hidden
+                                      onClick={() => setOpenMenuId(null)}
+                                    />
+                                    <div className="absolute right-0 top-full mt-1 py-1 bg-white rounded-lg shadow-lg border border-[#e5e5ea] z-20 min-w-[100px]">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditMessage(msg)}
+                                        className="w-full text-left px-3 py-2 text-xs text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                                      >
+                                        編集
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteMessage(msg)}
+                                        className="w-full text-left px-3 py-2 text-xs text-[#FF3B30] hover:bg-[#f5f5f7]"
+                                      >
+                                        削除
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
                             </div>
                             <span className={`text-[10px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                               {formatTime(msg.createdAt)}
@@ -929,6 +1094,52 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplatePicker(!showTemplatePicker)}
+                      aria-label="テンプレートを挿入"
+                      title="テンプレート"
+                      className="w-10 h-10 flex items-center justify-center text-[#86868b] hover:text-[#007AFF] transition flex-shrink-0"
+                    >
+                      📝
+                    </button>
+                    {showTemplatePicker && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          aria-hidden
+                          onClick={() => setShowTemplatePicker(false)}
+                        />
+                        <div className="absolute left-0 bottom-full mb-1 w-64 max-h-60 overflow-y-auto bg-white rounded-xl shadow-lg border border-[#e5e5ea] z-20 py-1">
+                          {messageTemplates.length === 0 ? (
+                            <p className="px-3 py-4 text-[#86868b] text-xs text-center">
+                              テンプレートがありません
+                              <br />
+                              <span className="text-[#007AFF]">テンプレート</span>タブで作成してください
+                            </p>
+                          ) : (
+                            messageTemplates.map((t) => (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => insertTemplate(t)}
+                                className="w-full text-left px-3 py-2.5 hover:bg-[#f5f5f7] text-sm block"
+                              >
+                                {t.category && (
+                                  <span className="text-[10px] text-[#86868b] block">{t.category}</span>
+                                )}
+                                <span className="text-[#1d1d1f] font-medium">{t.title}</span>
+                                <span className="text-[#86868b] text-xs line-clamp-2 block mt-0.5">
+                                  {t.content}
+                                </span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -996,6 +1207,20 @@ export default function AdminDashboard() {
                   ? `選択した${sendTargetUids.length}名の会員に同じメッセージを送信します。`
                   : `管理者以外の全アクティブ会員に同じメッセージを送信します。（${users.filter((u) => u.role !== 'admin' && u.uid !== currentUser?.uid).length}名）`}
               </p>
+              {messageTemplates.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {messageTemplates.slice(0, 5).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setBroadcastText((prev) => (prev ? `${prev}\n${t.content}` : t.content))}
+                      className="px-2 py-1 rounded-lg bg-[#f5f5f7] text-[#007AFF] text-xs hover:bg-[#e5e5ea] transition"
+                    >
+                      📝 {t.title}
+                    </button>
+                  ))}
+                </div>
+              )}
               <textarea
                 value={broadcastText}
                 onChange={(e) => setBroadcastText(e.target.value)}

@@ -11,6 +11,7 @@ import {
   doc,
   setDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore'
@@ -67,6 +68,9 @@ export default function Home() {
   const [creditsOpen, setCreditsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResultIndex, setSearchResultIndex] = useState(0)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState('')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -266,6 +270,45 @@ export default function Home() {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleSend()
+    }
+  }
+
+  const chatId = currentUser?.uid ?? ''
+  const canEditMessage = (msg: Message) => msg.senderId === currentUser?.uid
+
+  async function handleEditMessage(msg: Message) {
+    setEditingMessageId(msg.id)
+    setEditingText(msg.text ?? '')
+    setOpenMenuId(null)
+  }
+
+  async function handleSaveEdit() {
+    if (!editingMessageId || !chatId) return
+    const trimmed = editingText.trim()
+    try {
+      await updateDoc(doc(db, 'chats', chatId, 'messages', editingMessageId), {
+        text: trimmed,
+        editedAt: serverTimestamp(),
+      })
+      setEditingMessageId(null)
+      setEditingText('')
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : '編集に失敗しました')
+    }
+  }
+
+  function handleCancelEdit() {
+    setEditingMessageId(null)
+    setEditingText('')
+  }
+
+  async function handleDeleteMessage(msg: Message) {
+    if (!chatId || !window.confirm('このメッセージを削除しますか？')) return
+    setOpenMenuId(null)
+    try {
+      await deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id))
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : '削除に失敗しました')
     }
   }
 
@@ -512,10 +555,11 @@ export default function Home() {
                         </div>
                       )}
 
-                      <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+                      <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col group/message`}>
                         {!isOwn && (
                           <span className="text-[13px] text-[#007AFF] mb-0.5 ml-1 font-medium">店長</span>
                         )}
+                        <div className="flex items-end gap-1">
                         <div
                           className={`px-4 py-2.5 rounded-2xl text-[17px] leading-relaxed ${
                             isOwn
@@ -523,6 +567,36 @@ export default function Home() {
                               : 'bg-white text-[#1d1d1f] border border-[#e5e5ea] rounded-bl-sm shadow-[0_1px_4px_rgba(0,0,0,0.04)]'
                           }`}
                         >
+                          {editingMessageId === msg.id ? (
+                            <div className="space-y-2">
+                              <textarea
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                className="w-full min-h-[60px] bg-transparent border-none outline-none resize-none text-inherit placeholder-white/70"
+                                placeholder="メッセージを入力..."
+                                autoFocus
+                                rows={2}
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEdit}
+                                  className="text-sm px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30"
+                                >
+                                  キャンセル
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleSaveEdit}
+                                  disabled={!editingText.trim()}
+                                  className="text-sm px-3 py-1 rounded-lg bg-white/30 hover:bg-white/40 disabled:opacity-50"
+                                >
+                                  保存
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                          <>
                           {msg.attachmentUrl && (
                             <div className="mb-2">
                               {msg.attachmentType === 'image' ? (
@@ -555,6 +629,46 @@ export default function Home() {
                                 : msg.text}
                             </span>
                           )}
+                          </>
+                          )}
+                        </div>
+                        {isOwn && canEditMessage(msg) && editingMessageId !== msg.id && (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
+                              aria-label="メッセージの操作"
+                              className="p-1.5 rounded-lg hover:bg-black/10 text-white/80 hover:text-white"
+                            >
+                              ⋮
+                            </button>
+                            {openMenuId === msg.id && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  aria-hidden
+                                  onClick={() => setOpenMenuId(null)}
+                                />
+                                <div className="absolute right-0 top-full mt-1 py-1 bg-white rounded-lg shadow-lg border border-[#e5e5ea] z-20 min-w-[100px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditMessage(msg)}
+                                    className="w-full text-left px-3 py-2 text-sm text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                                  >
+                                    編集
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteMessage(msg)}
+                                    className="w-full text-left px-3 py-2 text-sm text-[#FF3B30] hover:bg-[#f5f5f7]"
+                                  >
+                                    削除
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                         </div>
                         <span className={`text-[13px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                           {formatTime(msg.createdAt)}
