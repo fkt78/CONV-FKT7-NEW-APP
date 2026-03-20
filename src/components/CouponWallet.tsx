@@ -255,7 +255,7 @@ export default function CouponWallet() {
               <button
                 key={c.id}
                 onClick={() => canUse && setPresenting(c)}
-                disabled={isUsed || marking}
+                disabled={isUsed || expired || marking}
                 className="w-full text-left group"
               >
                 <div className={`relative flex rounded-2xl overflow-hidden border transition ${
@@ -328,7 +328,7 @@ export default function CouponWallet() {
           <div className="w-full max-w-sm">
             <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl">
               <div className="bg-[#007AFF] py-3 text-center">
-                <span className="inline-block text-2xl animate-[coupon-float_2.5s_ease-in-out_infinite]" aria-hidden>🎫</span>
+                <span className="inline-block text-2xl animate-[coupon-float_2s_ease-in-out_infinite]" aria-hidden>🎫</span>
                 <p className="text-white font-bold text-xs tracking-widest mt-1">VIP COUPON</p>
               </div>
 
@@ -388,7 +388,7 @@ export default function CouponWallet() {
                   className="relative w-full bg-[#007AFF] text-white font-semibold py-3 rounded-2xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                 >
                   <span
-                    className="absolute inset-0 bg-[length:200%_100%] bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.35)_50%,transparent_100%)] animate-[coupon-shimmer_2.5s_ease-in-out_infinite] pointer-events-none"
+                    className="absolute inset-0 bg-[length:200%_100%] bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.55)_45%,rgba(255,255,255,0.55)_55%,transparent_100%)] animate-[coupon-shimmer_1.8s_ease-in-out_infinite] pointer-events-none"
                     aria-hidden
                   />
                   <span className="relative z-10">

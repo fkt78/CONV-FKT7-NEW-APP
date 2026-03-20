@@ -177,6 +177,9 @@ export default function CouponManager() {
         })
       }
       resetForm()
+    } catch (err) {
+      console.error('クーポン保存エラー:', err)
+      alert('保存に失敗しました。もう一度お試しください。')
     } finally {
       setSaving(false)
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
@@ -15,7 +15,8 @@ import {
   type Timestamp,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
-import { formatTime } from '../lib/formatTime'
+import { formatTime, isSameDay, formatDateDivider } from '../lib/formatTime'
+import { messageMatches, highlightMatch } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponWallet from '../components/CouponWallet'
@@ -49,42 +50,6 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   female: '女性',
   student: '学生',
   other: 'その他',
-}
-
-function isSameDay(a: Date | null, b: Date | null): boolean {
-  if (!a || !b) return false
-  return a.toDateString() === b.toDateString()
-}
-
-function formatDateDivider(date: Date | null): string {
-  if (!date) return ''
-  const now = new Date()
-  if (date.toDateString() === now.toDateString()) return '今日'
-  const yesterday = new Date(now)
-  yesterday.setDate(now.getDate() - 1)
-  if (date.toDateString() === yesterday.toDateString()) return '昨日'
-  return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
-}
-
-function messageMatches(msg: Message, q: string): boolean {
-  if (!q.trim()) return true
-  const lower = q.trim().toLowerCase()
-  if (msg.text?.toLowerCase().includes(lower)) return true
-  if (msg.attachmentName?.toLowerCase().includes(lower)) return true
-  return false
-}
-
-function highlightMatch(text: string, query: string): ReactNode {
-  if (!query.trim()) return text
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
-  return parts.map((part, i) =>
-    part.toLowerCase() === query.trim().toLowerCase() ? (
-      <mark key={i} className="bg-[#FFE500]/70 rounded px-0.5">{part}</mark>
-    ) : (
-      part
-    ),
-  )
 }
 
 export default function Home() {

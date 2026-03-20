@@ -62,7 +62,7 @@ html, body, #root {
 /* クーポン詳細モーダル：スクショ不正防止アニメーション */
 @keyframes coupon-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-8px); }
 }
 
 @keyframes coupon-shimmer {

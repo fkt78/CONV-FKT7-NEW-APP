@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
@@ -21,7 +21,8 @@ import {
   type Query,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
-import { formatTime, formatTimeCompact } from '../lib/formatTime'
+import { formatTime, formatTimeCompact, isSameDay, formatDateDivider } from '../lib/formatTime'
+import { messageMatches, highlightMatch } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponManager from '../components/CouponManager'
@@ -57,44 +58,6 @@ interface Message {
   attachmentUrl?: string
   attachmentType?: AttachmentType
   attachmentName?: string
-}
-
-function isSameDay(a: Date | null, b: Date | null): boolean {
-  if (!a || !b) return false
-  return a.toDateString() === b.toDateString()
-}
-
-/** メッセージが検索キーワードにマッチするか */
-function messageMatches(msg: Message, q: string): boolean {
-  if (!q.trim()) return true
-  const lower = q.trim().toLowerCase()
-  if (msg.text?.toLowerCase().includes(lower)) return true
-  if (msg.attachmentName?.toLowerCase().includes(lower)) return true
-  return false
-}
-
-/** テキスト内のキーワードをハイライト表示 */
-function highlightMatch(text: string, query: string): ReactNode {
-  if (!query.trim()) return text
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
-  return parts.map((part, i) =>
-    part.toLowerCase() === query.trim().toLowerCase() ? (
-      <mark key={i} className="bg-[#FFE500]/70 rounded px-0.5">{part}</mark>
-    ) : (
-      part
-    ),
-  )
-}
-
-function formatDateDivider(date: Date | null): string {
-  if (!date) return ''
-  const now = new Date()
-  if (date.toDateString() === now.toDateString()) return '今日'
-  const yesterday = new Date(now)
-  yesterday.setDate(now.getDate() - 1)
-  if (date.toDateString() === yesterday.toDateString()) return '昨日'
-  return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 const ATTRIBUTE_LABELS: Record<string, string> = {
@@ -720,16 +683,16 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[#1d1d1f] text-sm font-medium truncate">
-                              {user.memberNumber != null && (
-                                <span className="text-[#86868b] font-mono text-[10px] mr-1.5">
-                                  #{String(user.memberNumber).padStart(5, '0')}
-                                </span>
-                              )}
-                              {user.fullName}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#1d1d1f] text-sm font-medium truncate">
+                          {user.memberNumber != null && (
+                            <span className="text-[#86868b] font-mono text-[10px] mr-1.5">
+                              #{String(user.memberNumber).padStart(5, '0')}
                             </span>
+                          )}
+                          {user.fullName}
+                        </span>
                         {meta?.lastMessageAt && (
                           <span className="text-[#86868b] text-[10px] flex-shrink-0 ml-2">
                             {formatTimeCompact(meta.lastMessageAt)}

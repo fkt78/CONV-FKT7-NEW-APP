@@ -31,3 +31,20 @@ export function formatTimeCompact(date: Date | null): string {
   if (date.toDateString() === yesterday.toDateString()) return '昨日'
   return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
 }
+
+/** 2つの日付が同じ日かどうか */
+export function isSameDay(a: Date | null, b: Date | null): boolean {
+  if (!a || !b) return false
+  return a.toDateString() === b.toDateString()
+}
+
+/** 日付区切り表示用（今日/昨日/年月日） */
+export function formatDateDivider(date: Date | null): string {
+  if (!date) return ''
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) return '今日'
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return '昨日'
+  return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+}
