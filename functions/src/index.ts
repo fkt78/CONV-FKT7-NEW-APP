@@ -1,6 +1,7 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { initializeApp } from 'firebase-admin/app'
 
@@ -176,3 +177,183 @@ export const onNewsCreated = onDocumentCreated('news/{newsId}', async (event) =>
     await sendToUser(uid, '新しいお知らせ', title, 'news')
   }
 })
+
+/* ── 朝7時 天気判定＆クーポン自動配信 ── */
+
+const IGA_LAT = 34.7667
+const IGA_LON = 136.1333
+const RAIN_CODES = new Set([51, 53, 55, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99])
+const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86])
+
+type WeatherCondition = 'any' | 'rain' | 'snow' | 'cold_below' | 'hot_above'
+type TargetSegment = 'all' | 'male' | 'female' | 'student' | 'other' | '10s' | '20s' | '30s' | '40s' | '50s' | '60plus'
+type ExpiryType = 'same_day' | 'end_of_week' | 'end_of_month' | 'date'
+
+interface WeatherData {
+  temperature: number
+  temperatureMax: number
+  temperatureMin: number
+  weatherCode: number
+  isRainy: boolean
+  isSnowy: boolean
+}
+
+interface CouponTemplate {
+  id: string
+  title: string
+  description: string
+  discountAmount: number
+  weatherCondition: WeatherCondition
+  temperatureThreshold: number | null
+  targetSegment: TargetSegment
+  expiryType?: ExpiryType
+  expiryDate?: string
+}
+
+async function fetchWeatherForSchedule(): Promise<WeatherData> {
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${IGA_LAT}&longitude=${IGA_LON}` +
+    `&current=temperature_2m,weather_code` +
+    `&daily=temperature_2m_max,temperature_2m_min` +
+    `&timezone=Asia%2FTokyo`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('天気情報の取得に失敗しました')
+  const json = await res.json()
+  const c = json.current
+  const d = json.daily
+  const code = (c?.weather_code as number) ?? 0
+  return {
+    temperature: c?.temperature_2m ?? 0,
+    temperatureMax: (d?.temperature_2m_max?.[0] as number) ?? c?.temperature_2m ?? 0,
+    temperatureMin: (d?.temperature_2m_min?.[0] as number) ?? c?.temperature_2m ?? 0,
+    weatherCode: code,
+    isRainy: RAIN_CODES.has(code),
+    isSnowy: SNOW_CODES.has(code),
+  }
+}
+
+function matchesWeather(cond: WeatherCondition, threshold: number | null, w: WeatherData): boolean {
+  switch (cond) {
+    case 'any': return true
+    case 'rain': return w.isRainy
+    case 'snow': return w.isSnowy
+    case 'cold_below': return threshold !== null && w.temperatureMin <= threshold
+    case 'hot_above': return threshold !== null && w.temperatureMax >= threshold
+    default: return false
+  }
+}
+
+function getAgeDecade(birthMonth: string): TargetSegment {
+  const [y, m] = birthMonth.split('-').map(Number)
+  const now = new Date()
+  let age = now.getFullYear() - y
+  if (now.getMonth() + 1 < m) age--
+  if (age < 20) return '10s'
+  if (age < 30) return '20s'
+  if (age < 40) return '30s'
+  if (age < 50) return '40s'
+  if (age < 60) return '50s'
+  return '60plus'
+}
+
+function matchesSegment(seg: TargetSegment, attr: string, birth: string): boolean {
+  if (seg === 'all') return true
+  if (['male', 'female', 'student', 'other'].includes(seg)) return attr === seg
+  return getAgeDecade(birth) === seg
+}
+
+function computeExpiryDate(expiryType: ExpiryType, expiryDateStr: string | undefined, distributedDate: string): Date {
+  const [y, m, d] = distributedDate.split('-').map(Number)
+  const dist = new Date(y, m - 1, d)
+  switch (expiryType) {
+    case 'same_day':
+      return new Date(y, m - 1, d, 23, 59, 59, 999)
+    case 'end_of_week': {
+      const day = dist.getDay()
+      const daysUntilSunday = (7 - day) % 7
+      const sunday = new Date(dist)
+      sunday.setDate(sunday.getDate() + daysUntilSunday)
+      return new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 23, 59, 59, 999)
+    }
+    case 'end_of_month':
+      return new Date(y, m, 0, 23, 59, 59, 999)
+    case 'date': {
+      if (!expiryDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDateStr)) {
+        return new Date(y, m - 1, d, 23, 59, 59, 999)
+      }
+      const [ey, em, ed] = expiryDateStr.split('-').map(Number)
+      return new Date(ey, em - 1, ed, 23, 59, 59, 999)
+    }
+    default:
+      return new Date(y, m - 1, d, 23, 59, 59, 999)
+  }
+}
+
+/** 毎朝7時（日本時間）に天気判定＆クーポン自動配信 */
+export const scheduledCouponDistribution = onSchedule(
+  {
+    schedule: '0 7 * * *',
+    timeZone: 'Asia/Tokyo',
+  },
+  async () => {
+    const settingsSnap = await db.collection('settings').doc('coupon').get()
+    const settings = settingsSnap.data() ?? {}
+    if (settings.autoDistributeEnabled === false) {
+      console.log('scheduledCouponDistribution: autoDistributeEnabled is false, skipping')
+      return
+    }
+    const dailyLimit = (settings.dailyLimit as number) ?? 1
+
+    const weather = await fetchWeatherForSchedule()
+    const cSnap = await db.collection('coupons').where('active', '==', true).get()
+    const templates: CouponTemplate[] = cSnap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
+      .filter((t) => matchesWeather(t.weatherCondition, t.temperatureThreshold ?? null, weather))
+
+    if (templates.length === 0) {
+      console.log('scheduledCouponDistribution: no matching coupons', weather)
+      return
+    }
+
+    const uSnap = await db.collection('users').where('status', '==', 'active').get()
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    let distributedCount = 0
+    for (const coupon of templates) {
+      const expiryType = coupon.expiryType ?? 'same_day'
+      const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
+
+      for (const uDoc of uSnap.docs) {
+        const u = uDoc.data()
+        const uid = uDoc.id
+        if (!matchesSegment(coupon.targetSegment, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
+
+        const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
+        const logSnap = await logRef.get()
+        const count = logSnap.exists ? (logSnap.data()?.count as number) : 0
+        if (count >= dailyLimit) continue
+
+        const couponDocId = `${coupon.id}_${today}`
+        const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
+        if (existing.exists) continue
+
+        await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
+          couponId: coupon.id,
+          title: coupon.title,
+          description: coupon.description ?? '',
+          discountAmount: coupon.discountAmount ?? 0,
+          status: 'unused',
+          distributedAt: Timestamp.now(),
+          distributedDate: today,
+          expiresAt: Timestamp.fromDate(expiresAtDate),
+          usedAt: null,
+        })
+        await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+        distributedCount++
+      }
+    }
+    console.log('scheduledCouponDistribution:', distributedCount, 'coupons distributed', weather)
+  },
+)

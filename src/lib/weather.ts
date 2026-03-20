@@ -2,7 +2,12 @@ const IGA_LAT = 34.7667
 const IGA_LON = 136.1333
 
 export interface WeatherData {
+  /** 現在の気温（表示用） */
   temperature: number
+  /** その日の予想最高気温（hot_above 条件に使用） */
+  temperatureMax: number
+  /** その日の予想最低気温（cold_below 条件に使用） */
+  temperatureMin: number
   precipitation: number
   weatherCode: number
   description: string
@@ -48,6 +53,7 @@ export async function fetchWeather(): Promise<WeatherData> {
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${IGA_LAT}&longitude=${IGA_LON}` +
     `&current=temperature_2m,precipitation,weather_code` +
+    `&daily=temperature_2m_max,temperature_2m_min` +
     `&timezone=Asia%2FTokyo`
 
   const res = await fetch(url)
@@ -55,11 +61,14 @@ export async function fetchWeather(): Promise<WeatherData> {
 
   const json = await res.json()
   const c = json.current
+  const d = json.daily
   const code = c.weather_code as number
   const info = WEATHER_MAP[code] ?? { text: '不明', emoji: '❓' }
 
   return {
     temperature: c.temperature_2m,
+    temperatureMax: (d?.temperature_2m_max?.[0] as number) ?? c.temperature_2m,
+    temperatureMin: (d?.temperature_2m_min?.[0] as number) ?? c.temperature_2m,
     precipitation: c.precipitation,
     weatherCode: code,
     description: info.text,

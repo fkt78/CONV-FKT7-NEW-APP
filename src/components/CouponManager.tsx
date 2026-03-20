@@ -34,6 +34,7 @@ export default function CouponManager() {
   /* ── state ── */
   const [coupons, setCoupons] = useState<CouponTemplate[]>([])
   const [dailyLimit, setDailyLimit] = useState(1)
+  const [autoDistributeEnabled, setAutoDistributeEnabled] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -80,7 +81,11 @@ export default function CouponManager() {
 
   useEffect(() => {
     getDoc(doc(db, 'settings', 'coupon')).then((snap) => {
-      if (snap.exists()) setDailyLimit(snap.data().dailyLimit as number)
+      if (snap.exists()) {
+        const data = snap.data()
+        setDailyLimit((data?.dailyLimit as number) ?? 1)
+        setAutoDistributeEnabled((data?.autoDistributeEnabled as boolean) ?? true)
+      }
     })
   }, [])
 
@@ -114,6 +119,12 @@ export default function CouponManager() {
   async function handleSaveLimit(val: number) {
     setDailyLimit(val)
     await setDoc(doc(db, 'settings', 'coupon'), { dailyLimit: val }, { merge: true })
+  }
+
+  /* ── 自動配信オン/オフ ── */
+  async function handleToggleAutoDistribute(enabled: boolean) {
+    setAutoDistributeEnabled(enabled)
+    await setDoc(doc(db, 'settings', 'coupon'), { autoDistributeEnabled: enabled }, { merge: true })
   }
 
   /* ── フォームリセット ── */
@@ -300,7 +311,7 @@ export default function CouponManager() {
               <p className="text-[#1d1d1f] text-sm font-medium">三重県伊賀市</p>
               {weather ? (
                 <p className="text-[#86868b] text-xs">
-                  {weather.description} / {weather.temperature}℃ / 降水 {weather.precipitation}mm
+                  {weather.description} / 最高{weather.temperatureMax}℃ 最低{weather.temperatureMin}℃ / 降水 {weather.precipitation}mm
                 </p>
               ) : (
                 <p className="text-[#86868b]/70 text-xs">天気未取得</p>
@@ -316,18 +327,29 @@ export default function CouponManager() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-lg px-3 py-2">
-            <span className="text-[#86868b] text-xs whitespace-nowrap">1日上限</span>
-            <select
-              value={dailyLimit}
-              onChange={(e) => handleSaveLimit(Number(e.target.value))}
-              className="bg-transparent text-[#007AFF] text-sm font-bold focus:outline-none"
-            >
-              {[1, 2, 3, 5].map((n) => (
-                <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
-              ))}
-            </select>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoDistributeEnabled}
+                onChange={(e) => handleToggleAutoDistribute(e.target.checked)}
+                className="rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
+              />
+              <span className="text-[#1d1d1f] text-xs">毎朝7時に自動配信</span>
+            </label>
+            <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-lg px-3 py-2">
+              <span className="text-[#86868b] text-xs whitespace-nowrap">1日上限</span>
+              <select
+                value={dailyLimit}
+                onChange={(e) => handleSaveLimit(Number(e.target.value))}
+                className="bg-transparent text-[#007AFF] text-sm font-bold focus:outline-none"
+              >
+                {[1, 2, 3, 5].map((n) => (
+                  <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
+                ))}
+              </select>
+            </div>
           </div>
           <button
             onClick={handleDistribute}
@@ -343,7 +365,7 @@ export default function CouponManager() {
             <div className="flex items-center gap-2 text-sm">
               <span>{result.weather.emoji}</span>
               <span className="text-[#1d1d1f] font-medium">
-                {result.weather.description} {result.weather.temperature}℃
+                {result.weather.description} 最高{result.weather.temperatureMax}℃ 最低{result.weather.temperatureMin}℃
               </span>
               <span className="text-[#86868b]">→</span>
               <span className="text-[#007AFF] font-bold">{result.distributedCount}件配信</span>

@@ -91,8 +91,8 @@ function matchesWeather(
     case 'any':        return true
     case 'rain':       return w.isRainy
     case 'snow':       return w.isSnowy
-    case 'cold_below': return threshold !== null && w.temperature <= threshold
-    case 'hot_above':  return threshold !== null && w.temperature >= threshold
+    case 'cold_below': return threshold !== null && w.temperatureMin <= threshold
+    case 'hot_above':  return threshold !== null && w.temperatureMax >= threshold
   }
 }
 
