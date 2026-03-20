@@ -267,7 +267,7 @@ export default function CouponManager() {
     try {
       const r = await distributeCouponToUsers(individualCoupon.id, Array.from(selectedUserIds))
       setIndividualResult(r)
-    } catch (err) {
+    } catch {
       alert('配信処理中にエラーが発生しました')
     } finally {
       setIndividualDistributing(false)

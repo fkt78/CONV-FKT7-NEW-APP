@@ -328,7 +328,7 @@ export default function CouponWallet() {
           <div className="w-full max-w-sm">
             <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl">
               <div className="bg-[#007AFF] py-3 text-center">
-                <span className="text-2xl">🎫</span>
+                <span className="inline-block text-2xl animate-[coupon-float_2.5s_ease-in-out_infinite]" aria-hidden>🎫</span>
                 <p className="text-white font-bold text-xs tracking-widest mt-1">VIP COUPON</p>
               </div>
 
@@ -336,7 +336,7 @@ export default function CouponWallet() {
                 <h2 className="text-[#1d1d1f] font-semibold text-xl">{presenting.title}</h2>
                 {presenting.description && (
                   <div className="text-[#86868b] text-sm text-left space-y-1.5">
-                    {presenting.description.split('\n').map((line, i) => {
+                    {presenting.description.split(/\r?\n|\r/).map((line, i) => {
                       const trimmed = line.trim()
                       if (!trimmed) return <div key={i} className="h-2" />
                       const bulletMatch = trimmed.match(/^[-•*・]\s+(.+)$/)
@@ -385,14 +385,20 @@ export default function CouponWallet() {
                 <button
                   onClick={() => handleUse(presenting)}
                   disabled={marking}
-                  className="w-full bg-[#007AFF] text-white font-semibold py-3 rounded-2xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative w-full bg-[#007AFF] text-white font-semibold py-3 rounded-2xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                 >
+                  <span
+                    className="absolute inset-0 bg-[length:200%_100%] bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.35)_50%,transparent_100%)] animate-[coupon-shimmer_2.5s_ease-in-out_infinite] pointer-events-none"
+                    aria-hidden
+                  />
+                  <span className="relative z-10">
                   {marking ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       処理中...
                     </span>
                   ) : '✓ 使用済みにする'}
+                  </span>
                 </button>
                 <button
                   onClick={() => !marking && setPresenting(null)}

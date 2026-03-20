@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
@@ -203,11 +203,15 @@ export default function Home() {
     })
   }, [currentUser, messages, homeTab])
 
-  const matchedIndices = searchQuery.trim()
-    ? messages
-        .map((m, i) => (messageMatches(m, searchQuery) ? i : -1))
-        .filter((i) => i >= 0)
-    : []
+  const matchedIndices = useMemo(
+    () =>
+      searchQuery.trim()
+        ? messages
+            .map((m, i) => (messageMatches(m, searchQuery) ? i : -1))
+            .filter((i) => i >= 0)
+        : [],
+    [searchQuery, messages],
+  )
   const matchCount = matchedIndices.length
   const currentMatchIndex = Math.min(searchResultIndex, Math.max(0, matchCount - 1))
 
@@ -225,7 +229,7 @@ export default function Home() {
         return () => clearTimeout(timer)
       }
     }
-  }, [searchQuery, matchCount])
+  }, [searchQuery, matchCount, matchedIndices, messages])
 
   const scrollToMatch = (index: number) => {
     const idx = matchedIndices[index]
