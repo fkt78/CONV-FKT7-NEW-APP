@@ -208,6 +208,13 @@ interface CouponTemplate {
   targetSegment: TargetSegment
   expiryType?: ExpiryType
   expiryDate?: string
+  autoDistribute?: boolean
+  autoDistributeSchedule?: {
+    type: 'daily' | 'weekly' | 'monthly' | 'specific_months' | 'birth_month'
+    dayOfWeek?: number
+    dayOfMonth?: number
+    months?: number[]
+  }
 }
 
 async function fetchWeatherForSchedule(): Promise<WeatherData> {
@@ -290,6 +297,33 @@ function computeExpiryDate(expiryType: ExpiryType, expiryDateStr: string | undef
   }
 }
 
+/** 今日がスケジュールに合致するか（日付ベースのクーポン用、天気チェックなし） */
+function matchesSchedule(schedule: CouponTemplate['autoDistributeSchedule'], now: Date): boolean {
+  if (!schedule) return true
+  if (schedule.type === 'daily') return true
+  const dayOfWeek = now.getDay()
+  const dayOfMonth = now.getDate()
+  const month = now.getMonth() + 1
+
+  switch (schedule.type) {
+    case 'weekly':
+      return schedule.dayOfWeek === dayOfWeek
+    case 'monthly':
+      return schedule.dayOfMonth === dayOfMonth
+    case 'specific_months':
+      return (schedule.months ?? []).includes(month) && schedule.dayOfMonth === dayOfMonth
+    default:
+      return false
+  }
+}
+
+/** 誕生月の○日か（会員の birthMonth と今日の日付で判定） */
+function isBirthMonthDay(birthMonth: string, dayOfMonth: number, now: Date): boolean {
+  if (!birthMonth || !/^\d{4}-(0[1-9]|1[0-2])$/.test(birthMonth)) return false
+  const [, m] = birthMonth.split('-').map(Number)
+  return m === now.getMonth() + 1 && now.getDate() === dayOfMonth
+}
+
 /** 毎朝7時（日本時間）に天気判定＆クーポン自動配信 */
 export const scheduledCouponDistribution = onSchedule(
   {
@@ -299,61 +333,97 @@ export const scheduledCouponDistribution = onSchedule(
   async () => {
     const settingsSnap = await db.collection('settings').doc('coupon').get()
     const settings = settingsSnap.data() ?? {}
-    if (settings.autoDistributeEnabled === false) {
-      console.log('scheduledCouponDistribution: autoDistributeEnabled is false, skipping')
-      return
-    }
     const dailyLimit = (settings.dailyLimit as number) ?? 1
 
     const weather = await fetchWeatherForSchedule()
     const cSnap = await db.collection('coupons').where('active', '==', true).get()
-    const templates: CouponTemplate[] = cSnap.docs
-      .map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
-      .filter((t) => matchesWeather(t.weatherCondition, t.temperatureThreshold ?? null, weather))
-
-    if (templates.length === 0) {
-      console.log('scheduledCouponDistribution: no matching coupons', weather)
-      return
-    }
-
-    const uSnap = await db.collection('users').where('status', '==', 'active').get()
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
+    const allTemplates = cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
+    const uSnap = await db.collection('users').where('status', '==', 'active').get()
+
     let distributedCount = 0
-    for (const coupon of templates) {
-      const expiryType = coupon.expiryType ?? 'same_day'
-      const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
 
-      for (const uDoc of uSnap.docs) {
-        const u = uDoc.data()
-        const uid = uDoc.id
-        if (!matchesSegment(coupon.targetSegment, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
+    for (const coupon of allTemplates) {
+      if (!coupon.autoDistribute) continue
 
-        const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
-        const logSnap = await logRef.get()
-        const count = logSnap.exists ? (logSnap.data()?.count as number) : 0
-        if (count >= dailyLimit) continue
+      const s = coupon.autoDistributeSchedule
+      const isBirthMonth = s?.type === 'birth_month'
+      const dayOfMonthForBirth = s?.dayOfMonth ?? 1
 
-        const couponDocId = `${coupon.id}_${today}`
-        const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
-        if (existing.exists) continue
+      if (isBirthMonth) {
+        for (const uDoc of uSnap.docs) {
+          const u = uDoc.data()
+          const uid = uDoc.id
+          const birth = u.birthMonth as string
+          if (!isBirthMonthDay(birth ?? '', dayOfMonthForBirth, now)) continue
+          if (!matchesSegment(coupon.targetSegment, u.attribute ?? '', birth ?? '01-2000')) continue
 
-        await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
-          couponId: coupon.id,
-          title: coupon.title,
-          description: coupon.description ?? '',
-          discountAmount: coupon.discountAmount ?? 0,
-          status: 'unused',
-          distributedAt: Timestamp.now(),
-          distributedDate: today,
-          expiresAt: Timestamp.fromDate(expiresAtDate),
-          usedAt: null,
-        })
-        await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
-        distributedCount++
+          const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
+          const logSnap = await logRef.get()
+          const count = logSnap.exists ? (logSnap.data()?.count as number) : 0
+          if (count >= dailyLimit) continue
+
+          const couponDocId = `${coupon.id}_${today}`
+          const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
+          if (existing.exists) continue
+
+          const expiryType = coupon.expiryType ?? 'same_day'
+          const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
+
+          await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
+            couponId: coupon.id,
+            title: coupon.title,
+            description: coupon.description ?? '',
+            discountAmount: coupon.discountAmount ?? 0,
+            status: 'unused',
+            distributedAt: Timestamp.now(),
+            distributedDate: today,
+            expiresAt: Timestamp.fromDate(expiresAtDate),
+            usedAt: null,
+          })
+          await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          distributedCount++
+        }
+      } else {
+        if (!matchesSchedule(s, now)) continue
+        if ((!s || s.type === 'daily') && !matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) continue
+
+        const expiryType = coupon.expiryType ?? 'same_day'
+        const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
+
+        for (const uDoc of uSnap.docs) {
+          const u = uDoc.data()
+          const uid = uDoc.id
+          if (!matchesSegment(coupon.targetSegment, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
+
+          const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
+          const logSnap = await logRef.get()
+          const count = logSnap.exists ? (logSnap.data()?.count as number) : 0
+          if (count >= dailyLimit) continue
+
+          const couponDocId = `${coupon.id}_${today}`
+          const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
+          if (existing.exists) continue
+
+          await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
+            couponId: coupon.id,
+            title: coupon.title,
+            description: coupon.description ?? '',
+            discountAmount: coupon.discountAmount ?? 0,
+            status: 'unused',
+            distributedAt: Timestamp.now(),
+            distributedDate: today,
+            expiresAt: Timestamp.fromDate(expiresAtDate),
+            usedAt: null,
+          })
+          await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          distributedCount++
+        }
       }
     }
+
     console.log('scheduledCouponDistribution:', distributedCount, 'coupons distributed', weather)
   },
 )

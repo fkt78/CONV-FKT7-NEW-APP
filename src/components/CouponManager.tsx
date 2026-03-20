@@ -34,7 +34,6 @@ export default function CouponManager() {
   /* ── state ── */
   const [coupons, setCoupons] = useState<CouponTemplate[]>([])
   const [dailyLimit, setDailyLimit] = useState(1)
-  const [autoDistributeEnabled, setAutoDistributeEnabled] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -47,6 +46,11 @@ export default function CouponManager() {
   const [segment, setSegment] = useState<TargetSegment>('all')
   const [expiryType, setExpiryType] = useState<ExpiryType>('same_day')
   const [expiryDate, setExpiryDate] = useState('')
+  const [autoDistribute, setAutoDistribute] = useState(false)
+  const [scheduleType, setScheduleType] = useState<'daily' | 'weekly' | 'monthly' | 'specific_months' | 'birth_month'>('daily')
+  const [scheduleDayOfWeek, setScheduleDayOfWeek] = useState(5)
+  const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState(1)
+  const [scheduleMonths, setScheduleMonths] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
 
   // weather & distribution
@@ -84,7 +88,6 @@ export default function CouponManager() {
       if (snap.exists()) {
         const data = snap.data()
         setDailyLimit((data?.dailyLimit as number) ?? 1)
-        setAutoDistributeEnabled((data?.autoDistributeEnabled as boolean) ?? true)
       }
     })
   }, [])
@@ -121,12 +124,6 @@ export default function CouponManager() {
     await setDoc(doc(db, 'settings', 'coupon'), { dailyLimit: val }, { merge: true })
   }
 
-  /* ── 自動配信オン/オフ ── */
-  async function handleToggleAutoDistribute(enabled: boolean) {
-    setAutoDistributeEnabled(enabled)
-    await setDoc(doc(db, 'settings', 'coupon'), { autoDistributeEnabled: enabled }, { merge: true })
-  }
-
   /* ── フォームリセット ── */
   function resetForm() {
     setTitle('')
@@ -137,6 +134,11 @@ export default function CouponManager() {
     setSegment('all')
     setExpiryType('same_day')
     setExpiryDate('')
+    setAutoDistribute(false)
+    setScheduleType('daily')
+    setScheduleDayOfWeek(5)
+    setScheduleDayOfMonth(1)
+    setScheduleMonths([])
     setEditingId(null)
     setShowForm(false)
   }
@@ -151,6 +153,12 @@ export default function CouponManager() {
     setSegment(c.targetSegment)
     setExpiryType(c.expiryType ?? 'same_day')
     setExpiryDate(c.expiryDate ?? '')
+    setAutoDistribute(c.autoDistribute ?? false)
+    const s = c.autoDistributeSchedule
+    setScheduleType((s?.type as typeof scheduleType) ?? 'daily')
+    setScheduleDayOfWeek(s?.dayOfWeek ?? 5)
+    setScheduleDayOfMonth(s?.dayOfMonth ?? 1)
+    setScheduleMonths(s?.months ?? [])
     setEditingId(c.id)
     setShowForm(true)
   }
@@ -176,6 +184,15 @@ export default function CouponManager() {
         targetSegment: segment,
         expiryType,
         expiryDate: expiryType === 'date' ? expiryDate : null,
+        autoDistribute,
+        ...(autoDistribute && {
+          autoDistributeSchedule: {
+            type: scheduleType,
+            ...(scheduleType === 'weekly' && { dayOfWeek: scheduleDayOfWeek }),
+            ...(['monthly', 'specific_months', 'birth_month'].includes(scheduleType) && { dayOfMonth: scheduleDayOfMonth }),
+            ...(scheduleType === 'specific_months' && scheduleMonths.length > 0 && { months: scheduleMonths }),
+          },
+        }),
       }
 
       if (editingId) {
@@ -199,6 +216,11 @@ export default function CouponManager() {
   /* ── 有効/無効切り替え ── */
   async function handleToggle(id: string, current: boolean) {
     await updateDoc(doc(db, 'coupons', id), { active: !current })
+  }
+
+  /* ── 自動配信オン/オフ切り替え ── */
+  async function handleToggleAutoDistribute(id: string, current: boolean) {
+    await updateDoc(doc(db, 'coupons', id), { autoDistribute: !current })
   }
 
   /* ── 削除 ── */
@@ -301,6 +323,21 @@ export default function CouponManager() {
     return EXPIRY_LABELS[c.expiryType ?? 'same_day']
   }
 
+  /* ── 自動配信スケジュールバッジ ── */
+  function scheduleBadge(c: CouponTemplate): string {
+    const s = c.autoDistributeSchedule
+    if (!c.autoDistribute || !s) return ''
+    const days = ['日', '月', '火', '水', '木', '金', '土']
+    switch (s.type) {
+      case 'daily': return '毎日'
+      case 'weekly': return `毎週${days[s.dayOfWeek ?? 0]}`
+      case 'monthly': return `毎月${s.dayOfMonth ?? 1}日`
+      case 'specific_months': return (s.months ?? []).map((m) => `${m}月`).join('・') + `${s.dayOfMonth ?? 1}日`
+      case 'birth_month': return `誕生月${s.dayOfMonth ?? 1}日`
+      default: return '自動'
+    }
+  }
+
   return (
     <div className="flex flex-col h-full bg-white">
       <div className="p-4 border-b border-[#e5e5ea] space-y-4 flex-shrink-0">
@@ -329,15 +366,6 @@ export default function CouponManager() {
 
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoDistributeEnabled}
-                onChange={(e) => handleToggleAutoDistribute(e.target.checked)}
-                className="rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
-              />
-              <span className="text-[#1d1d1f] text-xs">毎朝7時に自動配信</span>
-            </label>
             <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-lg px-3 py-2">
               <span className="text-[#86868b] text-xs whitespace-nowrap">1日上限</span>
               <select
@@ -513,9 +541,101 @@ export default function CouponManager() {
                 <span className="text-[#86868b] text-xs">℃</span>
               </div>
             )}
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoDistribute}
+                onChange={(e) => setAutoDistribute(e.target.checked)}
+                className="rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
+              />
+              <span className="text-[#1d1d1f] text-sm">毎朝7時に自動配信</span>
+            </label>
+
+            {autoDistribute && (
+              <div className="space-y-2 pl-6 border-l-2 border-[#e5e5ea]">
+                <div>
+                  <label className="text-[#86868b] text-[10px] block mb-1">配信タイミング</label>
+                  <select
+                    value={scheduleType}
+                    onChange={(e) => setScheduleType(e.target.value as typeof scheduleType)}
+                    className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                  >
+                    <option value="daily">毎日（天気条件があれば天気チェック）</option>
+                    <option value="weekly">毎週</option>
+                    <option value="monthly">毎月</option>
+                    <option value="specific_months">指定した月</option>
+                    <option value="birth_month">誕生月</option>
+                  </select>
+                </div>
+                {scheduleType === 'weekly' && (
+                  <div>
+                    <label className="text-[#86868b] text-[10px] block mb-1">曜日</label>
+                    <select
+                      value={scheduleDayOfWeek}
+                      onChange={(e) => setScheduleDayOfWeek(Number(e.target.value))}
+                      className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                    >
+                      {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                        <option key={i} value={i}>{d}曜日</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {['monthly', 'specific_months', 'birth_month'].includes(scheduleType) && (
+                  <div>
+                    <label className="text-[#86868b] text-[10px] block mb-1">日</label>
+                    <select
+                      value={scheduleDayOfMonth}
+                      onChange={(e) => setScheduleDayOfMonth(Number(e.target.value))}
+                      className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                        <option key={d} value={d}>{d}日</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {scheduleType === 'specific_months' && (
+                  <div>
+                    <label className="text-[#86868b] text-[10px] block mb-1">対象月（複数選択可）</label>
+                    <div className="flex flex-wrap gap-1">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                        <label
+                          key={m}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer ${
+                            scheduleMonths.includes(m) ? 'bg-[#007AFF] text-white' : 'bg-[#e5e5ea] text-[#86868b]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={scheduleMonths.includes(m)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setScheduleMonths((prev) => [...prev, m].sort((a, b) => a - b))
+                              } else {
+                                setScheduleMonths((prev) => prev.filter((x) => x !== m))
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                          {m}月
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <button
               onClick={handleSave}
-              disabled={!title.trim() || saving || (expiryType === 'date' && !expiryDate)}
+              disabled={
+                !title.trim() ||
+                saving ||
+                (expiryType === 'date' && !expiryDate) ||
+                (autoDistribute && scheduleType === 'specific_months' && scheduleMonths.length === 0)
+              }
               className="w-full bg-[#007AFF] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
             >
               {saving ? '保存中...' : editingId ? '更新する' : 'テンプレートを保存'}
@@ -560,6 +680,11 @@ export default function CouponManager() {
                     <span className="text-[10px] bg-[#e5e5ea] text-[#86868b] px-2 py-0.5 rounded-full">
                       {SEGMENT_LABELS[c.targetSegment]}
                     </span>
+                    {c.autoDistribute && (
+                      <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full" title="毎朝7時自動配信">
+                        ⏰{scheduleBadge(c) || '自動'}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -576,6 +701,17 @@ export default function CouponManager() {
                     title="編集"
                   >
                     ✏️
+                  </button>
+                  <button
+                    onClick={() => handleToggleAutoDistribute(c.id, c.autoDistribute ?? false)}
+                    className={`text-[10px] px-2 py-1 rounded-md transition ${
+                      c.autoDistribute
+                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        : 'bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#e5e5ea]'
+                    }`}
+                    title="毎朝7時自動配信"
+                  >
+                    ⏰{c.autoDistribute ? 'ON' : 'OFF'}
                   </button>
                   <button
                     onClick={() => handleToggle(c.id, c.active)}

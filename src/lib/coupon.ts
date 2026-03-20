@@ -36,6 +36,25 @@ export interface CouponTemplate {
   expiryType?: ExpiryType
   /** expiryType が 'date' のときのみ使用（YYYY-MM-DD） */
   expiryDate?: string
+  /** 毎朝7時の自動配信に含めるか（未設定時は false） */
+  autoDistribute?: boolean
+  /**
+   * 自動配信スケジュール（autoDistribute が true のとき使用）
+   * - daily: 毎日（天気条件があれば天気チェック）
+   * - weekly: 毎週○曜日
+   * - monthly: 毎月○日
+   * - specific_months: 指定月の○日
+   * - birth_month: 誕生月の○日（会員ごとにその月の○日に配信）
+   */
+  autoDistributeSchedule?: {
+    type: 'daily' | 'weekly' | 'monthly' | 'specific_months' | 'birth_month'
+    /** weekly のとき: 0=日, 1=月, ..., 6=土 */
+    dayOfWeek?: number
+    /** monthly / specific_months / birth_month のとき: 1-31 */
+    dayOfMonth?: number
+    /** specific_months のとき: 1-12 の配列（例: [1,7,12]） */
+    months?: number[]
+  }
 }
 
 export const EXPIRY_LABELS: Record<ExpiryType, string> = {
