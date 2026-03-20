@@ -28,7 +28,7 @@ export const ROADMAP_ITEMS: RoadmapItem[] = [
   // 管理者機能
   { category: '管理者機能', item: 'ユーザー管理（詳細編集）', description: '氏名・属性・誕生月などの詳細編集', priority: '中', notes: '会員番号は実装済（自動採番・一括割り当て）' },
   { category: '管理者機能', item: 'チャット検索', description: '顧客名・メールでの検索', priority: '中', notes: '' },
-  { category: '管理者機能', item: '分析・レポート', description: 'クーポン利用率・チャット数・エンゲージメント', priority: '中', notes: '' },
+  { category: '管理者機能', item: '分析・レポート', description: 'クーポン利用率・チャット数・エンゲージメント', priority: '中', notes: '実装済（7日/30日/全期間・テンプレート別・日別）' },
   { category: '管理者機能', item: 'データエクスポート', description: 'チャット履歴・顧客データのCSV出力', priority: '中', notes: '' },
   { category: '管理者機能', item: '複数管理者', description: '権限レベル（スーパー管理者・一般管理者等）', priority: '低', notes: '' },
   { category: '管理者機能', item: '操作ログ', description: '管理者の操作履歴', priority: '低', notes: '' },

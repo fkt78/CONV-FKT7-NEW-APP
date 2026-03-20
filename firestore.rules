@@ -43,6 +43,11 @@ service cloud.firestore {
       allow read: if request.auth != null && isAdmin();
     }
 
+    // ── クーポン集計用：collectionGroup クエリは管理者のみ ──
+    match /{path=**}/coupons/{couponId} {
+      allow read: if request.auth != null && isAdmin();
+    }
+
     // ── お知らせ：認証済みは全員読み取り、書き込みは管理者のみ ──
     match /news/{newsId} {
       allow read: if request.auth != null;

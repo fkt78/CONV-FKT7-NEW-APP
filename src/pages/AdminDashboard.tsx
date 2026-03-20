@@ -31,8 +31,9 @@ import NewsManager from '../components/NewsManager'
 import RoadmapManager from '../components/RoadmapManager'
 import UserManager from '../components/UserManager'
 import MessageTemplateManager, { type MessageTemplate } from '../components/MessageTemplateManager'
+import AnalyticsManager from '../components/AnalyticsManager'
 
-type AdminTab = 'chat' | 'coupon' | 'news' | 'users' | 'roadmap' | 'templates'
+type AdminTab = 'chat' | 'coupon' | 'news' | 'users' | 'roadmap' | 'templates' | 'analytics'
 
 interface UserRecord {
   uid: string
@@ -625,10 +626,22 @@ export default function AdminDashboard() {
         >
           📝 テンプレート
         </button>
+        <button
+          onClick={() => setAdminTab('analytics')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'analytics'
+              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
+          }`}
+        >
+          📊 分析
+        </button>
       </div>
 
       {/* メインエリア */}
-      {adminTab === 'templates' ? (
+      {adminTab === 'analytics' ? (
+        <AnalyticsManager />
+      ) : adminTab === 'templates' ? (
         <MessageTemplateManager />
       ) : adminTab === 'roadmap' ? (
         <RoadmapManager />
