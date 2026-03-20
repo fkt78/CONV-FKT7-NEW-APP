@@ -103,7 +103,7 @@ export default function AdminDashboard() {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const messagesForChatRef = useRef<string | null>(null)
@@ -419,8 +419,11 @@ export default function AdminDashboard() {
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-      e.preventDefault()
-      handleSend()
+      if (e.shiftKey) {
+        e.preventDefault()
+        handleSend()
+      }
+      // Enter単体は改行のため何もしない
     }
   }
 
@@ -1000,7 +1003,7 @@ export default function AdminDashboard() {
                                 </div>
                               )}
                               {msg.text && (
-                                <span>
+                                <span className="whitespace-pre-wrap">
                                   {searchQuery.trim()
                                     ? highlightMatch(msg.text, searchQuery)
                                     : msg.text}
@@ -1143,14 +1146,14 @@ export default function AdminDashboard() {
                       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                     </svg>
                   </button>
-                  <input
+                  <textarea
                     ref={inputRef}
-                    type="text"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={`${selectedUser.fullName}さんに返信...`}
-                    className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-full px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] transition"
+                    placeholder={`${selectedUser.fullName}さんに返信...（Enterで改行、Shift+Enterで送信）`}
+                    rows={1}
+                    className="flex-1 min-h-[40px] max-h-28 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] transition resize-none"
                   />
                   <button
                     onClick={handleSend}

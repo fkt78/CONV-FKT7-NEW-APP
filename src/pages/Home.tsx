@@ -72,7 +72,7 @@ export default function Home() {
   const [editingText, setEditingText] = useState('')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
 
@@ -268,8 +268,11 @@ export default function Home() {
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-      e.preventDefault()
-      handleSend()
+      if (e.shiftKey) {
+        e.preventDefault()
+        handleSend()
+      }
+      // Enter単体は改行のため何もしない
     }
   }
 
@@ -623,7 +626,7 @@ export default function Home() {
                             </div>
                           )}
                           {msg.text && (
-                            <span>
+                            <span className="whitespace-pre-wrap">
                               {searchQuery.trim()
                                 ? highlightMatch(msg.text, searchQuery)
                                 : msg.text}
@@ -723,15 +726,15 @@ export default function Home() {
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                 </svg>
               </button>
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="メッセージを入力..."
+                placeholder="メッセージを入力...（Enterで改行、Shift+Enterで送信）"
                 aria-label="メッセージを入力"
-                className="flex-1 min-h-[44px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-full px-5 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition"
+                rows={1}
+                className="flex-1 min-h-[44px] max-h-32 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-5 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition resize-none"
               />
               <button
                 onClick={handleSend}
