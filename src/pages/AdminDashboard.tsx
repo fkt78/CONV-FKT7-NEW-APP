@@ -7,6 +7,7 @@ import {
   query,
   orderBy,
   limit,
+  startAfter,
   onSnapshot,
   getDocs,
   addDoc,
@@ -16,8 +17,11 @@ import {
   where,
   serverTimestamp,
   type Timestamp,
+  type DocumentSnapshot,
+  type Query,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
+import { formatTime, formatTimeCompact } from '../lib/formatTime'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponManager from '../components/CouponManager'
@@ -53,34 +57,6 @@ interface Message {
   attachmentUrl?: string
   attachmentType?: AttachmentType
   attachmentName?: string
-}
-
-function formatTime(date: Date | null): string {
-  if (!date) return ''
-  const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
-  if (isToday) {
-    return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-  }
-  const yesterday = new Date(now)
-  yesterday.setDate(now.getDate() - 1)
-  if (date.toDateString() === yesterday.toDateString()) return '昨日'
-  return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
-}
-
-function formatMessageTime(date: Date | null): string {
-  if (!date) return ''
-  const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
-  if (isToday) {
-    return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-  }
-  return date.toLocaleDateString('ja-JP', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function isSameDay(a: Date | null, b: Date | null): boolean {
@@ -323,31 +299,52 @@ export default function AdminDashboard() {
     setGlobalSearchLoading(true)
     setShowGlobalSearchResults(true)
     try {
-      const qRef = query(
-        collectionGroup(db, 'messages'),
-        orderBy('createdAt', 'desc'),
-        limit(500),
-      )
-      const snap = await getDocs(qRef)
+      const BATCH_SIZE = 500
+      const MAX_MESSAGES = 2500
       const userMap = Object.fromEntries(users.map((u) => [u.uid, { fullName: u.fullName, memberNumber: u.memberNumber }]))
       const matches: Array<Message & { chatId: string }> = []
-      snap.docs.forEach((d) => {
-        const chatId = d.ref.parent.parent?.id
-        if (!chatId) return
-        const data = d.data()
-        const msg: Message & { chatId: string } = {
-          id: d.id,
-          chatId,
-          senderId: data.senderId as string,
-          text: (data.text as string) ?? '',
-          createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
-          readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
-          attachmentUrl: data.attachmentUrl as string | undefined,
-          attachmentType: data.attachmentType as AttachmentType | undefined,
-          attachmentName: data.attachmentName as string | undefined,
-        }
-        if (messageMatches(msg, q)) matches.push(msg)
-      })
+      let lastDoc: DocumentSnapshot | null = null
+      let totalFetched = 0
+
+      while (totalFetched < MAX_MESSAGES) {
+        const qRef: Query = lastDoc
+          ? query(
+              collectionGroup(db, 'messages'),
+              orderBy('createdAt', 'desc'),
+              limit(BATCH_SIZE),
+              startAfter(lastDoc),
+            )
+          : query(
+              collectionGroup(db, 'messages'),
+              orderBy('createdAt', 'desc'),
+              limit(BATCH_SIZE),
+            )
+        const snap = await getDocs(qRef)
+        if (snap.empty) break
+
+        snap.docs.forEach((d: DocumentSnapshot) => {
+          const chatId = d.ref.parent.parent?.id
+          if (!chatId) return
+          const data = d.data() ?? {}
+          const msg: Message & { chatId: string } = {
+            id: d.id,
+            chatId,
+            senderId: data.senderId as string,
+            text: (data.text as string) ?? '',
+            createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+            readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+            attachmentUrl: data.attachmentUrl as string | undefined,
+            attachmentType: data.attachmentType as AttachmentType | undefined,
+            attachmentName: data.attachmentName as string | undefined,
+          }
+          if (messageMatches(msg, q)) matches.push(msg)
+        })
+
+        lastDoc = snap.docs[snap.docs.length - 1] ?? null
+        totalFetched += snap.docs.length
+        if (snap.docs.length < BATCH_SIZE) break
+      }
+
       const byChat = new Map<string, Array<Message & { chatId: string }>>()
       matches.forEach((m) => {
         const arr = byChat.get(m.chatId) ?? []
@@ -457,19 +454,25 @@ export default function AdminDashboard() {
 
     try {
       const ts = serverTimestamp()
-      for (let i = 0; i < targets.length; i++) {
-        const uid = targets[i].uid
-        await addDoc(collection(db, 'chats', uid, 'messages'), {
-          senderId: currentUser.uid,
-          text: trimmed,
-          createdAt: ts,
-        })
-        await setDoc(
-          doc(db, 'chats', uid),
-          { lastMessage: trimmed.slice(0, 50), lastMessageAt: ts },
-          { merge: true },
+      const BATCH_SIZE = 15
+      for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+        const chunk = targets.slice(i, i + BATCH_SIZE)
+        await Promise.all(
+          chunk.map(async (t) => {
+            const uid = t.uid
+            await addDoc(collection(db, 'chats', uid, 'messages'), {
+              senderId: currentUser.uid,
+              text: trimmed,
+              createdAt: ts,
+            })
+            await setDoc(
+              doc(db, 'chats', uid),
+              { lastMessage: trimmed.slice(0, 50), lastMessageAt: ts },
+              { merge: true },
+            )
+          }),
         )
-        setBroadcastProgress({ current: i + 1, total: targets.length })
+        setBroadcastProgress({ current: Math.min(i + BATCH_SIZE, targets.length), total: targets.length })
       }
       setBroadcastText('')
       setShowBroadcastModal(false)
@@ -498,7 +501,7 @@ export default function AdminDashboard() {
   const selectedUser = users.find((u) => u.uid === selectedUid) ?? null
 
   return (
-    <div className="h-screen bg-[#f5f5f7] flex flex-col">
+    <div className="h-dvh bg-[#f5f5f7] flex flex-col">
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e5ea] shadow-sm">
         <div className="flex items-center gap-2">
           <span className="text-[#007AFF] text-xl">♛</span>
@@ -729,7 +732,7 @@ export default function AdminDashboard() {
                             </span>
                         {meta?.lastMessageAt && (
                           <span className="text-[#86868b] text-[10px] flex-shrink-0 ml-2">
-                            {formatTime(meta.lastMessageAt)}
+                            {formatTimeCompact(meta.lastMessageAt)}
                           </span>
                         )}
                       </div>
@@ -922,7 +925,7 @@ export default function AdminDashboard() {
                               )}
                             </div>
                             <span className={`text-[10px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
-                              {formatMessageTime(msg.createdAt)}
+                              {formatTime(msg.createdAt)}
                               {isOwn && (
                                 <span className="ml-1 text-[9px] opacity-80">
                                   {isRead ? '既読' : '未読'}

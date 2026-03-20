@@ -15,6 +15,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
+import { formatTime } from '../lib/formatTime'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponWallet from '../components/CouponWallet'
@@ -48,21 +49,6 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   female: '女性',
   student: '学生',
   other: 'その他',
-}
-
-function formatTime(date: Date | null): string {
-  if (!date) return ''
-  const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
-  if (isToday) {
-    return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-  }
-  return date.toLocaleDateString('ja-JP', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function isSameDay(a: Date | null, b: Date | null): boolean {
@@ -292,6 +278,7 @@ export default function Home() {
           customerUid: currentUser.uid,
           lastMessage: displayText,
           lastMessageAt: ts,
+          unreadFromCustomer: true,
         },
         { merge: true },
       )
