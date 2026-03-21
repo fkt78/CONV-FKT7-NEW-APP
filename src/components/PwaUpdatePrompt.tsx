@@ -52,7 +52,7 @@ export default function PwaUpdatePrompt() {
       <div className="flex gap-3">
         <button
           onClick={handleUpdate}
-          className="flex-1 min-h-[44px] bg-[#007AFF] text-white font-semibold text-[15px] rounded-xl hover:bg-[#0051D5] active:scale-[0.98] transition"
+          className="flex-1 min-h-[44px] bg-[#0095B6] text-white font-semibold text-[15px] rounded-xl hover:bg-[#007A96] active:scale-[0.98] transition"
         >
           更新する
         </button>

@@ -47,7 +47,7 @@ export default function PrivacyPolicy() {
             href="https://firebase.google.com/support/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#007AFF] underline hover:text-[#0051D5]"
+            className="text-[#0095B6] underline hover:text-[#007A96]"
           >
             Firebase プライバシーとセキュリティ
           </a>
@@ -57,7 +57,7 @@ export default function PrivacyPolicy() {
             href="https://policies.google.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#007AFF] underline hover:text-[#0051D5]"
+            className="text-[#0095B6] underline hover:text-[#007A96]"
           >
             Google プライバシーポリシー
           </a>

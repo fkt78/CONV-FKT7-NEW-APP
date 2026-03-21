@@ -15,7 +15,7 @@ function StepItem({
 }) {
   return (
     <li className="flex gap-4 items-start">
-      <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center text-xl font-black border-2 border-[#007AFF]/30">
+      <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#0095B6]/15 text-[#0095B6] flex items-center justify-center text-xl font-black border-2 border-[#0095B6]/30">
         {num}
       </span>
       <div className="flex-1 min-w-0 pt-0.5">
@@ -33,15 +33,15 @@ export default function InstallGuide() {
 
   return (
     <div className="min-h-dvh bg-[#f5f5f7] flex flex-col">
-      <div className="h-px bg-gradient-to-r from-transparent via-[#007AFF]/30 to-transparent flex-shrink-0" />
-      <div className="h-px bg-gradient-to-r from-transparent via-[#5AC8FA]/20 to-transparent flex-shrink-0" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#0095B6]/30 to-transparent flex-shrink-0" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#5BC8D7]/20 to-transparent flex-shrink-0" />
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-5 py-6 pb-10">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => navigate(-1)}
-              className="text-[#007AFF] text-[15px] hover:text-[#0051D5] transition flex items-center gap-1"
+              className="text-[#0095B6] text-[15px] hover:text-[#007A96] transition flex items-center gap-1"
             >
               ← 戻る
             </button>
@@ -67,7 +67,7 @@ export default function InstallGuide() {
               }}
               className={`flex-1 py-3 rounded-lg text-[15px] font-semibold transition flex items-center justify-center gap-2 ${
                 deviceTab === 'iphone'
-                  ? 'bg-white text-[#007AFF] shadow-sm'
+                  ? 'bg-white text-[#0095B6] shadow-sm'
                   : 'text-[#86868b] hover:text-[#1d1d1f]'
               }`}
             >
@@ -78,7 +78,7 @@ export default function InstallGuide() {
               onClick={() => setDeviceTab('android')}
               className={`flex-1 py-3 rounded-lg text-[15px] font-semibold transition flex items-center justify-center gap-2 ${
                 deviceTab === 'android'
-                  ? 'bg-white text-[#007AFF] shadow-sm'
+                  ? 'bg-white text-[#0095B6] shadow-sm'
                   : 'text-[#86868b] hover:text-[#1d1d1f]'
               }`}
             >
@@ -93,7 +93,7 @@ export default function InstallGuide() {
                 onClick={() => setBrowserTab('safari')}
                 className={`flex-1 py-2.5 rounded-md text-[14px] font-semibold transition flex items-center justify-center gap-1.5 ${
                   browserTab === 'safari'
-                    ? 'bg-white text-[#007AFF] shadow-sm'
+                    ? 'bg-white text-[#0095B6] shadow-sm'
                     : 'text-[#86868b] hover:text-[#1d1d1f]'
                 }`}
               >
@@ -104,7 +104,7 @@ export default function InstallGuide() {
                 onClick={() => setBrowserTab('chrome')}
                 className={`flex-1 py-2.5 rounded-md text-[14px] font-semibold transition flex items-center justify-center gap-1.5 ${
                   browserTab === 'chrome'
-                    ? 'bg-white text-[#007AFF] shadow-sm'
+                    ? 'bg-white text-[#0095B6] shadow-sm'
                     : 'text-[#86868b] hover:text-[#1d1d1f]'
                 }`}
               >
@@ -236,7 +236,7 @@ export default function InstallGuide() {
           </p>
 
           {/* LINEでリンクが開けない場合の案内 */}
-          <div className="mt-8 p-4 rounded-2xl bg-[#007AFF]/5 border border-[#007AFF]/20">
+          <div className="mt-8 p-4 rounded-2xl bg-[#0095B6]/5 border border-[#0095B6]/20">
             <h3 className="text-[#1d1d1f] font-semibold text-[15px] mb-2 flex items-center gap-2">
               <span>💬</span>
               LINEでリンクが開けない場合

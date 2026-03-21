@@ -63,8 +63,8 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
         className="w-full max-w-lg max-h-[85vh] flex flex-col bg-white border border-[#e5e5ea] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="h-px bg-gradient-to-r from-transparent via-[#007AFF]/30 to-transparent flex-shrink-0" />
-        <div className="h-px bg-gradient-to-r from-transparent via-[#5AC8FA]/20 to-transparent flex-shrink-0" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#0095B6]/30 to-transparent flex-shrink-0" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#5BC8D7]/20 to-transparent flex-shrink-0" />
 
         <div className="px-5 py-4 border-b border-[#e5e5ea] flex-shrink-0">
           <h2
@@ -81,13 +81,13 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
           </p>
           <ul className="space-y-4">
             {CREDITS.map((item, i) => (
-              <li key={i} className="border-l-4 border-[#007AFF] pl-4">
+              <li key={i} className="border-l-4 border-[#0095B6] pl-4">
                 <p className="text-[#1d1d1f] font-medium text-[14px] mb-1">{item.name}</p>
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#007AFF] text-[13px] hover:text-[#0051D5] hover:underline transition"
+                  className="text-[#0095B6] text-[13px] hover:text-[#007A96] hover:underline transition"
                 >
                   規約 →
                 </a>
@@ -99,7 +99,7 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
         <div className="px-5 py-4 border-t border-[#e5e5ea] flex-shrink-0 safe-area-bottom">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-[#007AFF] text-white font-semibold text-base rounded-2xl hover:bg-[#0051D5] transition active:scale-[0.98]"
+            className="w-full py-3 bg-[#0095B6] text-white font-semibold text-base rounded-2xl hover:bg-[#007A96] transition active:scale-[0.98]"
           >
             閉じる
           </button>

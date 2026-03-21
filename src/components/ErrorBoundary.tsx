@@ -38,10 +38,10 @@ export default class ErrorBoundary extends Component<Props, State> {
           <p className="text-[#86868b] text-sm text-center mb-6">
             ブラウザを更新するか、別のブラウザでお試しください。
           </p>
-          <a href="/debug.html" className="text-[#007AFF] text-sm mb-4">診断ページ</a>
+          <a href="/debug.html" className="text-[#0095B6] text-sm mb-4">診断ページ</a>
           <button
             onClick={() => window.location.reload()}
-            className="min-h-[44px] px-6 bg-[#007AFF] text-white font-semibold rounded-xl"
+            className="min-h-[44px] px-6 bg-[#0095B6] text-white font-semibold rounded-xl"
           >
             再読み込み
           </button>

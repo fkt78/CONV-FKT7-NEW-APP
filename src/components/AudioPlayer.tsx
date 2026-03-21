@@ -87,7 +87,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
   return (
     <div className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-3 space-y-2">
       {title && (
-        <p className="text-[#007AFF] text-[10px] font-medium tracking-widest truncate">
+        <p className="text-[#0095B6] text-[10px] font-medium tracking-widest truncate">
           ♪ {title}
         </p>
       )}
@@ -96,7 +96,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
         <button
           onClick={togglePlay}
           disabled={loading}
-          className="w-9 h-9 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0 shadow-sm hover:bg-[#0051D5] transition disabled:opacity-40 disabled:cursor-wait"
+          className="w-9 h-9 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0 shadow-sm hover:bg-[#007A96] transition disabled:opacity-40 disabled:cursor-wait"
           aria-label={playing ? '一時停止' : '再生'}
         >
           {loading ? (
@@ -118,7 +118,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
           {/* シークバー */}
           <div className="relative h-1.5 rounded-full bg-[#e5e5ea] group">
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-[#007AFF] pointer-events-none transition-all"
+              className="absolute inset-y-0 left-0 rounded-full bg-[#0095B6] pointer-events-none transition-all"
               style={{ width: `${progress}%` }}
             />
             {/* スライダー */}
@@ -136,7 +136,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
             {/* サムネイル */}
             {duration > 0 && (
               <div
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#007AFF] shadow-sm pointer-events-none transition-all"
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#0095B6] shadow-sm pointer-events-none transition-all"
                 style={{ left: `calc(${progress}% - 6px)` }}
               />
             )}

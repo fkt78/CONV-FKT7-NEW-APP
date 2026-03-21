@@ -152,7 +152,7 @@ export default function NewsManager() {
         </h3>
         <button
           onClick={() => showForm ? resetForm() : setShowForm(true)}
-          className="text-[#007AFF] text-xs font-semibold hover:text-[#0051D5] transition"
+          className="text-[#0095B6] text-xs font-semibold hover:text-[#007A96] transition"
         >
           {showForm ? '✕ 閉じる' : '＋ 新規投稿'}
         </button>
@@ -162,7 +162,7 @@ export default function NewsManager() {
         {showForm && (
           <div className="mx-4 my-3 p-4 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] space-y-3">
             {editingId && (
-              <p className="text-[#007AFF] text-[10px] font-medium tracking-wide">✏️ お知らせを編集中</p>
+              <p className="text-[#0095B6] text-[10px] font-medium tracking-wide">✏️ お知らせを編集中</p>
             )}
 
             <input
@@ -170,7 +170,7 @@ export default function NewsManager() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="タイトル（例: 新商品入荷のお知らせ）"
-              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF]"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6]"
             />
 
             <textarea
@@ -178,7 +178,7 @@ export default function NewsManager() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="本文"
               rows={3}
-              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-none"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] resize-none"
             />
 
             <div>
@@ -187,7 +187,7 @@ export default function NewsManager() {
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
               />
               <p className="text-[#86868b] text-[10px] mt-0.5">設定すると、期限を過ぎると自動で非表示になります</p>
             </div>
@@ -209,7 +209,7 @@ export default function NewsManager() {
               {removeAudio && (
                 <p className="text-red-500/80 text-[10px]">
                   保存時に音声を削除します
-                  <button onClick={() => setRemoveAudio(false)} className="ml-2 text-[#007AFF] hover:text-[#0051D5]">
+                  <button onClick={() => setRemoveAudio(false)} className="ml-2 text-[#0095B6] hover:text-[#007A96]">
                     取り消す
                   </button>
                 </p>
@@ -217,7 +217,7 @@ export default function NewsManager() {
 
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 cursor-pointer hover:border-[#007AFF]/40 transition"
+                className="flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 cursor-pointer hover:border-[#0095B6]/40 transition"
               >
                 <span className="text-[#86868b] text-xs">
                   {audioFile ? audioFile.name : '音声ファイルを選択 (.mp3 / .wav / .m4a)'}
@@ -245,7 +245,7 @@ export default function NewsManager() {
                 <div className="space-y-1">
                   <div className="h-1 rounded-full bg-[#e5e5ea] overflow-hidden">
                     <div
-                      className="h-full bg-[#007AFF] transition-all"
+                      className="h-full bg-[#0095B6] transition-all"
                       style={{ width: `${upload.percent}%` }}
                     />
                   </div>
@@ -257,7 +257,7 @@ export default function NewsManager() {
             <button
               onClick={handleSave}
               disabled={!title.trim() || saving}
-              className="w-full bg-[#007AFF] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
+              className="w-full bg-[#0095B6] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#007A96] transition disabled:opacity-50"
             >
               {saving ? '保存中...' : editingId ? '更新する' : '投稿する'}
             </button>
@@ -275,7 +275,7 @@ export default function NewsManager() {
                   <p className="text-[#1d1d1f] text-sm font-bold truncate">{item.title}</p>
                   <p className="text-[#86868b] text-xs mt-0.5 line-clamp-2">{item.content}</p>
                   {item.audioUrl && (
-                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-[#007AFF]">
+                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-[#0095B6]">
                       🎵 音声あり
                     </span>
                   )}
@@ -287,7 +287,7 @@ export default function NewsManager() {
                   )}
                   <button
                     onClick={() => handleEdit(item)}
-                    className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#007AFF]/10 hover:text-[#007AFF] transition"
+                    className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#0095B6]/10 hover:text-[#0095B6] transition"
                   >✏️</button>
                   <button
                     onClick={() => handleDelete(item)}

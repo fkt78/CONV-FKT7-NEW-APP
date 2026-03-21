@@ -10,8 +10,8 @@ export default function LegalPageLayout({ title, children }: LegalPageLayoutProp
 
   return (
     <div className="h-dvh bg-[#f5f5f7] flex flex-col overflow-hidden">
-      <div className="h-px bg-gradient-to-r from-transparent via-[#007AFF]/30 to-transparent flex-shrink-0" />
-      <div className="h-px bg-gradient-to-r from-transparent via-[#5AC8FA]/20 to-transparent flex-shrink-0" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#0095B6]/30 to-transparent flex-shrink-0" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#5BC8D7]/20 to-transparent flex-shrink-0" />
 
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         <div className="max-w-lg mx-auto px-5 py-6 pb-10 safe-area-top safe-area-bottom">
@@ -19,7 +19,7 @@ export default function LegalPageLayout({ title, children }: LegalPageLayoutProp
             <button
               onClick={() => navigate(-1)}
               aria-label="戻る"
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center -ml-2 text-[#007AFF] text-[17px] hover:text-[#0051D5] transition rounded-lg"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center -ml-2 text-[#0095B6] text-[17px] hover:text-[#007A96] transition rounded-lg"
             >
               ← 戻る
             </button>

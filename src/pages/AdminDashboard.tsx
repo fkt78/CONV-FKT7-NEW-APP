@@ -561,7 +561,7 @@ export default function AdminDashboard() {
     <div className="h-dvh bg-[#f5f5f7] flex flex-col">
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e5ea] shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="text-[#007AFF] text-xl">♛</span>
+          <span className="text-[#0095B6] text-xl">♛</span>
           <div>
             <span className="text-[#1d1d1f] font-semibold text-sm tracking-wide">Admin Dashboard</span>
             <span className="text-[#86868b] text-[10px] ml-2">店長</span>
@@ -570,7 +570,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
-            className="text-[#007AFF] text-xs hover:text-[#0051D5] transition"
+            className="text-[#0095B6] text-xs hover:text-[#007A96] transition"
             aria-label="通常画面へ戻る"
           >
             戻る
@@ -589,7 +589,7 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('chat')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'chat'
-              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
               : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
@@ -599,7 +599,7 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('coupon')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'coupon'
-              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
               : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
@@ -609,7 +609,7 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('news')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'news'
-              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
               : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
@@ -619,7 +619,7 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('users')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'users'
-              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
               : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
@@ -629,7 +629,7 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('roadmap')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'roadmap'
-              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
               : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
@@ -639,7 +639,7 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('templates')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'templates'
-              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
               : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
@@ -649,7 +649,7 @@ export default function AdminDashboard() {
           onClick={() => setAdminTab('analytics')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'analytics'
-              ? 'text-[#007AFF] border-b-2 border-[#007AFF]'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
               : 'text-[#86868b] hover:text-[#1d1d1f]'
           }`}
         >
@@ -686,7 +686,7 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={() => openBroadcastModal(null)}
-              className="w-full py-2.5 bg-[#007AFF] text-white text-xs font-semibold rounded-lg hover:bg-[#0051D5] transition flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-[#0095B6] text-white text-xs font-semibold rounded-lg hover:bg-[#007A96] transition flex items-center justify-center gap-2"
             >
               📢 全員に一斉送信
             </button>
@@ -697,14 +697,14 @@ export default function AdminDashboard() {
                 onChange={(e) => setGlobalSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && runGlobalSearch()}
                 placeholder="商品名で全チャット検索（例: クリスマスケーキ）"
-                className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-xs focus:outline-none focus:border-[#007AFF] transition"
+                className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-xs focus:outline-none focus:border-[#0095B6] transition"
                 aria-label="全チャット検索"
               />
               <button
                 type="button"
                 onClick={runGlobalSearch}
                 disabled={globalSearchLoading || !globalSearchQuery.trim()}
-                className="px-3 py-2 bg-[#007AFF] text-white text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-[#0051D5] transition"
+                className="px-3 py-2 bg-[#0095B6] text-white text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-[#007A96] transition"
               >
                 {globalSearchLoading ? '検索中' : '検索'}
               </button>
@@ -713,7 +713,7 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 onClick={clearGlobalSearch}
-                className="text-[#007AFF] text-[10px] hover:underline"
+                className="text-[#0095B6] text-[10px] hover:underline"
               >
                 ← 顧客一覧に戻る
               </button>
@@ -742,12 +742,12 @@ export default function AdminDashboard() {
                       }}
                       className={`w-full text-left px-4 py-3 transition flex items-center gap-3 ${
                         isSelected
-                          ? 'bg-[#007AFF]/10 border-l-4 border-l-[#007AFF]'
+                          ? 'bg-[#0095B6]/10 border-l-4 border-l-[#0095B6]'
                           : 'hover:bg-[#f5f5f7]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold text-sm">{fullName.charAt(0)}</span>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -786,12 +786,12 @@ export default function AdminDashboard() {
                     onClick={() => selectUser(user.uid)}
                     className={`w-full text-left px-4 py-3.5 border-b border-[#e5e5ea] transition flex items-center gap-3 ${
                       isSelected
-                        ? 'bg-[#007AFF]/10 border-l-4 border-l-[#007AFF]'
+                        ? 'bg-[#0095B6]/10 border-l-4 border-l-[#0095B6]'
                         : 'hover:bg-[#f5f5f7]'
                     }`}
                   >
                     <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-[#0095B6] flex items-center justify-center">
                         <span className="text-white font-bold text-sm">
                           {user.fullName.charAt(0)}
                         </span>
@@ -823,7 +823,7 @@ export default function AdminDashboard() {
                           : `${ATTRIBUTE_LABELS[user.attribute] ?? user.attribute} · ${user.birthMonth}`}
                       </p>
                       {user.totalSavedAmount > 0 && (
-                        <span className="text-[9px] text-[#007AFF] mt-0.5 inline-block">
+                        <span className="text-[9px] text-[#0095B6] mt-0.5 inline-block">
                           👑 累計 ¥{user.totalSavedAmount.toLocaleString()}
                         </span>
                       )}
@@ -842,14 +842,14 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
                 <button
                   onClick={() => setShowChatPanel(false)}
-                  className="md:hidden text-[#007AFF] hover:text-[#0051D5] transition mr-1"
+                  className="md:hidden text-[#0095B6] hover:text-[#007A96] transition mr-1"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 18 9 12 15 6" />
                   </svg>
                 </button>
 
-                <div className="w-9 h-9 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-sm">
                     {selectedUser.fullName.charAt(0)}
                   </span>
@@ -878,7 +878,7 @@ export default function AdminDashboard() {
                       <button type="button" onClick={() => handleRedCard()} title="レッドカード（即ブラックリスト）" className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">🟥</button>
                     </div>
                     {selectedUser.totalSavedAmount > 0 && (
-                      <span className="text-[9px] bg-[#007AFF]/10 text-[#007AFF] px-1.5 py-0.5 rounded-full font-bold">
+                      <span className="text-[9px] bg-[#0095B6]/10 text-[#0095B6] px-1.5 py-0.5 rounded-full font-bold">
                         👑 ¥{selectedUser.totalSavedAmount.toLocaleString()}
                       </span>
                     )}
@@ -895,7 +895,7 @@ export default function AdminDashboard() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="商品名・キーワードで検索"
-                    className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] transition"
+                    className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] transition"
                     aria-label="メッセージを検索"
                   />
                   {matchCount > 0 && (
@@ -907,7 +907,7 @@ export default function AdminDashboard() {
                         type="button"
                         onClick={handleSearchPrev}
                         aria-label="前の検索結果"
-                        className="w-7 h-7 rounded flex items-center justify-center text-[#007AFF] hover:bg-[#007AFF]/10 transition"
+                        className="w-7 h-7 rounded flex items-center justify-center text-[#0095B6] hover:bg-[#0095B6]/10 transition"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                       </button>
@@ -915,7 +915,7 @@ export default function AdminDashboard() {
                         type="button"
                         onClick={handleSearchNext}
                         aria-label="次の検索結果"
-                        className="w-7 h-7 rounded flex items-center justify-center text-[#007AFF] hover:bg-[#007AFF]/10 transition"
+                        className="w-7 h-7 rounded flex items-center justify-center text-[#0095B6] hover:bg-[#0095B6]/10 transition"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                       </button>
@@ -962,7 +962,7 @@ export default function AdminDashboard() {
 
                         <div className={`flex items-end gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                           {!isOwn && (
-                            <div className="w-7 h-7 rounded-full bg-[#007AFF] flex items-center justify-center flex-shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
                               <span className="text-white text-[10px] font-bold">
                                 {selectedUser.fullName.charAt(0)}
                               </span>
@@ -979,7 +979,7 @@ export default function AdminDashboard() {
                             <div
                               className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${
                                 isOwn
-                                  ? 'bg-[#007AFF] text-white rounded-br-sm'
+                                  ? 'bg-[#0095B6] text-white rounded-br-sm'
                                   : 'bg-white text-[#1d1d1f] rounded-bl-sm shadow-sm border border-[#e5e5ea]'
                               }`}
                             >
@@ -1010,7 +1010,7 @@ export default function AdminDashboard() {
                                       onClick={handleSaveEdit}
                                       disabled={!editingText.trim()}
                                       className={`text-xs px-2 py-1 rounded ${
-                                        isOwn ? 'bg-white/30 hover:bg-white/40' : 'bg-[#007AFF] text-white hover:bg-[#0051D5]'
+                                        isOwn ? 'bg-white/30 hover:bg-white/40' : 'bg-[#0095B6] text-white hover:bg-[#007A96]'
                                       } disabled:opacity-50`}
                                     >
                                       保存
@@ -1034,7 +1034,7 @@ export default function AdminDashboard() {
                                       href={msg.attachmentUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className={`text-xs underline ${isOwn ? 'text-white/90' : 'text-[#007AFF]'}`}
+                                      className={`text-xs underline ${isOwn ? 'text-white/90' : 'text-[#0095B6]'}`}
                                     >
                                       📎{' '}
                                       {searchQuery.trim() && msg.attachmentName
@@ -1142,7 +1142,7 @@ export default function AdminDashboard() {
                       onClick={() => setShowTemplatePicker(!showTemplatePicker)}
                       aria-label="テンプレートを挿入"
                       title="テンプレート"
-                      className="w-10 h-10 flex items-center justify-center text-[#86868b] hover:text-[#007AFF] transition flex-shrink-0"
+                      className="w-10 h-10 flex items-center justify-center text-[#86868b] hover:text-[#0095B6] transition flex-shrink-0"
                     >
                       📝
                     </button>
@@ -1158,7 +1158,7 @@ export default function AdminDashboard() {
                             <p className="px-3 py-4 text-[#86868b] text-xs text-center">
                               テンプレートがありません
                               <br />
-                              <span className="text-[#007AFF]">テンプレート</span>タブで作成してください
+                              <span className="text-[#0095B6]">テンプレート</span>タブで作成してください
                             </p>
                           ) : (
                             messageTemplates.map((t) => (
@@ -1182,7 +1182,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     aria-label="ファイルを添付"
-                    className="w-10 h-10 flex items-center justify-center text-[#86868b] hover:text-[#007AFF] transition flex-shrink-0"
+                    className="w-10 h-10 flex items-center justify-center text-[#86868b] hover:text-[#0095B6] transition flex-shrink-0"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -1195,12 +1195,12 @@ export default function AdminDashboard() {
                     onKeyDown={handleKeyDown}
                     placeholder={`${selectedUser.fullName}さんに返信...（Enterで改行、Shift+Enterで送信）`}
                     rows={1}
-                    className="flex-1 min-h-[40px] max-h-28 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] transition resize-none"
+                    className="flex-1 min-h-[40px] max-h-28 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] transition resize-none"
                   />
                   <button
                     onClick={handleSend}
                     disabled={(!text.trim() && !selectedFile) || sending}
-                    className="w-10 h-10 bg-[#007AFF] rounded-full flex items-center justify-center text-white disabled:opacity-30 transition hover:bg-[#0051D5]"
+                    className="w-10 h-10 bg-[#0095B6] rounded-full flex items-center justify-center text-white disabled:opacity-30 transition hover:bg-[#007A96]"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="22" y1="2" x2="11" y2="13" />
@@ -1212,7 +1212,7 @@ export default function AdminDashboard() {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center bg-[#f5f5f7]">
-              <span className="text-5xl text-[#007AFF]/30 mb-4">♛</span>
+              <span className="text-5xl text-[#0095B6]/30 mb-4">♛</span>
               <p className="text-[#86868b] text-sm">左のリストから顧客を選択してください</p>
               <p className="text-[#86868b]/70 text-xs mt-1">チャットが始まります</p>
             </div>
@@ -1254,7 +1254,7 @@ export default function AdminDashboard() {
                         key={t.id}
                         type="button"
                         onClick={() => setBroadcastText((prev) => (prev ? `${prev}\n${t.content}` : t.content))}
-                        className="px-2 py-1 rounded-lg bg-[#f5f5f7] text-[#007AFF] text-xs hover:bg-[#e5e5ea] transition truncate max-w-[180px]"
+                        className="px-2 py-1 rounded-lg bg-[#f5f5f7] text-[#0095B6] text-xs hover:bg-[#e5e5ea] transition truncate max-w-[180px]"
                         title={t.content}
                       >
                         📝 {preview}{preview.length >= 20 ? '...' : ''}
@@ -1269,10 +1269,10 @@ export default function AdminDashboard() {
                 placeholder="送信するメッセージを入力..."
                 rows={5}
                 disabled={broadcastSending}
-                className="w-full bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl px-4 py-3 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#007AFF] resize-none disabled:opacity-60"
+                className="w-full bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl px-4 py-3 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] resize-none disabled:opacity-60"
               />
               {broadcastProgress && (
-                <p className="text-[#007AFF] text-sm">
+                <p className="text-[#0095B6] text-sm">
                   送信中... {broadcastProgress.current} / {broadcastProgress.total}
                 </p>
               )}
@@ -1282,7 +1282,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={handleBroadcastSend}
                 disabled={!broadcastText.trim() || broadcastSending}
-                className="w-full py-3 bg-[#007AFF] text-white font-semibold rounded-xl disabled:opacity-50 hover:bg-[#0051D5] transition"
+                className="w-full py-3 bg-[#0095B6] text-white font-semibold rounded-xl disabled:opacity-50 hover:bg-[#007A96] transition"
               >
                 {broadcastSending ? '送信中...' : '送信する'}
               </button>

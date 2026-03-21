@@ -38,7 +38,7 @@ export default function Licenses() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold text-[#1d1d1f]">{item.name}</span>
-                <span className="text-[#007AFF] text-xs font-medium">{item.license}</span>
+                <span className="text-[#0095B6] text-xs font-medium">{item.license}</span>
               </div>
               {item.version && (
                 <p className="text-[#86868b] text-xs mt-1">バージョン: {item.version}</p>
@@ -48,7 +48,7 @@ export default function Licenses() {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#007AFF] text-xs underline hover:text-[#0051D5] mt-1 inline-block"
+                  className="text-[#0095B6] text-xs underline hover:text-[#007A96] mt-1 inline-block"
                 >
                   プロジェクトページ
                 </a>
@@ -72,7 +72,7 @@ export default function Licenses() {
             href="https://firebase.google.com/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#007AFF] underline hover:text-[#0051D5] ml-1"
+            className="text-[#0095B6] underline hover:text-[#007A96] ml-1"
           >
             Firebase利用規約
           </a>
@@ -88,7 +88,7 @@ export default function Licenses() {
             href="https://opensource.org/licenses"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#007AFF] underline hover:text-[#0051D5] ml-1"
+            className="text-[#0095B6] underline hover:text-[#007A96] ml-1"
           >
             Open Source Initiative
           </a>

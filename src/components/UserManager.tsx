@@ -348,7 +348,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           <button
             onClick={handleExportCsv}
           disabled={exporting || users.length === 0}
-          className="px-4 py-2 bg-[#007AFF] text-white text-sm font-medium rounded-lg hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-[#0095B6] text-white text-sm font-medium rounded-lg hover:bg-[#007A96] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
             {exporting ? '出力中...' : 'CSV出力'}
           </button>
@@ -373,7 +373,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                           checked={selectableUsers.length > 0 && selectedUids.size === selectableUsers.length}
                           onChange={toggleSelectAll}
                           aria-label="全選択"
-                          className="rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
+                          className="rounded border-[#e5e5ea] text-[#0095B6] focus:ring-[#0095B6]"
                         />
                       </th>
                     )}
@@ -422,7 +422,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                               checked={selectedUids.has(user.uid)}
                               onChange={() => toggleSelect(user.uid)}
                               aria-label={`${user.fullName}を選択`}
-                              className="rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
+                              className="rounded border-[#e5e5ea] text-[#0095B6] focus:ring-[#0095B6]"
                             />
                           ) : (
                             <span className="inline-block w-4" />
@@ -499,7 +499,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                             <button
                               type="button"
                               onClick={() => onOpenChat(user.uid)}
-                              className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition"
+                              className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[#0095B6]/10 text-[#0095B6] hover:bg-[#0095B6]/20 transition"
                             >
                               チャット
                             </button>
@@ -536,7 +536,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                       <td className="px-4 py-3 text-right text-[#86868b] text-xs">
                         —
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-[#007AFF]">
+                      <td className="px-4 py-3 text-right font-medium text-[#0095B6]">
                         ¥{(user.totalSavedAmount ?? 0).toLocaleString()}
                       </td>
                     </tr>
@@ -566,7 +566,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
             <div className="flex-1 overflow-y-auto min-h-0 p-4">
               {loadingCoupons ? (
                 <div className="flex items-center justify-center py-12">
-                  <span className="w-8 h-8 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+                  <span className="w-8 h-8 border-2 border-[#0095B6] border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : userCoupons.length === 0 ? (
                 <p className="text-[#86868b] text-sm text-center py-8">配信されたクーポンはありません</p>
@@ -611,7 +611,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {c.discountAmount > 0 && (
-                            <span className="text-[#007AFF] font-bold text-sm">¥{c.discountAmount}</span>
+                            <span className="text-[#0095B6] font-bold text-sm">¥{c.discountAmount}</span>
                           )}
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusClass}`}>
                             {statusLabel}

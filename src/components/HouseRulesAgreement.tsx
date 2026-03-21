@@ -25,13 +25,13 @@ export default function HouseRulesAgreement() {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-[#f5f5f7] flex flex-col overflow-hidden">
-      <div className="h-px bg-gradient-to-r from-transparent via-[#007AFF]/30 to-transparent flex-shrink-0" />
-      <div className="h-px bg-gradient-to-r from-transparent via-[#5AC8FA]/20 to-transparent flex-shrink-0" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#0095B6]/30 to-transparent flex-shrink-0" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#5BC8D7]/20 to-transparent flex-shrink-0" />
 
       <div className="flex-1 overflow-y-auto overscroll-contain">
         <div className="max-w-lg mx-auto px-5 py-6 pb-8 safe-area-top">
           <div className="text-center mb-8">
-            <span className="text-[#007AFF] text-4xl block mb-3" aria-hidden>♛</span>
+            <span className="text-[#0095B6] text-4xl block mb-3" aria-hidden>♛</span>
             <h1 className="text-[#1d1d1f] font-semibold text-[22px] tracking-wide leading-tight">
               FKT7へようこそ
             </h1>
@@ -46,7 +46,7 @@ export default function HouseRulesAgreement() {
               本アプリは、上記3店舗をご利用いただく特別なお客様（VIP）だけに向けた、完全クローズドな専用プラットフォームです。皆様に最高の体験と、公平でスムーズなサービスをご提供するため、ご入室にあたり以下の「紳士協定（ハウスルール）」へのご理解をお願い申し上げます。
             </p>
 
-            <div className="border-l-4 border-[#007AFF] pl-4 space-y-3">
+            <div className="border-l-4 border-[#0095B6] pl-4 space-y-3">
               <h2 className="text-[#1d1d1f] font-semibold text-base">1. 希少商品の「特別なご案内」とご予約について</h2>
               <p>
                 当店に入荷する数量限定の特殊な商品につきましては、FKT7メンバーの皆様を最優先といたします。
@@ -61,7 +61,7 @@ export default function HouseRulesAgreement() {
               </ul>
             </div>
 
-            <div className="border-l-4 border-[#007AFF] pl-4 space-y-3">
+            <div className="border-l-4 border-[#0095B6] pl-4 space-y-3">
               <h2 className="text-[#1d1d1f] font-semibold text-base">2. 徹底した「秘密厳守」と「アプリ内完結」のお願い</h2>
               <p>
                 FKT7は、お客様と店舗スタッフの「信義」によって成り立つシークレットな空間です。
@@ -76,7 +76,7 @@ export default function HouseRulesAgreement() {
               </ul>
             </div>
 
-            <div className="border-l-4 border-[#007AFF] pl-4 space-y-3">
+            <div className="border-l-4 border-[#0095B6] pl-4 space-y-3">
               <h2 className="text-[#1d1d1f] font-semibold text-base">3. アカウントの取り扱い</h2>
               <p>
                 本アプリは、ご本人様のみのご利用を前提としております。
@@ -87,7 +87,7 @@ export default function HouseRulesAgreement() {
               </ul>
             </div>
 
-            <div className="border-l-4 border-[#007AFF] pl-4 space-y-3">
+            <div className="border-l-4 border-[#0095B6] pl-4 space-y-3">
               <h2 className="text-[#1d1d1f] font-semibold text-base">4. FKT7のフル活用とサポート</h2>
               <p>
                 本アプリはご予約ツールにとどまらず、限定クーポンや特別なご案内を随時お届けしていく予定です。ぜひ日常的にご活用ください。
@@ -99,14 +99,14 @@ export default function HouseRulesAgreement() {
               </ul>
             </div>
 
-            <div className="border-l-4 border-[#007AFF] pl-4 space-y-3">
+            <div className="border-l-4 border-[#0095B6] pl-4 space-y-3">
               <h2 className="text-[#1d1d1f] font-semibold text-base">5. ハウスルールの改定について</h2>
               <p>
                 運営上、本ハウスルールを改定する場合がございます。改定後は本アプリ上でお知らせいたします。お知らせ後のご利用につきましては、改定後の内容にご同意いただいたものとみなします。
               </p>
             </div>
 
-            <div className="bg-[#007AFF]/5 border border-[#007AFF]/20 rounded-2xl p-4">
+            <div className="bg-[#0095B6]/5 border border-[#0095B6]/20 rounded-2xl p-4">
               <p className="text-[#1d1d1f] text-[15px]">
                 万が一、上記のお約束や信頼関係を損なう行為が見受けられた場合、誠に勝手ながら事前の予告なくアプリの利用を停止させていただく場合がございます。
               </p>
@@ -114,11 +114,11 @@ export default function HouseRulesAgreement() {
 
             <p className="text-[#86868b] text-[15px] leading-relaxed">
               本アプリのご利用には、
-              <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-[#007AFF] underline hover:text-[#0051D5]">
+              <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-[#0095B6] underline hover:text-[#007A96]">
                 利用規約
               </Link>
               および
-              <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#007AFF] underline hover:text-[#0051D5]">
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#0095B6] underline hover:text-[#007A96]">
                 プライバシーポリシー
               </Link>
               への同意が必要です。下のボタンを押すことで、上記ハウスルール（今後改定された場合は改定後の内容を含みます）ならびに利用規約・プライバシーポリシーに同意したものとみなします。
@@ -131,7 +131,7 @@ export default function HouseRulesAgreement() {
         <button
           onClick={handleAccept}
           aria-label="同意してFKT7へ入場する"
-          className="w-full min-h-[48px] py-4 bg-[#007AFF] text-white font-semibold text-[17px] tracking-wide rounded-2xl hover:bg-[#0051D5] active:scale-[0.98] transition shadow-sm"
+          className="w-full min-h-[48px] py-4 bg-[#0095B6] text-white font-semibold text-[17px] tracking-wide rounded-2xl hover:bg-[#007A96] active:scale-[0.98] transition shadow-sm"
         >
           同意してFKT7へ入場する
         </button>

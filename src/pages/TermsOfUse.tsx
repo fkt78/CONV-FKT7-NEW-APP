@@ -45,7 +45,7 @@ export default function TermsOfUse() {
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">第5条（個人情報の取り扱い）</h2>
         <p>
           会員様の個人情報の取り扱いについては、当店が定める
-          <Link to="/privacy" className="text-[#007AFF] underline hover:text-[#0051D5]">
+          <Link to="/privacy" className="text-[#0095B6] underline hover:text-[#007A96]">
             プライバシーポリシー
           </Link>
           に従います。本アプリの利用をもって、同ポリシーに同意したものとみなします。

@@ -13,13 +13,13 @@
   --radius-md: 10px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  /* Apple風カラーパレット */
+  /* Bondi Blue カラーパレット */
   --apple-bg: #f5f5f7;
   --apple-bg-elevated: #ffffff;
   --apple-text: #1d1d1f;
   --apple-text-secondary: #86868b;
-  --apple-accent: #007AFF;
-  --apple-accent-hover: #0051D5;
+  --apple-accent: #0095B6;
+  --apple-accent-hover: #007A96;
   --apple-border: #e5e5ea;
   --apple-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   --apple-shadow-lg: 0 4px 24px rgba(0, 0, 0, 0.08);

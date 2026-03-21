@@ -230,7 +230,7 @@ export default function AnalyticsManager() {
               onClick={() => setPeriod(p)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
                 period === p
-                  ? 'bg-[#007AFF] text-white'
+                  ? 'bg-[#0095B6] text-white'
                   : 'bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f]'
               }`}
             >

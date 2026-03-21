@@ -2,7 +2,7 @@ import { ROADMAP_ITEMS, exportRoadmapToCsv, type RoadmapItem } from '../lib/road
 
 const PRIORITY_COLORS: Record<string, string> = {
   高: 'bg-red-500/15 text-red-600 border-red-500/30',
-  中: 'bg-[#007AFF]/15 text-[#007AFF] border-[#007AFF]/30',
+  中: 'bg-[#0095B6]/15 text-[#0095B6] border-[#0095B6]/30',
   低: 'bg-[#e5e5ea]/60 text-[#86868b] border-[#e5e5ea]',
 }
 
@@ -38,7 +38,7 @@ export default function RoadmapManager() {
         </h2>
         <button
           onClick={downloadCsv}
-          className="px-4 py-2 bg-[#007AFF]/10 text-[#007AFF] text-xs font-semibold rounded-xl border border-[#007AFF]/20 hover:bg-[#007AFF]/5 transition"
+          className="px-4 py-2 bg-[#0095B6]/10 text-[#0095B6] text-xs font-semibold rounded-xl border border-[#0095B6]/20 hover:bg-[#0095B6]/5 transition"
         >
           📥 CSVダウンロード
         </button>

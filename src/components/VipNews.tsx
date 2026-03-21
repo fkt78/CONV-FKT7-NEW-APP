@@ -63,10 +63,10 @@ export default function VipNews() {
     return (
       <div className="mx-4 mt-4 flex-shrink-0">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[#007AFF] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
+          <span className="text-[#0095B6] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
         </div>
         <div className="rounded-2xl bg-white border border-[#e5e5ea] p-4 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-          <span className="w-5 h-5 border-2 border-[#e5e5ea] border-t-[#007AFF] rounded-full animate-spin" />
+          <span className="w-5 h-5 border-2 border-[#e5e5ea] border-t-[#0095B6] rounded-full animate-spin" />
         </div>
       </div>
     )
@@ -81,14 +81,14 @@ export default function VipNews() {
       {/* セクションラベル */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[#007AFF] text-sm">📢</span>
-          <span className="text-[#007AFF] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
+          <span className="text-[#0095B6] text-sm">📢</span>
+          <span className="text-[#0095B6] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
         </div>
         {newsList.length > INITIAL_SHOW && (
           <button
             onClick={() => setShowAll(!showAll)}
             aria-label={showAll ? '折りたたむ' : `他 ${newsList.length - INITIAL_SHOW} 件を表示`}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center px-2 text-[#007AFF] text-[13px] hover:text-[#0051D5] transition rounded-xl"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center px-2 text-[#0095B6] text-[13px] hover:text-[#007A96] transition rounded-xl"
           >
             {showAll ? '折りたたむ' : `他 ${newsList.length - INITIAL_SHOW} 件`}
           </button>
@@ -116,7 +116,7 @@ export default function VipNews() {
               )}
               <span className="flex-1 text-[#1d1d1f] text-[15px] font-semibold truncate">{item.title}</span>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {item.audioUrl && <span className="text-[#007AFF]/70 text-[13px]">🎵</span>}
+                {item.audioUrl && <span className="text-[#0095B6]/70 text-[13px]">🎵</span>}
                 <span className="text-[#86868b] text-[13px]">{formatDate(item.createdAt)}</span>
                 <svg
                   className={`w-4 h-4 text-[#86868b] transition-transform ${isOpen ? 'rotate-180' : ''}`}

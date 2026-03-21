@@ -210,7 +210,7 @@ export default function CouponWallet() {
         <button
           onClick={() => setTab('unused')}
           className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition ${
-            tab === 'unused' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-[#86868b]'
+            tab === 'unused' ? 'bg-white text-[#0095B6] shadow-sm' : 'text-[#86868b]'
           }`}
         >
           未使用 ({validUnusedCount})
@@ -218,7 +218,7 @@ export default function CouponWallet() {
         <button
           onClick={() => setTab('history')}
           className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition ${
-            tab === 'history' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-[#86868b]'
+            tab === 'history' ? 'bg-white text-[#0095B6] shadow-sm' : 'text-[#86868b]'
           }`}
         >
           使用履歴 ({usedCoupons.length})
@@ -230,13 +230,13 @@ export default function CouponWallet() {
         {/* インデックス構築中などのエラー表示 */}
         {((tab === 'unused' && unusedError) || (tab === 'history' && usedError)) ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-10 h-10 border-2 border-[#e5e5ea] border-t-[#007AFF] rounded-full animate-spin mb-4" />
+            <div className="w-10 h-10 border-2 border-[#e5e5ea] border-t-[#0095B6] rounded-full animate-spin mb-4" />
             <p className="text-[#86868b] text-sm">データを準備中です…</p>
             <p className="text-[#86868b]/70 text-xs mt-1">しばらくお待ちください</p>
           </div>
         ) : displayCoupons.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-[#007AFF]/10 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-[#0095B6]/10 flex items-center justify-center mb-4">
               <span className="text-3xl opacity-50">🎫</span>
             </div>
             <p className="text-[#86868b] text-sm">
@@ -261,12 +261,12 @@ export default function CouponWallet() {
                 <div className={`relative flex rounded-2xl overflow-hidden border transition ${
                   isUsed || expired
                     ? 'border-[#e5e5ea] opacity-70'
-                    : 'border-[#e5e5ea] hover:border-[#007AFF]/40'
+                    : 'border-[#e5e5ea] hover:border-[#0095B6]/40'
                 } bg-white shadow-sm`}>
                   <div className={`w-12 flex flex-col items-center justify-center flex-shrink-0 relative ${
                     isUsed || expired
                       ? 'bg-[#e5e5ea]'
-                      : 'bg-[#007AFF]'
+                      : 'bg-[#0095B6]'
                   }`}>
                     <span className={`text-lg ${isUsed || expired ? 'grayscale opacity-60' : ''}`}>🎫</span>
                     <div className="absolute -right-2 top-1/4 w-4 h-4 rounded-full bg-white" />
@@ -279,7 +279,7 @@ export default function CouponWallet() {
                         {c.title}
                       </p>
                       {c.discountAmount > 0 && (
-                        <span className={`text-xs font-bold flex-shrink-0 ${isUsed ? 'text-[#86868b]' : 'text-[#007AFF]'}`}>
+                        <span className={`text-xs font-bold flex-shrink-0 ${isUsed ? 'text-[#86868b]' : 'text-[#0095B6]'}`}>
                           ¥{c.discountAmount}
                         </span>
                       )}
@@ -301,7 +301,7 @@ export default function CouponWallet() {
                       ) : expired ? (
                         <span className="text-[#FF3B30] text-[10px]">期限切れ</span>
                       ) : (
-                        <span className="text-[#007AFF] text-[10px] group-hover:text-[#0051D5] transition">
+                        <span className="text-[#0095B6] text-[10px] group-hover:text-[#007A96] transition">
                           タップして使用 →
                         </span>
                       )}
@@ -327,7 +327,7 @@ export default function CouponWallet() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
           <div className="w-full max-w-sm">
             <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl">
-              <div className="bg-[#007AFF] py-3 text-center">
+              <div className="bg-[#0095B6] py-3 text-center">
                 <span className="inline-block text-2xl animate-[coupon-float_2s_ease-in-out_infinite]" aria-hidden>🎫</span>
                 <p className="text-white font-bold text-xs tracking-widest mt-1">VIP COUPON</p>
               </div>
@@ -344,7 +344,7 @@ export default function CouponWallet() {
                       if (bulletMatch) {
                         return (
                           <div key={i} className="flex gap-2">
-                            <span className="flex-shrink-0 text-[#007AFF]">•</span>
+                            <span className="flex-shrink-0 text-[#0095B6]">•</span>
                             <span>{bulletMatch[1]}</span>
                           </div>
                         )
@@ -366,7 +366,7 @@ export default function CouponWallet() {
                   </div>
                 )}
                 {presenting.discountAmount > 0 && (
-                  <p className="text-[#007AFF] text-2xl font-bold">¥{presenting.discountAmount}</p>
+                  <p className="text-[#0095B6] text-2xl font-bold">¥{presenting.discountAmount}</p>
                 )}
                 <div className="border-t border-dashed border-[#e5e5ea] pt-4">
                   <p className="text-[#86868b] text-[10px]">
@@ -385,7 +385,7 @@ export default function CouponWallet() {
                 <button
                   onClick={() => handleUse(presenting)}
                   disabled={marking}
-                  className="relative w-full bg-[#007AFF] text-white font-semibold py-3 rounded-2xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                  className="relative w-full bg-[#0095B6] text-white font-semibold py-3 rounded-2xl text-sm hover:bg-[#007A96] transition disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                 >
                   <span
                     className="absolute inset-0 bg-[length:200%_100%] bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.55)_45%,rgba(255,255,255,0.55)_55%,transparent_100%)] animate-[coupon-shimmer_1.8s_ease-in-out_infinite] pointer-events-none"

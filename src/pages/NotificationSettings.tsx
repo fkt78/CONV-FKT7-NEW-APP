@@ -95,7 +95,7 @@ export default function NotificationSettings() {
         <button
           onClick={() => navigate(-1)}
           aria-label="戻る"
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#007AFF]"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#0095B6]"
         >
           ←
         </button>
@@ -128,7 +128,7 @@ export default function NotificationSettings() {
                   aria-checked={settings.enabled}
                   onClick={() => handleToggle(!settings.enabled)}
                   disabled={saving}
-                  className={`w-12 h-7 rounded-full transition ${settings.enabled ? 'bg-[#007AFF]' : 'bg-[#e5e5ea]'}`}
+                  className={`w-12 h-7 rounded-full transition ${settings.enabled ? 'bg-[#0095B6]' : 'bg-[#e5e5ea]'}`}
                 >
                   <span
                     className={`block w-5 h-5 rounded-full bg-white shadow-sm mt-1 transition-transform ${
@@ -140,7 +140,7 @@ export default function NotificationSettings() {
               {settings.enabled && permission !== 'granted' && (
                 <button
                   onClick={handleRequestPermission}
-                  className="mt-3 w-full py-2.5 bg-[#007AFF] text-white text-[15px] font-medium rounded-xl"
+                  className="mt-3 w-full py-2.5 bg-[#0095B6] text-white text-[15px] font-medium rounded-xl"
                 >
                   通知を許可する
                 </button>
@@ -166,7 +166,7 @@ export default function NotificationSettings() {
                         aria-checked={settings[key]}
                         onClick={() => handleSettingChange(key, !settings[key])}
                         disabled={saving}
-                        className={`w-12 h-7 rounded-full transition ${settings[key] ? 'bg-[#007AFF]' : 'bg-[#e5e5ea]'}`}
+                        className={`w-12 h-7 rounded-full transition ${settings[key] ? 'bg-[#0095B6]' : 'bg-[#e5e5ea]'}`}
                       >
                         <span
                           className={`block w-5 h-5 rounded-full bg-white shadow-sm mt-1 transition-transform ${
@@ -189,7 +189,7 @@ export default function NotificationSettings() {
                       aria-checked={settings.sound}
                       onClick={() => handleSettingChange('sound', !settings.sound)}
                       disabled={saving}
-                      className={`w-12 h-7 rounded-full transition ${settings.sound ? 'bg-[#007AFF]' : 'bg-[#e5e5ea]'}`}
+                      className={`w-12 h-7 rounded-full transition ${settings.sound ? 'bg-[#0095B6]' : 'bg-[#e5e5ea]'}`}
                     >
                       <span
                         className={`block w-5 h-5 rounded-full bg-white shadow-sm mt-1 transition-transform ${

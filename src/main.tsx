@@ -17,8 +17,8 @@ function showError(root: HTMLElement, err: unknown) {
       <div style="text-align:center;">
         <p style="color:#1d1d1f;font-weight:600;margin-bottom:8px;">読み込みに失敗しました</p>
         <p style="color:#86868b;font-size:14px;margin-bottom:16px;">${msg}</p>
-        <a href="/debug.html" style="color:#007AFF;">診断ページ</a> | 
-        <button onclick="location.reload()" style="background:#007AFF;color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;">再読み込み</button>
+        <a href="/debug.html" style="color:#0095B6;">診断ページ</a> | 
+        <button onclick="location.reload()" style="background:#0095B6;color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;">再読み込み</button>
       </div>
     </div>
   `

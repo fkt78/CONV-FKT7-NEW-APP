@@ -330,7 +330,7 @@ export default function CouponManager() {
           <button
             onClick={handleFetchWeather}
             disabled={weatherLoading}
-            className="text-xs bg-[#e5e5ea]/60 hover:bg-[#e5e5ea] text-[#007AFF] px-3 py-1.5 rounded-lg transition disabled:opacity-30"
+            className="text-xs bg-[#e5e5ea]/60 hover:bg-[#e5e5ea] text-[#0095B6] px-3 py-1.5 rounded-lg transition disabled:opacity-30"
           >
             {weatherLoading ? '取得中...' : '天気取得'}
           </button>
@@ -342,7 +342,7 @@ export default function CouponManager() {
             <select
               value={dailyLimit}
               onChange={(e) => handleSaveLimit(Number(e.target.value))}
-              className="bg-transparent text-[#007AFF] text-sm font-bold focus:outline-none"
+              className="bg-transparent text-[#0095B6] text-sm font-bold focus:outline-none"
             >
               {[1, 2, 3, 5].map((n) => (
                 <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
@@ -360,7 +360,7 @@ export default function CouponManager() {
           </h3>
           <button
             onClick={() => showForm ? resetForm() : handleNewForm()}
-            className="text-[#007AFF] text-xs font-semibold hover:text-[#0051D5] transition"
+            className="text-[#0095B6] text-xs font-semibold hover:text-[#007A96] transition"
           >
             {showForm ? '✕ 閉じる' : '＋ 新規作成'}
           </button>
@@ -370,21 +370,21 @@ export default function CouponManager() {
         {showForm && (
           <div className="mx-4 mb-4 p-4 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] space-y-3">
             {editingId && (
-              <p className="text-[#007AFF] text-[10px] font-medium tracking-wide">✏️ テンプレートを編集中</p>
+              <p className="text-[#0095B6] text-[10px] font-medium tracking-wide">✏️ テンプレートを編集中</p>
             )}
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="クーポンタイトル（例: 雨の日ドリンク無料）"
-              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF]"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6]"
             />
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               placeholder="内容（改行・箇条書き（- や 1. で始める）がそのまま反映されます）"
               rows={5}
-              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#007AFF] resize-y"
+              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] resize-y"
             />
             <div className="flex items-center gap-2">
               <label className="text-[#86868b] text-xs whitespace-nowrap">割引額</label>
@@ -396,7 +396,7 @@ export default function CouponManager() {
                   value={discount}
                   onChange={(e) => setDiscount(Number(e.target.value))}
                   placeholder="0"
-                  className="w-24 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#007AFF] text-sm font-bold focus:outline-none focus:border-[#007AFF]"
+                  className="w-24 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#0095B6] text-sm font-bold focus:outline-none focus:border-[#0095B6]"
                 />
               </div>
               <span className="text-[#86868b] text-[10px]">0 = 金額なし（サービス券等）</span>
@@ -407,7 +407,7 @@ export default function CouponManager() {
                 <select
                   value={cond}
                   onChange={(e) => setCond(e.target.value as WeatherCondition)}
-                  className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                  className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                 >
                   {Object.entries(CONDITION_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>{v}</option>
@@ -419,7 +419,7 @@ export default function CouponManager() {
                 <select
                   value={targetAttribute}
                   onChange={(e) => setTargetAttribute(e.target.value as TargetAttribute)}
-                  className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                  className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                 >
                   {Object.entries(ATTRIBUTE_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>{v}</option>
@@ -434,8 +434,8 @@ export default function CouponManager() {
                       key={key}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer transition text-sm ${
                         targetAgeRanges.includes(key)
-                          ? 'border-[#007AFF] bg-[#007AFF]/10 text-[#007AFF]'
-                          : 'border-[#e5e5ea] bg-white text-[#86868b] hover:border-[#007AFF]/40'
+                          ? 'border-[#0095B6] bg-[#0095B6]/10 text-[#0095B6]'
+                          : 'border-[#e5e5ea] bg-white text-[#86868b] hover:border-[#0095B6]/40'
                       }`}
                     >
                       <input
@@ -466,8 +466,8 @@ export default function CouponManager() {
                     key={k}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer transition text-sm ${
                       expiryType === k
-                        ? 'border-[#007AFF] bg-[#007AFF]/10 text-[#007AFF]'
-                        : 'border-[#e5e5ea] bg-white text-[#86868b] hover:border-[#007AFF]/40'
+                        ? 'border-[#0095B6] bg-[#0095B6]/10 text-[#0095B6]'
+                        : 'border-[#e5e5ea] bg-white text-[#86868b] hover:border-[#0095B6]/40'
                     }`}
                   >
                     <input
@@ -489,7 +489,7 @@ export default function CouponManager() {
                     value={expiryDate}
                     onChange={(e) => setExpiryDate(e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                    className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                   />
                 </div>
               )}
@@ -502,7 +502,7 @@ export default function CouponManager() {
                   type="number"
                   value={threshold}
                   onChange={(e) => setThreshold(Number(e.target.value))}
-                  className="w-20 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                  className="w-20 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                 />
                 <span className="text-[#86868b] text-xs">℃</span>
               </div>
@@ -513,7 +513,7 @@ export default function CouponManager() {
                 type="checkbox"
                 checked={autoDistribute}
                 onChange={(e) => setAutoDistribute(e.target.checked)}
-                className="rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
+                className="rounded border-[#e5e5ea] text-[#0095B6] focus:ring-[#0095B6]"
               />
               <span className="text-[#1d1d1f] text-sm">毎朝7時に自動配信</span>
             </label>
@@ -525,7 +525,7 @@ export default function CouponManager() {
                   <select
                     value={scheduleType}
                     onChange={(e) => setScheduleType(e.target.value as typeof scheduleType)}
-                    className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                    className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                   >
                     <option value="daily">毎日（天気条件があれば天気チェック）</option>
                     <option value="weekly">毎週</option>
@@ -540,7 +540,7 @@ export default function CouponManager() {
                     <select
                       value={scheduleDayOfWeek}
                       onChange={(e) => setScheduleDayOfWeek(Number(e.target.value))}
-                      className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                      className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                     >
                       {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
                         <option key={i} value={i}>{d}曜日</option>
@@ -554,7 +554,7 @@ export default function CouponManager() {
                     <select
                       value={scheduleDayOfMonth}
                       onChange={(e) => setScheduleDayOfMonth(Number(e.target.value))}
-                      className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#007AFF]"
+                      className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                         <option key={d} value={d}>{d}日</option>
@@ -570,7 +570,7 @@ export default function CouponManager() {
                         <label
                           key={m}
                           className={`flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer ${
-                            scheduleMonths.includes(m) ? 'bg-[#007AFF] text-white' : 'bg-[#e5e5ea] text-[#86868b]'
+                            scheduleMonths.includes(m) ? 'bg-[#0095B6] text-white' : 'bg-[#e5e5ea] text-[#86868b]'
                           }`}
                         >
                           <input
@@ -602,7 +602,7 @@ export default function CouponManager() {
                 (expiryType === 'date' && !expiryDate) ||
                 (autoDistribute && scheduleType === 'specific_months' && scheduleMonths.length === 0)
               }
-              className="w-full bg-[#007AFF] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
+              className="w-full bg-[#0095B6] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#007A96] transition disabled:opacity-50"
             >
               {saving ? '保存中...' : editingId ? '更新する' : 'テンプレートを保存'}
             </button>
@@ -621,7 +621,7 @@ export default function CouponManager() {
               key={c.id}
               className={`rounded-xl border p-3 transition ${
                 c.active
-                  ? 'bg-white border-[#007AFF]/20 shadow-sm'
+                  ? 'bg-white border-[#0095B6]/20 shadow-sm'
                   : 'bg-[#f5f5f7] border-[#e5e5ea] opacity-60'
               }`}
             >
@@ -633,14 +633,14 @@ export default function CouponManager() {
                   )}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     {(c.discountAmount ?? 0) > 0 && (
-                      <span className="text-[10px] bg-[#007AFF]/10 text-[#007AFF] px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] bg-[#0095B6]/10 text-[#0095B6] px-2 py-0.5 rounded-full font-bold">
                         ¥{c.discountAmount}
                       </span>
                     )}
                     <span className="text-[10px] bg-[#34C759]/15 text-[#34C759] px-2 py-0.5 rounded-full">
                       {expiryBadge(c)}
                     </span>
-                    <span className="text-[10px] bg-[#5AC8FA]/15 text-[#007AFF] px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] bg-[#5BC8D7]/15 text-[#0095B6] px-2 py-0.5 rounded-full">
                       {conditionBadge(c)}
                     </span>
                     <span className="text-[10px] bg-[#e5e5ea] text-[#86868b] px-2 py-0.5 rounded-full">
@@ -663,7 +663,7 @@ export default function CouponManager() {
                   </button>
                   <button
                     onClick={() => handleEdit(c)}
-                    className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#007AFF]/10 hover:text-[#007AFF] transition"
+                    className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#0095B6]/10 hover:text-[#0095B6] transition"
                     title="編集"
                   >
                     ✏️
@@ -708,7 +708,7 @@ export default function CouponManager() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b border-[#e5e5ea] flex-shrink-0">
               <h3 className="text-[#1d1d1f] font-semibold text-base">個人に配信</h3>
-              <p className="text-[#007AFF] text-sm font-medium mt-1">{individualCoupon.title}</p>
+              <p className="text-[#0095B6] text-sm font-medium mt-1">{individualCoupon.title}</p>
               <p className="text-[#86868b] text-xs mt-1">
                 配信したい人を選択して「配信」を押してください
               </p>
@@ -717,7 +717,7 @@ export default function CouponManager() {
             <div className="flex items-center gap-2 px-4 py-2 border-b border-[#e5e5ea] flex-shrink-0">
               <button
                 onClick={() => selectAllUsers(true)}
-                className="text-xs text-[#007AFF] hover:text-[#0051D5] font-medium"
+                className="text-xs text-[#0095B6] hover:text-[#007A96] font-medium"
               >
                 全選択
               </button>
@@ -741,14 +741,14 @@ export default function CouponManager() {
                   <label
                     key={u.uid}
                     className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition ${
-                      selectedUserIds.has(u.uid) ? 'bg-[#007AFF]/10 border border-[#007AFF]/30' : 'bg-[#f5f5f7] border border-transparent hover:bg-[#e5e5ea]/60'
+                      selectedUserIds.has(u.uid) ? 'bg-[#0095B6]/10 border border-[#0095B6]/30' : 'bg-[#f5f5f7] border border-transparent hover:bg-[#e5e5ea]/60'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={selectedUserIds.has(u.uid)}
                       onChange={() => toggleUserSelection(u.uid)}
-                      className="w-4 h-4 rounded border-[#e5e5ea] text-[#007AFF] focus:ring-[#007AFF]"
+                      className="w-4 h-4 rounded border-[#e5e5ea] text-[#0095B6] focus:ring-[#0095B6]"
                     />
                     <span className="text-[#1d1d1f] text-sm font-medium truncate">
                       {u.fullName || '（名前未設定）'}
@@ -759,8 +759,8 @@ export default function CouponManager() {
             </div>
 
             {individualResult && (
-              <div className="px-4 py-2 bg-[#007AFF]/5 border-t border-[#007AFF]/20 flex-shrink-0">
-                <p className="text-[#007AFF] text-sm font-bold">
+              <div className="px-4 py-2 bg-[#0095B6]/5 border-t border-[#0095B6]/20 flex-shrink-0">
+                <p className="text-[#0095B6] text-sm font-bold">
                   {individualResult.distributedCount}件配信
                   {individualResult.skippedCount > 0 && (
                     <span className="text-[#86868b] font-normal ml-1">
@@ -780,7 +780,7 @@ export default function CouponManager() {
               <button
                 onClick={handleIndividualDistribute}
                 disabled={individualDistributing || selectedUserIds.size === 0}
-                className="flex-1 bg-[#007AFF] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-[#0095B6] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#007A96] transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {individualDistributing ? '配信中...' : `${selectedUserIds.size}人に配信`}
               </button>
