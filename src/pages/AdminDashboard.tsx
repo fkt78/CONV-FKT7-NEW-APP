@@ -380,6 +380,23 @@ export default function AdminDashboard() {
     e.target.value = ''
   }
 
+  async function handleYellowCard(delta: number) {
+    if (!selectedUser) return
+    const next = Math.max(0, selectedUser.yellowCards + delta)
+    const label = delta > 0 ? 'イエローカードを付与' : 'イエローカードを取消'
+    if (!confirm(`${selectedUser.fullName}さんに${label}しますか？（${selectedUser.yellowCards}枚→${next}枚）${next >= 3 ? '\n⚠️ 3枚到達のためブラックリストに入ります' : ''}`)) return
+    const update: Record<string, unknown> = { yellowCards: next }
+    if (next >= 3 && selectedUser.role !== 'admin') update.status = 'blacklisted'
+    if (next < 3) update.status = 'active'
+    await updateDoc(doc(db, 'users', selectedUser.uid), update)
+  }
+
+  async function handleRedCard() {
+    if (!selectedUser) return
+    if (!confirm(`${selectedUser.fullName}さんにレッドカードを出しますか？\n即座にブラックリストに入ります。`)) return
+    await updateDoc(doc(db, 'users', selectedUser.uid), { status: 'blacklisted', yellowCards: 3 })
+  }
+
   async function handleSend() {
     const trimmed = text.trim()
     if ((!trimmed && !selectedFile) || !selectedUid || !currentUser || sending) return
@@ -850,11 +867,16 @@ export default function AdminDashboard() {
                     <p className="text-[#86868b] text-[10px]">
                       {ATTRIBUTE_LABELS[selectedUser.attribute] ?? selectedUser.attribute} · {selectedUser.birthMonth}
                     </p>
-                    {selectedUser.yellowCards > 0 && (
-                      <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
-                        🟨 ×{selectedUser.yellowCards}
-                      </span>
-                    )}
+                    <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
+                      🟨 ×{selectedUser.yellowCards}
+                    </span>
+                    <div className="flex gap-0.5">
+                      <button type="button" onClick={() => handleYellowCard(1)} title="イエローカード付与" className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition">+🟨</button>
+                      {selectedUser.yellowCards > 0 && (
+                        <button type="button" onClick={() => handleYellowCard(-1)} title="イエローカード取消" className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">-1</button>
+                      )}
+                      <button type="button" onClick={() => handleRedCard()} title="レッドカード（即ブラックリスト）" className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">🟥</button>
+                    </div>
                     {selectedUser.totalSavedAmount > 0 && (
                       <span className="text-[9px] bg-[#007AFF]/10 text-[#007AFF] px-1.5 py-0.5 rounded-full font-bold">
                         👑 ¥{selectedUser.totalSavedAmount.toLocaleString()}
