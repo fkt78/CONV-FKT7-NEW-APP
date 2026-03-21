@@ -27,7 +27,10 @@ async function sendToUser(
   const userSnap = await db.collection('users').doc(uid).get()
   const user = userSnap.data()
   const token = user?.fcmToken as string | undefined
-  if (!token) return
+  if (!token) {
+    console.warn(`[sendToUser] No fcmToken for user ${uid}, skipping push`)
+    return
+  }
 
   const settings = (user?.notificationSettings ?? {}) as NotificationSettings
   if (settings.enabled === false) return
@@ -57,8 +60,19 @@ async function sendToUser(
         sound: String(sound),
       },
     })
-  } catch (err) {
-    console.error('FCM send error:', uid, err)
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code ?? ''
+    console.error(`[sendToUser] FCM send error for ${uid}:`, code, err)
+    if (
+      code === 'messaging/invalid-registration-token' ||
+      code === 'messaging/registration-token-not-registered'
+    ) {
+      console.warn(`[sendToUser] Clearing invalid token for ${uid}`)
+      await db.collection('users').doc(uid).update({
+        fcmToken: null,
+        fcmTokenUpdatedAt: null,
+      })
+    }
   }
 }
 

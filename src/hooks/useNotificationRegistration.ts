@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react'
 
 /**
  * ログイン中ユーザーのプッシュ通知登録を管理
- * - 通知設定が有効かつ許可済みならトークンを登録
+ * - 通知設定が有効ならトークンを登録（許可が未決定の場合は requestPermission を呼ぶ）
  * - 無効ならトークンを削除
+ * - 起動ごとにトークンを再取得し、変更があれば Firestore を更新
  * - firebase/messaging は動的インポート（Safari/LINE内ブラウザで白画面を防ぐ）
  */
 export function useNotificationRegistration(uid: string | null) {
@@ -26,7 +27,11 @@ export function useNotificationRegistration(uid: string | null) {
           return
         }
 
-        if (Notification.permission !== 'granted') return
+        let perm = Notification.permission
+        if (perm === 'default') {
+          perm = await Notification.requestPermission()
+        }
+        if (perm !== 'granted' || cancelled) return
 
         const reg = await navigator.serviceWorker.ready
         if (cancelled) return
