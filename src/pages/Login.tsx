@@ -1,12 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import {
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signOut,
-} from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth'
+import { auth } from '../lib/firebase'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -19,6 +14,12 @@ export default function Login() {
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
+
+  useEffect(() => {
+    if (blockedFromRedirect) {
+      signOut(auth)
+    }
+  }, [blockedFromRedirect])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -35,28 +36,13 @@ export default function Login() {
     }
 
     try {
-      const credential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
-      const uid = credential.user.uid
-
-      let isBlacklisted = false
-      try {
-        const snap = await getDoc(doc(db, 'users', uid))
-        isBlacklisted = snap.exists() && snap.data()?.status === 'blacklisted'
-      } catch (docErr) {
-        console.error('[Login] ユーザー情報取得失敗', docErr)
-        // ネットワークエラー等でもログインは継続（ブラックリスト判定はスキップ）
-      }
-      if (isBlacklisted) {
-        await signOut(auth)
-        setError('アカウントが停止されています。')
-        return
-      }
-
+      await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
+      // blacklist 判定は AuthContext + ProtectedRoute で行う
       navigate('/')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       const message = (err as { message?: string }).message
-      console.error('[Login]', code, message)
+      console.error('[Login]', code, message, err)
 
       if (
         code === 'auth/user-not-found' ||
@@ -76,6 +62,10 @@ export default function Login() {
         setError('ログイン機能が利用できません。管理者にお問い合わせください。')
       } else if (code === 'auth/internal-error') {
         setError('サーバーエラーが発生しました。しばらく経ってから再度お試しください。')
+      } else if (code === 'auth/unauthorized-domain') {
+        setError('このアプリではログインできません。管理者にお問い合わせください。')
+      } else if (code === 'auth/web-storage-unsupported' || code === 'auth/operation-not-supported-in-this-environment') {
+        setError('プライベート閲覧モードを解除するか、通常のブラウザでお試しください。')
       } else {
         setError('エラーが発生しました。通信環境を確認して、もう一度お試しください。')
       }
