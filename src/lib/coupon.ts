@@ -1,7 +1,5 @@
 import {
   collection,
-  query,
-  where,
   getDocs,
   doc,
   getDoc,
@@ -10,7 +8,6 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { fetchWeather, type WeatherData } from './weather'
 
 /* ── 型定義 ── */
 
@@ -124,46 +121,6 @@ export const CONDITION_LABELS: Record<WeatherCondition, string> = {
 
 /* ── ヘルパー ── */
 
-function getAgeDecade(birthMonth: string): string {
-  const [y, m] = birthMonth.split('-').map(Number)
-  const now = new Date()
-  let age = now.getFullYear() - y
-  if (now.getMonth() + 1 < m) age--
-  if (age < 20) return '10s'
-  if (age < 30) return '20s'
-  if (age < 40) return '30s'
-  if (age < 50) return '40s'
-  if (age < 60) return '50s'
-  return '60plus'
-}
-
-function matchesWeather(
-  cond: WeatherCondition,
-  threshold: number | null,
-  w: WeatherData,
-): boolean {
-  switch (cond) {
-    case 'any':        return true
-    case 'rain':       return w.isRainy
-    case 'snow':       return w.isSnowy
-    case 'cold_below': return threshold !== null && w.temperatureMin <= threshold
-    case 'hot_above':  return threshold !== null && w.temperatureMax >= threshold
-  }
-}
-
-/** 新仕様: 属性×年代（複数可）でマッチ判定 */
-function matchesTarget(
-  targetAttr: TargetAttribute,
-  targetAges: TargetAgeKey[],
-  userAttr: string,
-  userBirth: string,
-): boolean {
-  if (targetAttr !== 'all' && userAttr !== targetAttr) return false
-  if (targetAges.length === 0) return true
-  const userAge = getAgeDecade(userBirth)
-  return targetAges.includes(userAge as TargetAgeKey)
-}
-
 type TargetAgeKey = Exclude<TargetAgeRange, ''>
 
 /** クーポンから対象を取得（新フィールド優先、旧 targetSegment から変換） */
@@ -232,108 +189,7 @@ function computeExpiryDate(
   }
 }
 
-/* ── 配信結果 ── */
-
-export interface DistributionResult {
-  weather: WeatherData
-  matchedCoupons: CouponTemplate[]
-  distributedCount: number
-  skippedLimitCount: number
-  details: string[]
-}
-
-/* ── メイン配信関数 ── */
-
-export async function distributeCoupons(dailyLimit: number): Promise<DistributionResult> {
-  const weather = await fetchWeather()
-
-  // アクティブなクーポンテンプレートを取得
-  const cSnap = await getDocs(query(collection(db, 'coupons'), where('active', '==', true)))
-  const templates: CouponTemplate[] = cSnap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<CouponTemplate, 'id' | 'createdAt'>),
-    createdAt: d.data().createdAt?.toDate() ?? null,
-  }))
-
-  // 天気条件に合致するクーポンだけ抽出
-  const matched = templates.filter((t) =>
-    matchesWeather(t.weatherCondition, t.temperatureThreshold, weather),
-  )
-
-  if (matched.length === 0) {
-    return {
-      weather,
-      matchedCoupons: [],
-      distributedCount: 0,
-      skippedLimitCount: 0,
-      details: ['現在の天気に合致するクーポンがありません'],
-    }
-  }
-
-  // アクティブユーザー取得
-  const uSnap = await getDocs(query(collection(db, 'users'), where('status', '==', 'active')))
-  // ローカル日付を使用（UTCだと日本時間0:00〜9:00頃に配布日が1日前になる問題を回避）
-  const now = new Date()
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-
-  let distributedCount = 0
-  let skippedLimitCount = 0
-  const details: string[] = []
-
-  for (const coupon of matched) {
-    for (const uDoc of uSnap.docs) {
-      const u = uDoc.data()
-      const uid = uDoc.id
-
-      // セグメント照合（新: 属性×年代、旧: targetSegment）
-      const t = getTargetFromCoupon(coupon)
-      if (!matchesTarget(t.attr, t.ages, u.attribute as string, u.birthMonth as string))
-        continue
-
-      // サイレント上限チェック
-      const logRef = doc(db, 'couponLogs', `${uid}_${today}`)
-      const logSnap = await getDoc(logRef)
-      const count = logSnap.exists() ? (logSnap.data().count as number) : 0
-      if (count >= dailyLimit) {
-        skippedLimitCount++
-        continue
-      }
-
-      // 同日の同一クーポン重複防止（ドキュメントIDで冪等性を担保）
-      const couponDocId = `${coupon.id}_${today}`
-      const existing = await getDoc(doc(db, 'users', uid, 'coupons', couponDocId))
-      if (existing.exists()) continue
-
-      const expiryType = coupon.expiryType ?? 'same_day'
-      const expiryDate = coupon.expiryDate
-      const expiresAtDate = computeExpiryDate(expiryType, expiryDate, today)
-
-      await setDoc(doc(db, 'users', uid, 'coupons', couponDocId), {
-        couponId: coupon.id,
-        title: coupon.title,
-        description: coupon.description,
-        discountAmount: coupon.discountAmount ?? 0,
-        status: 'unused',
-        distributedAt: serverTimestamp(),
-        distributedDate: today,
-        expiresAt: Timestamp.fromDate(expiresAtDate),
-        usedAt: null,
-      })
-
-      // 日次カウンタ更新
-      await setDoc(logRef, { uid, date: today, count: count + 1 })
-
-      distributedCount++
-      details.push(`${u.fullName as string}さんに「${coupon.title}」を配信`)
-    }
-  }
-
-  if (distributedCount === 0 && skippedLimitCount === 0) {
-    details.push('対象セグメントの顧客がいません')
-  }
-
-  return { weather, matchedCoupons: matched, distributedCount, skippedLimitCount, details }
-}
+// 一斉配信は廃止。手動は個人配信のみ。自動は毎朝7時 Cloud Functions で実行。
 
 /* ── 個人向け配信 ── */
 

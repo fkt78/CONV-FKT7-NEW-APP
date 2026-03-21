@@ -14,10 +14,9 @@ import {
   serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { db } from '../lib/firebase'
 import { fetchWeather, type WeatherData } from '../lib/weather'
 import {
-  distributeCoupons,
   distributeCouponToUsers,
   getTargetFromCoupon,
   formatTargetLabel,
@@ -26,7 +25,6 @@ import {
   type TargetAttribute,
   type TargetAgeRange,
   type ExpiryType,
-  type DistributionResult,
   type IndividualDistributionResult,
   ATTRIBUTE_LABELS,
   AGE_RANGE_LABELS,
@@ -59,11 +57,9 @@ export default function CouponManager() {
   const [scheduleMonths, setScheduleMonths] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
 
-  // weather & distribution
+  // weather（自動配信の参考用）
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
-  const [distributing, setDistributing] = useState(false)
-  const [result, setResult] = useState<DistributionResult | null>(null)
 
   // 個人配信
   const [showIndividualModal, setShowIndividualModal] = useState(false)
@@ -239,40 +235,6 @@ export default function CouponManager() {
     await deleteDoc(doc(db, 'coupons', id))
   }
 
-  /* ── 配信実行 ── */
-  async function handleDistribute() {
-    setDistributing(true)
-    setResult(null)
-    try {
-      // トークン更新（identitytoolkit 400 対策：期限切れセッションを事前検出）
-      const user = auth.currentUser
-      if (user) {
-        await user.getIdToken(true)
-      }
-      const r = await distributeCoupons(dailyLimit)
-      setResult(r)
-      setWeather(r.weather)
-    } catch (err) {
-      const code = (err as { code?: string })?.code ?? ''
-      const msg = err instanceof Error ? err.message : ''
-      const isAuthError =
-        code.startsWith('auth/') ||
-        msg.includes('auth/') ||
-        msg.includes('TOKEN') ||
-        msg.includes('INVALID') ||
-        msg.includes('network')
-      if (isAuthError) {
-        alert(
-          'セッションが切れています。一度ログアウトして、再度ログインしてください。',
-        )
-      } else {
-        alert('配信処理中にエラーが発生しました')
-      }
-    } finally {
-      setDistributing(false)
-    }
-  }
-
   /* ── 個人配信モーダルを開く ── */
   function handleOpenIndividualModal(c: CouponTemplate) {
     setIndividualCoupon(c)
@@ -374,57 +336,21 @@ export default function CouponManager() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-lg px-3 py-2">
-              <span className="text-[#86868b] text-xs whitespace-nowrap">1日上限</span>
-              <select
-                value={dailyLimit}
-                onChange={(e) => handleSaveLimit(Number(e.target.value))}
-                className="bg-transparent text-[#007AFF] text-sm font-bold focus:outline-none"
-              >
-                {[1, 2, 3, 5].map((n) => (
-                  <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
-                ))}
-              </select>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#f5f5f7] rounded-lg px-3 py-2">
+            <span className="text-[#86868b] text-xs whitespace-nowrap">自動配信 1日上限</span>
+            <select
+              value={dailyLimit}
+              onChange={(e) => handleSaveLimit(Number(e.target.value))}
+              className="bg-transparent text-[#007AFF] text-sm font-bold focus:outline-none"
+            >
+              {[1, 2, 3, 5].map((n) => (
+                <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
+              ))}
+            </select>
+            <span className="text-[#86868b] text-[10px]">（毎朝7時）</span>
           </div>
-          <button
-            onClick={handleDistribute}
-            disabled={distributing}
-            className="flex-1 bg-[#007AFF] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#0051D5] transition disabled:opacity-50"
-          >
-            {distributing ? '配信処理中...' : '⚡ 天気判定＆クーポン配信'}
-          </button>
         </div>
-
-        {result && (
-          <div className="bg-[#007AFF]/5 rounded-xl p-3 border border-[#007AFF]/20 space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <span>{result.weather.emoji}</span>
-              <span className="text-[#1d1d1f] font-medium">
-                {result.weather.description} 最高{result.weather.temperatureMax}℃ 最低{result.weather.temperatureMin}℃
-              </span>
-              <span className="text-[#86868b]">→</span>
-              <span className="text-[#007AFF] font-bold">{result.distributedCount}件配信</span>
-              {result.skippedLimitCount > 0 && (
-                <span className="text-[#86868b] text-xs">({result.skippedLimitCount}件上限スキップ)</span>
-              )}
-            </div>
-            {result.matchedCoupons.length > 0 && (
-              <p className="text-[#86868b] text-[10px]">
-                合致: {result.matchedCoupons.map((c) => c.title).join(', ')}
-              </p>
-            )}
-            {result.details.length > 0 && (
-              <div className="max-h-24 overflow-y-auto space-y-0.5">
-                {result.details.map((d, i) => (
-                  <p key={i} className="text-[#86868b] text-[11px]">• {d}</p>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
