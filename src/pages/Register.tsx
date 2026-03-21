@@ -106,7 +106,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] flex flex-col overflow-y-auto p-5 safe-area-top safe-area-bottom">
+    <div className="h-dvh bg-[#f5f5f7] flex flex-col overflow-y-auto p-5 safe-area-top safe-area-bottom">
       <div className="w-full max-w-md mx-auto flex-1 py-6">
         <div className="text-center mb-8">
           <span className="text-5xl" aria-hidden>♛</span>

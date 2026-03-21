@@ -102,8 +102,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] flex items-center justify-center p-5 safe-area-top safe-area-bottom">
-      <div className="w-full max-w-md">
+    <div className="h-dvh bg-[#f5f5f7] flex flex-col overflow-y-auto p-5 safe-area-top safe-area-bottom">
+      <div className="w-full max-w-md mx-auto flex-1 py-6">
         <div className="text-center mb-8">
           <span className="text-5xl" aria-hidden>♛</span>
           <h1 className="text-[#1d1d1f] font-semibold text-[22px] tracking-wide mt-3">
