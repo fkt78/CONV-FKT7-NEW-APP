@@ -10,8 +10,12 @@ window.addEventListener('unhandledrejection', (e) => {
   console.error('[App] Unhandled rejection', e.reason)
 })
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function showError(root: HTMLElement, err: unknown) {
-  const msg = err instanceof Error ? err.message : String(err)
+  const msg = escapeHtml(err instanceof Error ? err.message : String(err))
   root.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f7;font-family:sans-serif;padding:24px;">
       <div style="text-align:center;">

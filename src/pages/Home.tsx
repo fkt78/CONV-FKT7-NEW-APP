@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { formatTime, isSameDay, formatDateDivider } from '../lib/formatTime'
-import { messageMatches, highlightMatch } from '../lib/chatUtils'
+import { messageMatches, highlightMatch, isSafeUrl } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponWallet from '../components/CouponWallet'
@@ -600,7 +600,7 @@ export default function Home() {
                             </div>
                           ) : (
                           <>
-                          {msg.attachmentUrl && (
+                          {msg.attachmentUrl && isSafeUrl(msg.attachmentUrl) && (
                             <div className="mb-2">
                               {msg.attachmentType === 'image' ? (
                                 <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">

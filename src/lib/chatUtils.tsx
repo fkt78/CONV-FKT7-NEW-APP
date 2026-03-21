@@ -13,7 +13,8 @@ export function messageMatches(
 }
 
 /** テキスト内のキーワードをハイライト表示 */
-export function highlightMatch(text: string, query: string): ReactNode {
+export function highlightMatch(text: string | null | undefined, query: string): ReactNode {
+  if (text == null) return ''
   if (!query.trim()) return text
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
@@ -26,4 +27,10 @@ export function highlightMatch(text: string, query: string): ReactNode {
       part
     ),
   )
+}
+
+/** URL が安全なスキーム（http / https）かどうかを検証 */
+export function isSafeUrl(url: string | undefined | null): boolean {
+  if (!url) return false
+  return /^https?:\/\//i.test(url)
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   collection,
   query,
@@ -247,7 +247,10 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     return b.totalSavedAmount - a.totalSavedAmount
   })
 
+  const couponFetchIdRef = useRef(0)
+
   async function handleOpenCouponModal(user: UserRecord) {
+    const fetchId = ++couponFetchIdRef.current
     setCouponModalUser(user)
     setLoadingCoupons(true)
     setUserCoupons([])
@@ -258,6 +261,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           orderBy('distributedAt', 'desc'),
         ),
       )
+      if (couponFetchIdRef.current !== fetchId) return
       const now = Date.now()
       setUserCoupons(
         snap.docs.map((d) => {
@@ -279,10 +283,11 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
         }),
       )
     } catch (err) {
+      if (couponFetchIdRef.current !== fetchId) return
       console.error('クーポン取得エラー:', err)
       setUserCoupons([])
     } finally {
-      setLoadingCoupons(false)
+      if (couponFetchIdRef.current === fetchId) setLoadingCoupons(false)
     }
   }
 

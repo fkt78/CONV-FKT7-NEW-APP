@@ -34,12 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let latestUid: string | null = null
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      const uid = user?.uid ?? null
+      latestUid = uid
       setCurrentUser(user)
 
       if (user) {
         try {
           const snap = await getDoc(doc(db, 'users', user.uid))
+          if (latestUid !== uid) return
           if (snap.exists()) {
             const data = snap.data()
             setUserStatus(data.status as UserStatus)
@@ -49,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserRole(null)
           }
         } catch (err) {
+          if (latestUid !== uid) return
           console.error('[AuthContext] ユーザー情報取得失敗', err)
           setUserStatus(null)
           setUserRole(null)

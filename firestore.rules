@@ -10,12 +10,22 @@ service cloud.firestore {
     }
 
     // ── ユーザー：本人のみ読み書き、管理者は全件読み取り可 ──
+    // ※ role / status の書き換えは管理者のみ許可し、一般ユーザーの権限昇格を防止
     match /users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isAdmin());
-      allow create: if request.auth != null && request.auth.uid == uid;
-      allow update, delete: if request.auth != null
-        && (request.auth.uid == uid || isAdmin());
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['role']);
+      allow update: if request.auth != null
+        && (
+          (request.auth.uid == uid
+            && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
+            && (!('status' in request.resource.data) || request.resource.data.status == resource.data.status)
+          )
+          || isAdmin()
+        );
+      allow delete: if request.auth != null && isAdmin();
     }
 
     // ── ユーザー保有クーポン：本人または管理者が読み取り、本人は使用済み更新のみ、管理者は作成可 ──

@@ -86,12 +86,17 @@ export default function CouponManager() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
     getDoc(doc(db, 'settings', 'coupon')).then((snap) => {
+      if (cancelled) return
       if (snap.exists()) {
         const data = snap.data()
         setDailyLimit((data?.dailyLimit as number) ?? 1)
       }
+    }).catch((err) => {
+      if (!cancelled) console.error('[CouponManager] 設定取得失敗', err)
     })
+    return () => { cancelled = true }
   }, [])
 
   /* ── 個人配信用: モーダル表示時にユーザー一覧を取得 ── */
@@ -122,8 +127,15 @@ export default function CouponManager() {
 
   /* ── サイレント上限保存 ── */
   async function handleSaveLimit(val: number) {
+    const prev = dailyLimit
     setDailyLimit(val)
-    await setDoc(doc(db, 'settings', 'coupon'), { dailyLimit: val }, { merge: true })
+    try {
+      await setDoc(doc(db, 'settings', 'coupon'), { dailyLimit: val }, { merge: true })
+    } catch (err) {
+      console.error('[CouponManager] 上限保存失敗', err)
+      setDailyLimit(prev)
+      alert('上限の保存に失敗しました。')
+    }
   }
 
   /* ── フォームリセット ── */
@@ -221,18 +233,33 @@ export default function CouponManager() {
 
   /* ── 有効/無効切り替え ── */
   async function handleToggle(id: string, current: boolean) {
-    await updateDoc(doc(db, 'coupons', id), { active: !current })
+    try {
+      await updateDoc(doc(db, 'coupons', id), { active: !current })
+    } catch (err) {
+      console.error('[CouponManager] 切り替え失敗', err)
+      alert('切り替えに失敗しました。')
+    }
   }
 
   /* ── 自動配信オン/オフ切り替え ── */
   async function handleToggleAutoDistribute(id: string, current: boolean) {
-    await updateDoc(doc(db, 'coupons', id), { autoDistribute: !current })
+    try {
+      await updateDoc(doc(db, 'coupons', id), { autoDistribute: !current })
+    } catch (err) {
+      console.error('[CouponManager] 自動配信切り替え失敗', err)
+      alert('自動配信の切り替えに失敗しました。')
+    }
   }
 
   /* ── 削除 ── */
   async function handleDelete(id: string) {
     if (!confirm('このクーポンテンプレートを削除しますか？')) return
-    await deleteDoc(doc(db, 'coupons', id))
+    try {
+      await deleteDoc(doc(db, 'coupons', id))
+    } catch (err) {
+      console.error('[CouponManager] 削除失敗', err)
+      alert('削除に失敗しました。')
+    }
   }
 
   /* ── 個人配信モーダルを開く ── */
