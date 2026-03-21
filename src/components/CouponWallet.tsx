@@ -324,15 +324,15 @@ export default function CouponWallet() {
 
       {/* 使用確認オーバーレイ */}
       {presenting && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
-          <div className="w-full max-w-sm">
-            <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl">
-              <div className="bg-[#0095B6] py-3 text-center">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-sm my-auto">
+            <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl flex flex-col max-h-[85dvh]">
+              <div className="bg-[#0095B6] py-3 text-center flex-shrink-0">
                 <span className="inline-block text-2xl animate-[coupon-float_2s_ease-in-out_infinite]" aria-hidden>🎫</span>
                 <p className="text-white font-bold text-xs tracking-widest mt-1">VIP COUPON</p>
               </div>
 
-              <div className="p-6 text-center space-y-4">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-6 text-center space-y-4">
                 <h2 className="text-[#1d1d1f] font-semibold text-xl">{presenting.title}</h2>
                 {presenting.description && (
                   <div className="text-[#86868b] text-sm text-left space-y-1.5">
@@ -378,7 +378,7 @@ export default function CouponWallet() {
                 </div>
               </div>
 
-              <div className="px-6 pb-6 space-y-3">
+              <div className="px-6 py-4 space-y-3 flex-shrink-0 border-t border-[#e5e5ea]">
                 <p className="text-center text-[#86868b] text-xs">
                   この画面を店員にお見せください
                 </p>
