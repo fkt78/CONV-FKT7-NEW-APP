@@ -41,6 +41,7 @@ interface UserRecord {
   email: string
   attribute: string
   birthMonth: string
+  yellowCards: number
   totalSavedAmount: number
   memberNumber: number | null
   role?: string
@@ -119,6 +120,7 @@ export default function AdminDashboard() {
           email: d.data().email as string,
           attribute: d.data().attribute as string,
           birthMonth: d.data().birthMonth as string,
+          yellowCards: (d.data().yellowCards as number) ?? 0,
           totalSavedAmount: (d.data().totalSavedAmount as number) ?? 0,
           memberNumber: (d.data().memberNumber as number) ?? null,
           role: d.data().role as string | undefined,
@@ -848,6 +850,11 @@ export default function AdminDashboard() {
                     <p className="text-[#86868b] text-[10px]">
                       {ATTRIBUTE_LABELS[selectedUser.attribute] ?? selectedUser.attribute} · {selectedUser.birthMonth}
                     </p>
+                    {selectedUser.yellowCards > 0 && (
+                      <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
+                        🟨 ×{selectedUser.yellowCards}
+                      </span>
+                    )}
                     {selectedUser.totalSavedAmount > 0 && (
                       <span className="text-[9px] bg-[#007AFF]/10 text-[#007AFF] px-1.5 py-0.5 rounded-full font-bold">
                         👑 ¥{selectedUser.totalSavedAmount.toLocaleString()}

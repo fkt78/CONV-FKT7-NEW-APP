@@ -20,6 +20,7 @@ interface UserRecord {
   attribute: string
   birthMonth: string
   status: string
+  yellowCards: number
   totalSavedAmount: number
   usedCouponCount: number
   memberNumber: number | null
@@ -86,6 +87,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
             attribute: (data.attribute as string) ?? '',
             birthMonth: (data.birthMonth as string) ?? '',
             status: (data.status as string) ?? 'active',
+            yellowCards: (data.yellowCards as number) ?? 0,
             totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
             usedCouponCount: 0,
             memberNumber: (data.memberNumber as number) ?? null,
@@ -119,6 +121,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           attribute: (data.attribute as string) ?? '',
           birthMonth: (data.birthMonth as string) ?? '',
           status: (data.status as string) ?? 'active',
+          yellowCards: (data.yellowCards as number) ?? 0,
           totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
           usedCouponCount: usedSnap.size,
           memberNumber: (data.memberNumber as number) ?? null,
@@ -201,6 +204,39 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     } catch (err) {
       console.error('ステータス変更エラー:', err)
       alert('ステータスの変更に失敗しました')
+    } finally {
+      setUpdatingUid(null)
+    }
+  }
+
+  async function handleYellowCard(user: UserRecord, delta: number) {
+    if (user.uid === currentUser?.uid) return
+    const next = Math.max(0, user.yellowCards + delta)
+    const label = delta > 0 ? 'イエローカードを付与' : 'イエローカードを取消'
+    if (!confirm(`${user.fullName}さんに${label}しますか？（${user.yellowCards}枚→${next}枚）${next >= 3 ? '\n⚠️ 3枚到達のためブラックリストに入ります' : ''}`)) return
+    setUpdatingUid(user.uid)
+    try {
+      const update: Record<string, unknown> = { yellowCards: next }
+      if (next >= 3 && user.status === 'active') update.status = 'blacklisted'
+      if (next < 3 && user.status === 'blacklisted') update.status = 'active'
+      await updateDoc(doc(db, 'users', user.uid), update)
+    } catch (err) {
+      console.error('イエローカード更新エラー:', err)
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingUid(null)
+    }
+  }
+
+  async function handleRedCard(user: UserRecord) {
+    if (user.uid === currentUser?.uid) return
+    if (!confirm(`${user.fullName}さんにレッドカードを出しますか？\n即座にブラックリストに入ります。`)) return
+    setUpdatingUid(user.uid)
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { status: 'blacklisted', yellowCards: 3 })
+    } catch (err) {
+      console.error('レッドカード更新エラー:', err)
+      alert('更新に失敗しました')
     } finally {
       setUpdatingUid(null)
     }
@@ -346,6 +382,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">メール</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">属性</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">誕生月</th>
+                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">カード</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">ステータス</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">操作</th>
                     <th className="text-right px-4 py-3 text-[#86868b] font-medium">使用回数</th>
@@ -401,6 +438,50 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                         {ATTRIBUTE_LABELS[user.attribute] ?? user.attribute}
                       </td>
                       <td className="px-4 py-3 text-[#86868b]">{user.birthMonth}</td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5">
+                          {user.yellowCards > 0 ? (
+                            <span className="text-sm" title={`イエローカード ${user.yellowCards}枚`}>
+                              {'🟨'.repeat(Math.min(user.yellowCards, 3))}
+                            </span>
+                          ) : (
+                            <span className="text-[#86868b] text-xs">—</span>
+                          )}
+                          {user.uid !== currentUser?.uid && user.status === 'active' && (
+                            <div className="flex gap-0.5 ml-1">
+                              <button
+                                type="button"
+                                onClick={() => handleYellowCard(user, 1)}
+                                disabled={updatingUid === user.uid}
+                                title="イエローカード付与"
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 hover:bg-amber-200 transition disabled:opacity-50"
+                              >
+                                +🟨
+                              </button>
+                              {user.yellowCards > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleYellowCard(user, -1)}
+                                  disabled={updatingUid === user.uid}
+                                  title="イエローカード取消"
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition disabled:opacity-50"
+                                >
+                                  -1
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRedCard(user)}
+                                disabled={updatingUid === user.uid}
+                                title="レッドカード（即ブラックリスト）"
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 hover:bg-red-200 transition disabled:opacity-50"
+                              >
+                                🟥
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
