@@ -219,8 +219,10 @@ export const onNewsCreated = onDocumentCreated('news/{newsId}', async (event) =>
 
 const IGA_LAT = 34.7667
 const IGA_LON = 136.1333
-const RAIN_CODES = new Set([51, 53, 55, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99])
-const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86])
+/** 雨の日判定：当日の最大降水確率がこの値以上（%） */
+const RAIN_PRECIP_PROB_MIN = 60
+/** 1ユーザーあたり1日の自動配信クーポン合計の上限（デフォルト） */
+const DEFAULT_DAILY_COUPON_LIMIT = 5
 
 type WeatherCondition = 'any' | 'rain' | 'snow' | 'cold_below' | 'hot_above'
 type TargetAttribute = 'all' | 'male' | 'female' | 'student' | 'other'
@@ -229,12 +231,14 @@ type TargetSegment = 'all' | 'male' | 'female' | 'student' | 'other' | '10s' | '
 type ExpiryType = 'same_day' | 'end_of_week' | 'end_of_month' | 'date'
 
 interface WeatherData {
+  /** 現在気温（ログ用） */
   temperature: number
+  /** 当日の予想最高気温 */
   temperatureMax: number
+  /** 当日の予想最低気温 */
   temperatureMin: number
-  weatherCode: number
-  isRainy: boolean
-  isSnowy: boolean
+  /** 当日の最大降水確率（0–100）。雨の日判定に使用 */
+  precipitationProbabilityMax: number
 }
 
 interface CouponTemplate {
@@ -263,33 +267,37 @@ async function fetchWeatherForSchedule(): Promise<WeatherData> {
   const url =
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${IGA_LAT}&longitude=${IGA_LON}` +
-    `&current=temperature_2m,weather_code` +
-    `&daily=temperature_2m_max,temperature_2m_min` +
+    `&current=temperature_2m` +
+    `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
     `&timezone=Asia%2FTokyo`
   const res = await fetch(url)
   if (!res.ok) throw new Error('天気情報の取得に失敗しました')
   const json = await res.json()
   const c = json.current
   const d = json.daily
-  const code = (c?.weather_code as number) ?? 0
+  const pp = d?.precipitation_probability_max?.[0] as number | undefined
   return {
     temperature: c?.temperature_2m ?? 0,
     temperatureMax: (d?.temperature_2m_max?.[0] as number) ?? c?.temperature_2m ?? 0,
     temperatureMin: (d?.temperature_2m_min?.[0] as number) ?? c?.temperature_2m ?? 0,
-    weatherCode: code,
-    isRainy: RAIN_CODES.has(code),
-    isSnowy: SNOW_CODES.has(code),
+    precipitationProbabilityMax: typeof pp === 'number' && Number.isFinite(pp) ? pp : 0,
   }
 }
 
 function matchesWeather(cond: WeatherCondition, threshold: number | null, w: WeatherData): boolean {
   switch (cond) {
-    case 'any': return true
-    case 'rain': return w.isRainy
-    case 'snow': return w.isSnowy
-    case 'cold_below': return threshold !== null && w.temperatureMin <= threshold
-    case 'hot_above': return threshold !== null && w.temperatureMax >= threshold
-    default: return false
+    case 'any':
+      return true
+    case 'rain':
+      return w.precipitationProbabilityMax >= RAIN_PRECIP_PROB_MIN
+    case 'snow':
+      return false
+    case 'cold_below':
+      return threshold !== null && w.temperatureMin < threshold
+    case 'hot_above':
+      return threshold !== null && w.temperatureMax > threshold
+    default:
+      return false
   }
 }
 
@@ -399,7 +407,7 @@ export const scheduledCouponDistribution = onSchedule(
   async () => {
     const settingsSnap = await db.collection('settings').doc('coupon').get()
     const settings = settingsSnap.data() ?? {}
-    const dailyLimit = (settings.dailyLimit as number) ?? 1
+    const dailyLimit = (settings.dailyLimit as number) ?? DEFAULT_DAILY_COUPON_LIMIT
 
     const weather = await fetchWeatherForSchedule()
     const cSnap = await db.collection('coupons').where('active', '==', true).get()
@@ -455,7 +463,7 @@ export const scheduledCouponDistribution = onSchedule(
         }
       } else {
         if (!matchesSchedule(s, now)) continue
-        if ((!s || s.type === 'daily') && !matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) continue
+        if (!matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) continue
 
         const expiryType = coupon.expiryType ?? 'same_day'
         const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)

@@ -30,13 +30,14 @@ import {
   AGE_RANGE_LABELS,
   AGE_RANGE_KEYS,
   CONDITION_LABELS,
+  CONDITION_OPTIONS,
   EXPIRY_LABELS,
 } from '../lib/coupon'
 
 export default function CouponManager() {
   /* ── state ── */
   const [coupons, setCoupons] = useState<CouponTemplate[]>([])
-  const [dailyLimit, setDailyLimit] = useState(1)
+  const [dailyLimit, setDailyLimit] = useState(5)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -91,7 +92,7 @@ export default function CouponManager() {
       if (cancelled) return
       if (snap.exists()) {
         const data = snap.data()
-        setDailyLimit((data?.dailyLimit as number) ?? 1)
+        setDailyLimit((data?.dailyLimit as number) ?? 5)
       }
     }).catch((err) => {
       if (!cancelled) console.error('[CouponManager] 設定取得失敗', err)
@@ -311,8 +312,8 @@ export default function CouponManager() {
 
   /* ── 条件バッジ文字列 ── */
   function conditionBadge(c: CouponTemplate): string {
-    if (c.weatherCondition === 'cold_below') return `${c.temperatureThreshold}℃以下`
-    if (c.weatherCondition === 'hot_above') return `${c.temperatureThreshold}℃以上`
+    if (c.weatherCondition === 'cold_below') return `最低${c.temperatureThreshold}℃未満`
+    if (c.weatherCondition === 'hot_above') return `最高${c.temperatureThreshold}℃超`
     return CONDITION_LABELS[c.weatherCondition]
   }
 
@@ -347,7 +348,7 @@ export default function CouponManager() {
               <p className="text-[#1d1d1f] text-sm font-medium">三重県伊賀市</p>
               {weather ? (
                 <p className="text-[#86868b] text-xs">
-                  {weather.description} / 最高{weather.temperatureMax}℃ 最低{weather.temperatureMin}℃ / 降水 {weather.precipitation}mm
+                  {weather.description} / 最高{weather.temperatureMax}℃ 最低{weather.temperatureMin}℃ / 最大降水確率{weather.precipitationProbabilityMax}% / 現在の降水{weather.precipitation}mm
                 </p>
               ) : (
                 <p className="text-[#86868b]/70 text-xs">天気未取得</p>
@@ -371,11 +372,11 @@ export default function CouponManager() {
               onChange={(e) => handleSaveLimit(Number(e.target.value))}
               className="bg-transparent text-[#0095B6] text-sm font-bold focus:outline-none"
             >
-              {[1, 2, 3, 5].map((n) => (
+              {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
               ))}
             </select>
-            <span className="text-[#86868b] text-[10px]">（毎朝7時）</span>
+            <span className="text-[#86868b] text-[10px]">（毎朝7時・1ユーザー1日の自動配信合計）</span>
           </div>
         </div>
       </div>
@@ -436,8 +437,8 @@ export default function CouponManager() {
                   onChange={(e) => setCond(e.target.value as WeatherCondition)}
                   className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
                 >
-                  {Object.entries(CONDITION_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
+                  {CONDITION_OPTIONS.map((k) => (
+                    <option key={k} value={k}>{CONDITION_LABELS[k]}</option>
                   ))}
                 </select>
               </div>
@@ -523,15 +524,22 @@ export default function CouponManager() {
             </div>
 
             {(cond === 'cold_below' || cond === 'hot_above') && (
-              <div className="flex items-center gap-2">
-                <label className="text-[#86868b] text-xs">閾値:</label>
-                <input
-                  type="number"
-                  value={threshold}
-                  onChange={(e) => setThreshold(Number(e.target.value))}
-                  className="w-20 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
-                />
-                <span className="text-[#86868b] text-xs">℃</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <label className="text-[#86868b] text-xs">閾値:</label>
+                  <input
+                    type="number"
+                    value={threshold}
+                    onChange={(e) => setThreshold(Number(e.target.value))}
+                    className="w-20 bg-white border border-[#e5e5ea] rounded-lg px-3 py-1.5 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
+                  />
+                  <span className="text-[#86868b] text-xs">℃</span>
+                </div>
+                <p className="text-[#86868b] text-[10px] leading-relaxed">
+                  {cond === 'cold_below'
+                    ? '※ 当日の予想最低気温が、この値より低い日に配信します（例: 5 → 5℃未満）。'
+                    : '※ 当日の予想最高気温が、この値より高い日に配信します（例: 28 → 28℃超）。'}
+                </p>
               </div>
             )}
 

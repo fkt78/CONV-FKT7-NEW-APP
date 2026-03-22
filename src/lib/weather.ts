@@ -8,6 +8,8 @@ export interface WeatherData {
   temperatureMax: number
   /** その日の予想最低気温（cold_below 条件に使用） */
   temperatureMin: number
+  /** その日の最大降水確率（%・雨クーポン判定は60%以上） */
+  precipitationProbabilityMax: number
   precipitation: number
   weatherCode: number
   description: string
@@ -53,7 +55,7 @@ export async function fetchWeather(): Promise<WeatherData> {
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${IGA_LAT}&longitude=${IGA_LON}` +
     `&current=temperature_2m,precipitation,weather_code` +
-    `&daily=temperature_2m_max,temperature_2m_min` +
+    `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
     `&timezone=Asia%2FTokyo`
 
   const res = await fetch(url)
@@ -64,11 +66,13 @@ export async function fetchWeather(): Promise<WeatherData> {
   const d = json.daily
   const code = c.weather_code as number
   const info = WEATHER_MAP[code] ?? { text: '不明', emoji: '❓' }
+  const pp = d?.precipitation_probability_max?.[0] as number | undefined
 
   return {
     temperature: c.temperature_2m,
     temperatureMax: (d?.temperature_2m_max?.[0] as number) ?? c.temperature_2m,
     temperatureMin: (d?.temperature_2m_min?.[0] as number) ?? c.temperature_2m,
+    precipitationProbabilityMax: typeof pp === 'number' && Number.isFinite(pp) ? pp : 0,
     precipitation: c.precipitation,
     weatherCode: code,
     description: info.text,

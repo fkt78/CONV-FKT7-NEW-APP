@@ -113,11 +113,14 @@ export const SEGMENT_LABELS: Record<TargetSegment, string> = {
 
 export const CONDITION_LABELS: Record<WeatherCondition, string> = {
   any: '条件なし（常時）',
-  rain: '雨の日',
-  snow: '雪の日',
-  cold_below: '気温が○℃以下',
-  hot_above: '気温が○℃以上',
+  rain: '雨の日（当日の最大降水確率が60%以上）',
+  snow: '雪の日（廃止・配信されません）',
+  cold_below: '最低気温が○℃未満の日',
+  hot_above: '最高気温が○℃を超える日',
 }
+
+/** 管理画面の天気条件プルダウン（雪は選択不可・既存データ互換のため型には残す） */
+export const CONDITION_OPTIONS: WeatherCondition[] = ['any', 'rain', 'cold_below', 'hot_above']
 
 /* ── ヘルパー ── */
 
