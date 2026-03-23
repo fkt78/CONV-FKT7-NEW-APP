@@ -100,6 +100,25 @@ export default function CouponManager() {
     return () => { cancelled = true }
   }, [])
 
+  /* 管理画面表示時に天気を1回取得（手動「天気取得」と同じ。未取得のままでは配信可否の判断がしづらいため） */
+  useEffect(() => {
+    let cancelled = false
+    setWeatherLoading(true)
+    fetchWeather()
+      .then((w) => {
+        if (!cancelled) setWeather(w)
+      })
+      .catch(() => {
+        if (!cancelled) setWeather(null)
+      })
+      .finally(() => {
+        if (!cancelled) setWeatherLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   /* ── 個人配信用: モーダル表示時にユーザー一覧を取得 ── */
   useEffect(() => {
     if (!showIndividualModal) return

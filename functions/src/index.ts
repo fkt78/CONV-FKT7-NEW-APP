@@ -263,6 +263,8 @@ interface CouponTemplate {
   }
 }
 
+const WEATHER_FETCH_TIMEOUT_MS = 20_000
+
 async function fetchWeatherForSchedule(): Promise<WeatherData> {
   const url =
     `https://api.open-meteo.com/v1/forecast` +
@@ -270,21 +272,42 @@ async function fetchWeatherForSchedule(): Promise<WeatherData> {
     `&current=temperature_2m` +
     `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
     `&timezone=Asia%2FTokyo`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('天気情報の取得に失敗しました')
-  const json = await res.json()
-  const c = json.current
-  const d = json.daily
-  const pp = d?.precipitation_probability_max?.[0] as number | undefined
-  return {
-    temperature: c?.temperature_2m ?? 0,
-    temperatureMax: (d?.temperature_2m_max?.[0] as number) ?? c?.temperature_2m ?? 0,
-    temperatureMin: (d?.temperature_2m_min?.[0] as number) ?? c?.temperature_2m ?? 0,
-    precipitationProbabilityMax: typeof pp === 'number' && Number.isFinite(pp) ? pp : 0,
+  const ac = new AbortController()
+  const t = setTimeout(() => ac.abort(), WEATHER_FETCH_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { signal: ac.signal })
+    if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`)
+    const json = (await res.json()) as {
+      current?: { temperature_2m?: number }
+      daily?: {
+        temperature_2m_max?: number[]
+        temperature_2m_min?: number[]
+        precipitation_probability_max?: number[]
+      }
+    }
+    const c = json.current
+    const d = json.daily
+    const pp = d?.precipitation_probability_max?.[0] as number | undefined
+    return {
+      temperature: c?.temperature_2m ?? 0,
+      temperatureMax: (d?.temperature_2m_max?.[0] as number) ?? c?.temperature_2m ?? 0,
+      temperatureMin: (d?.temperature_2m_min?.[0] as number) ?? c?.temperature_2m ?? 0,
+      precipitationProbabilityMax: typeof pp === 'number' && Number.isFinite(pp) ? pp : 0,
+    }
+  } finally {
+    clearTimeout(t)
   }
 }
 
-function matchesWeather(cond: WeatherCondition, threshold: number | null, w: WeatherData): boolean {
+/**
+ * 天気連動の一致判定。
+ * - weather が null のときは API 失敗扱いで、rain / cold / hot / snow のテンプレは配信しない（any のみ）。
+ * - rain: 最大降水確率が RAIN_PRECIP_PROB_MIN% 以上（60% 以上）
+ * - cold_below: 予想最低気温が閾値「未満」（閾値と同じ温度では不一致）
+ * - hot_above: 予想最高気温が閾値「超」（閾値と同じでは不一致）
+ */
+function matchesWeather(cond: WeatherCondition, threshold: number | null, w: WeatherData | null): boolean {
+  if (w === null) return cond === 'any'
   switch (cond) {
     case 'any':
       return true
@@ -409,7 +432,17 @@ export const scheduledCouponDistribution = onSchedule(
     const settings = settingsSnap.data() ?? {}
     const dailyLimit = (settings.dailyLimit as number) ?? DEFAULT_DAILY_COUPON_LIMIT
 
-    const weather = await fetchWeatherForSchedule()
+    let weather: WeatherData | null = null
+    try {
+      weather = await fetchWeatherForSchedule()
+      console.log('[scheduledCouponDistribution] Open-Meteo OK:', JSON.stringify(weather))
+    } catch (err) {
+      console.error(
+        '[scheduledCouponDistribution] Open-Meteo 取得失敗（タイムアウト・HTTPエラー等）。天気条件付きテンプレはスキップし、条件なし(any)のみ配信します。',
+        err,
+      )
+    }
+
     const cSnap = await db.collection('coupons').where('active', '==', true).get()
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -463,7 +496,19 @@ export const scheduledCouponDistribution = onSchedule(
         }
       } else {
         if (!matchesSchedule(s, now)) continue
-        if (!matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) continue
+        if (!matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) {
+          if (weather) {
+            console.log(
+              `[scheduledCouponDistribution] 天候不一致でスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition} thr=${coupon.temperatureThreshold} ` +
+                `→ 予報: 最大降水確率=${weather.precipitationProbabilityMax}% 最低=${weather.temperatureMin}℃ 最高=${weather.temperatureMax}℃（雨は${RAIN_PRECIP_PROB_MIN}%以上、寒は最低が閾値未満、暑は最高が閾値超）`,
+            )
+          } else {
+            console.log(
+              `[scheduledCouponDistribution] 天気API未取得のためスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition}（any のみ配信可）`,
+            )
+          }
+          continue
+        }
 
         const expiryType = coupon.expiryType ?? 'same_day'
         const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
@@ -500,6 +545,11 @@ export const scheduledCouponDistribution = onSchedule(
       }
     }
 
-    console.log('scheduledCouponDistribution:', distributedCount, 'coupons distributed', weather)
+    console.log(
+      '[scheduledCouponDistribution] 完了:',
+      distributedCount,
+      '件配信。weather=',
+      weather === null ? 'null(API失敗時は天気条件付きは未実施)' : JSON.stringify(weather),
+    )
   },
 )
