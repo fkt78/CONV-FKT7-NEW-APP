@@ -354,6 +354,7 @@ export default function CouponManager() {
   function conditionBadge(c: CouponTemplate): string {
     if (c.weatherCondition === 'cold_below') return `最低${c.temperatureThreshold}℃未満`
     if (c.weatherCondition === 'hot_above') return `最高${c.temperatureThreshold}℃超`
+    if (c.weatherCondition === 'warning') return '気象警報発令時'
     return CONDITION_LABELS[c.weatherCondition]
   }
 

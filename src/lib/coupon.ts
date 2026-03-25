@@ -11,7 +11,7 @@ import { db } from './firebase'
 
 /* ── 型定義 ── */
 
-export type WeatherCondition = 'any' | 'rain' | 'snow' | 'cold_below' | 'hot_above'
+export type WeatherCondition = 'any' | 'rain' | 'snow' | 'cold_below' | 'hot_above' | 'warning'
 
 /** 属性（性別・その他） */
 export type TargetAttribute = 'all' | 'male' | 'female' | 'student' | 'other'
@@ -117,10 +117,11 @@ export const CONDITION_LABELS: Record<WeatherCondition, string> = {
   snow: '雪の日（廃止・配信されません）',
   cold_below: '最低気温が○℃未満の日',
   hot_above: '最高気温が○℃を超える日',
+  warning: '気象警報発令時（大雨・暴風・大雪など）',
 }
 
 /** 管理画面の天気条件プルダウン（雪は選択不可・既存データ互換のため型には残す） */
-export const CONDITION_OPTIONS: WeatherCondition[] = ['any', 'rain', 'cold_below', 'hot_above']
+export const CONDITION_OPTIONS: WeatherCondition[] = ['any', 'rain', 'cold_below', 'hot_above', 'warning']
 
 /* ── ヘルパー ── */
 

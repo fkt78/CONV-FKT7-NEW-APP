@@ -224,7 +224,21 @@ const RAIN_PRECIP_PROB_MIN = 60
 /** 1ユーザーあたり1日の自動配信クーポン合計の上限（デフォルト） */
 const DEFAULT_DAILY_COUPON_LIMIT = 5
 
-type WeatherCondition = 'any' | 'rain' | 'snow' | 'cold_below' | 'hot_above'
+/**
+ * 気象庁 警報・注意報 API（三重県）
+ * https://www.jma.go.jp/bosai/warning/data/warning/240000.json
+ */
+const JMA_WARNING_URL = 'https://www.jma.go.jp/bosai/warning/data/warning/240000.json'
+/** 伊賀市の JMA 市区町村コード（三重県=24、伊賀市=212 → "24212"） */
+const IGA_CITY_CODE = '24212'
+/**
+ * 「警報」以上とみなすコード（注意報は含まない）
+ * 3=大雨 4=洪水 5=暴風 6=暴風雪 7=大雪 10=波浪 12=高潮
+ * 33=大雨特別 35=暴風特別 36=暴風雪特別 37=大雪特別 38=波浪特別 39=高潮特別
+ */
+const JMA_WARN_CODES = new Set(['3', '4', '5', '6', '7', '10', '12', '33', '35', '36', '37', '38', '39'])
+
+type WeatherCondition = 'any' | 'rain' | 'snow' | 'cold_below' | 'hot_above' | 'warning'
 type TargetAttribute = 'all' | 'male' | 'female' | 'student' | 'other'
 type TargetAgeRange = '' | '10s' | '20s' | '30s' | '40s' | '50s' | '60plus'
 type TargetSegment = 'all' | 'male' | 'female' | 'student' | 'other' | '10s' | '20s' | '30s' | '40s' | '50s' | '60plus'
@@ -239,6 +253,10 @@ interface WeatherData {
   temperatureMin: number
   /** 当日の最大降水確率（0–100）。雨の日判定に使用 */
   precipitationProbabilityMax: number
+  /** 気象庁から伊賀市の警報が1件以上発令中かどうか */
+  hasWarning: boolean
+  /** 発令中の警報名リスト（ログ・デバッグ用） */
+  warningNames: string[]
 }
 
 interface CouponTemplate {
@@ -263,6 +281,55 @@ interface CouponTemplate {
   }
 }
 
+/** 気象庁の警報・注意報コードから名称を返す（ログ用） */
+const JMA_CODE_NAMES: Record<string, string> = {
+  '3': '大雨警報', '4': '洪水警報', '5': '暴風警報',
+  '6': '暴風雪警報', '7': '大雪警報', '10': '波浪警報', '12': '高潮警報',
+  '33': '大雨特別警報', '35': '暴風特別警報', '36': '暴風雪特別警報',
+  '37': '大雪特別警報', '38': '波浪特別警報', '39': '高潮特別警報',
+}
+
+/**
+ * 気象庁APIから伊賀市の警報発令状況を取得。
+ * 取得失敗時は false を返す（配信はスキップ）。
+ */
+async function fetchWarningStatus(): Promise<{ hasWarning: boolean; warningNames: string[] }> {
+  const ac = new AbortController()
+  const t = setTimeout(() => ac.abort(), 10_000)
+  try {
+    const res = await fetch(JMA_WARNING_URL, { signal: ac.signal })
+    if (!res.ok) {
+      console.warn(`[fetchWarningStatus] JMA HTTP ${res.status}`)
+      return { hasWarning: false, warningNames: [] }
+    }
+    const json = (await res.json()) as {
+      areaTypes?: Array<{
+        areas?: Array<{
+          areaCode?: string
+          warnings?: Array<{ code?: string; status?: string }>
+        }>
+      }>
+    }
+    const names: string[] = []
+    for (const areaType of json.areaTypes ?? []) {
+      for (const area of areaType.areas ?? []) {
+        if (!area.areaCode?.startsWith(IGA_CITY_CODE)) continue
+        for (const w of area.warnings ?? []) {
+          if (w.code && JMA_WARN_CODES.has(w.code) && w.status && w.status !== '') {
+            names.push(JMA_CODE_NAMES[w.code] ?? `code:${w.code}`)
+          }
+        }
+      }
+    }
+    return { hasWarning: names.length > 0, warningNames: names }
+  } catch (err) {
+    console.warn('[fetchWarningStatus] 取得失敗:', (err as Error)?.message ?? err)
+    return { hasWarning: false, warningNames: [] }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 const WEATHER_FETCH_TIMEOUT_MS = 15_000
 const WEATHER_RETRY_COUNT = 3
 const WEATHER_RETRY_BASE_MS = 3_000
@@ -271,7 +338,9 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-async function fetchWeatherOnce(): Promise<WeatherData> {
+type WeatherBase = Omit<WeatherData, 'hasWarning' | 'warningNames'>
+
+async function fetchWeatherOnce(): Promise<WeatherBase> {
   const url =
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${IGA_LAT}&longitude=${IGA_LON}` +
@@ -311,9 +380,11 @@ async function fetchWeatherOnce(): Promise<WeatherData> {
  */
 async function fetchWeatherForSchedule(): Promise<WeatherData> {
   let lastErr: unknown
+  let base: Omit<WeatherData, 'hasWarning' | 'warningNames'> | null = null
   for (let i = 0; i < WEATHER_RETRY_COUNT; i++) {
     try {
-      return await fetchWeatherOnce()
+      base = await fetchWeatherOnce()
+      break
     } catch (err) {
       lastErr = err
       console.warn(
@@ -327,7 +398,12 @@ async function fetchWeatherForSchedule(): Promise<WeatherData> {
       }
     }
   }
-  throw lastErr
+  if (!base) throw lastErr
+
+  /* 気象庁警報取得は失敗しても全体を止めない（hasWarning: false 扱い） */
+  const warn = await fetchWarningStatus()
+  console.log('[fetchWeatherForSchedule] 警報状況:', warn)
+  return { ...base, hasWarning: warn.hasWarning, warningNames: warn.warningNames }
 }
 
 /**
@@ -350,6 +426,8 @@ function matchesWeather(cond: WeatherCondition, threshold: number | null, w: Wea
       return threshold !== null && w.temperatureMin < threshold
     case 'hot_above':
       return threshold !== null && w.temperatureMax > threshold
+    case 'warning':
+      return w.hasWarning
     default:
       return false
   }
