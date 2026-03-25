@@ -14,7 +14,8 @@ import {
   serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { db, functions } from '../lib/firebase'
+import { httpsCallable } from 'firebase/functions'
 import { fetchWeather, type WeatherData } from '../lib/weather'
 import {
   distributeCouponToUsers,
@@ -61,6 +62,9 @@ export default function CouponManager() {
   // weather（自動配信の参考用）
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
+
+  // テスト配信
+  const [testRunning, setTestRunning] = useState(false)
 
   // 個人配信
   const [showIndividualModal, setShowIndividualModal] = useState(false)
@@ -329,6 +333,23 @@ export default function CouponManager() {
     }
   }
 
+  /* ── テスト配信実行 ── */
+  async function handleTestDistribution() {
+    if (!confirm('自動配信ロジックをテスト実行します（実際にクーポンが配信されます）。よろしいですか？')) return
+    setTestRunning(true)
+    try {
+      const fn = httpsCallable<unknown, { distributedCount: number; weather: unknown }>(functions, 'testCouponDistribution')
+      const res = await fn()
+      const d = res.data
+      alert(`テスト完了: ${d.distributedCount}件 配信\n\n天気データ:\n${JSON.stringify(d.weather, null, 2)}`)
+    } catch (err) {
+      console.error('[testCouponDistribution]', err)
+      alert('テスト実行に失敗しました: ' + (err as Error).message)
+    } finally {
+      setTestRunning(false)
+    }
+  }
+
   /* ── 条件バッジ文字列 ── */
   function conditionBadge(c: CouponTemplate): string {
     if (c.weatherCondition === 'cold_below') return `最低${c.temperatureThreshold}℃未満`
@@ -374,13 +395,22 @@ export default function CouponManager() {
               )}
             </div>
           </div>
-          <button
-            onClick={handleFetchWeather}
-            disabled={weatherLoading}
-            className="text-xs bg-[#e5e5ea]/60 hover:bg-[#e5e5ea] text-[#0095B6] px-3 py-1.5 rounded-lg transition disabled:opacity-30"
-          >
-            {weatherLoading ? '取得中...' : '天気取得'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleFetchWeather}
+              disabled={weatherLoading}
+              className="text-xs bg-[#e5e5ea]/60 hover:bg-[#e5e5ea] text-[#0095B6] px-3 py-1.5 rounded-lg transition disabled:opacity-30"
+            >
+              {weatherLoading ? '取得中...' : '天気取得'}
+            </button>
+            <button
+              onClick={handleTestDistribution}
+              disabled={testRunning}
+              className="text-xs bg-[#ff9500]/10 hover:bg-[#ff9500]/20 text-[#ff9500] px-3 py-1.5 rounded-lg transition disabled:opacity-30 font-semibold"
+            >
+              {testRunning ? '実行中...' : 'テスト配信'}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

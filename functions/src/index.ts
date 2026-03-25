@@ -452,14 +452,8 @@ function isBirthMonthDay(birthMonth: string, dayOfMonth: number, now: Date): boo
   return m === now.getMonth() + 1 && now.getDate() === dayOfMonth
 }
 
-/** 毎朝7時（日本時間）に天気判定＆クーポン自動配信 */
-export const scheduledCouponDistribution = onSchedule(
-  {
-    schedule: '0 7 * * *',
-    timeZone: 'Asia/Tokyo',
-    timeoutSeconds: 120,
-  },
-  async () => {
+/** クーポン自動配信の本体ロジック（スケジュール / 手動テスト共通） */
+async function runCouponDistribution(): Promise<{ distributedCount: number; weather: WeatherData | null }> {
     const settingsSnap = await db.collection('settings').doc('coupon').get()
     const settings = settingsSnap.data() ?? {}
     const dailyLimit = (settings.dailyLimit as number) ?? DEFAULT_DAILY_COUPON_LIMIT
@@ -467,10 +461,10 @@ export const scheduledCouponDistribution = onSchedule(
     let weather: WeatherData | null = null
     try {
       weather = await fetchWeatherForSchedule()
-      console.log('[scheduledCouponDistribution] Open-Meteo OK:', JSON.stringify(weather))
+      console.log('[couponDistribution] Open-Meteo OK:', JSON.stringify(weather))
     } catch (err) {
       console.error(
-        '[scheduledCouponDistribution] Open-Meteo 取得失敗（タイムアウト・HTTPエラー等）。天気条件付きテンプレはスキップし、条件なし(any)のみ配信します。',
+        '[couponDistribution] Open-Meteo 取得失敗。天気条件付きテンプレはスキップし、条件なし(any)のみ配信します。',
         err,
       )
     }
@@ -531,12 +525,12 @@ export const scheduledCouponDistribution = onSchedule(
         if (!matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) {
           if (weather) {
             console.log(
-              `[scheduledCouponDistribution] 天候不一致でスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition} thr=${coupon.temperatureThreshold} ` +
+              `[couponDistribution] 天候不一致でスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition} thr=${coupon.temperatureThreshold} ` +
                 `→ 予報: 最大降水確率=${weather.precipitationProbabilityMax}% 最低=${weather.temperatureMin}℃ 最高=${weather.temperatureMax}℃（雨は${RAIN_PRECIP_PROB_MIN}%以上、寒は最低が閾値未満、暑は最高が閾値超）`,
             )
           } else {
             console.log(
-              `[scheduledCouponDistribution] 天気API未取得のためスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition}（any のみ配信可）`,
+              `[couponDistribution] 天気API未取得のためスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition}（any のみ配信可）`,
             )
           }
           continue
@@ -578,10 +572,40 @@ export const scheduledCouponDistribution = onSchedule(
     }
 
     console.log(
-      '[scheduledCouponDistribution] 完了:',
+      '[couponDistribution] 完了:',
       distributedCount,
       '件配信。weather=',
       weather === null ? 'null(API失敗時は天気条件付きは未実施)' : JSON.stringify(weather),
     )
+    return { distributedCount, weather }
+}
+
+/** 毎朝7時（日本時間）に天気判定＆クーポン自動配信 */
+export const scheduledCouponDistribution = onSchedule(
+  {
+    schedule: '0 7 * * *',
+    timeZone: 'Asia/Tokyo',
+    timeoutSeconds: 120,
+  },
+  async () => {
+    await runCouponDistribution()
+  },
+)
+
+/** テスト用: 手動で配信ロジックを実行（管理者のみ） */
+export const testCouponDistribution = onCall(
+  { timeoutSeconds: 120 },
+  async (req) => {
+    if (!req.auth) throw new HttpsError('unauthenticated', 'ログインが必要です')
+    const userSnap = await db.collection('users').doc(req.auth.uid).get()
+    const role = userSnap.data()?.role as string | undefined
+    if (role !== 'admin') throw new HttpsError('permission-denied', '管理者権限が必要です')
+
+    console.log('[testCouponDistribution] 管理者', req.auth.uid, 'が手動テスト実行')
+    const result = await runCouponDistribution()
+    return {
+      distributedCount: result.distributedCount,
+      weather: result.weather,
+    }
   },
 )
