@@ -263,9 +263,15 @@ interface CouponTemplate {
   }
 }
 
-const WEATHER_FETCH_TIMEOUT_MS = 20_000
+const WEATHER_FETCH_TIMEOUT_MS = 15_000
+const WEATHER_RETRY_COUNT = 3
+const WEATHER_RETRY_BASE_MS = 3_000
 
-async function fetchWeatherForSchedule(): Promise<WeatherData> {
+async function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+async function fetchWeatherOnce(): Promise<WeatherData> {
   const url =
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${IGA_LAT}&longitude=${IGA_LON}` +
@@ -297,6 +303,31 @@ async function fetchWeatherForSchedule(): Promise<WeatherData> {
   } finally {
     clearTimeout(t)
   }
+}
+
+/**
+ * Open-Meteo からの天気取得。Cloud Functions のコールドスタートで DNS/接続が
+ * 不安定なため、最大 WEATHER_RETRY_COUNT 回リトライする。
+ */
+async function fetchWeatherForSchedule(): Promise<WeatherData> {
+  let lastErr: unknown
+  for (let i = 0; i < WEATHER_RETRY_COUNT; i++) {
+    try {
+      return await fetchWeatherOnce()
+    } catch (err) {
+      lastErr = err
+      console.warn(
+        `[fetchWeatherForSchedule] 試行${i + 1}/${WEATHER_RETRY_COUNT} 失敗:`,
+        (err as Error)?.message ?? err,
+      )
+      if (i < WEATHER_RETRY_COUNT - 1) {
+        const wait = WEATHER_RETRY_BASE_MS * (i + 1)
+        console.warn(`[fetchWeatherForSchedule] ${wait}ms 後にリトライします…`)
+        await sleep(wait)
+      }
+    }
+  }
+  throw lastErr
 }
 
 /**
@@ -426,6 +457,7 @@ export const scheduledCouponDistribution = onSchedule(
   {
     schedule: '0 7 * * *',
     timeZone: 'Asia/Tokyo',
+    timeoutSeconds: 120,
   },
   async () => {
     const settingsSnap = await db.collection('settings').doc('coupon').get()
