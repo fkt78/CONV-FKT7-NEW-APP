@@ -549,7 +549,11 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
 
     const cSnap = await db.collection('coupons').where('active', '==', true).get()
     const now = new Date()
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    /* Cloud Functions は UTC で動作するため、JST (UTC+9) に変換して日付を求める。
+     * 例: 朝7時JST = 前日22:00 UTC → now.getDate() だと前日になってしまう */
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+    const today = `${jstNow.getUTCFullYear()}-${String(jstNow.getUTCMonth() + 1).padStart(2, '0')}-${String(jstNow.getUTCDate()).padStart(2, '0')}`
+    console.log(`[couponDistribution] today(JST)=${today} (UTC=${now.toISOString()})`)
 
     const allTemplates = cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
     const uSnap = await db.collection('users').where('status', '==', 'active').get()
@@ -568,7 +572,7 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
           const u = uDoc.data()
           const uid = uDoc.id
           const birth = u.birthMonth as string
-          if (!isBirthMonthDay(birth ?? '', dayOfMonthForBirth, now)) continue
+          if (!isBirthMonthDay(birth ?? '', dayOfMonthForBirth, jstNow)) continue
           const t = getTargetFromCoupon(coupon)
           if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', birth ?? '01-2000')) continue
 
@@ -599,7 +603,7 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
           distributedCount++
         }
       } else {
-        if (!matchesSchedule(s, now)) continue
+        if (!matchesSchedule(s, jstNow)) continue
         if (!matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) {
           if (weather) {
             console.log(
