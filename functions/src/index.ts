@@ -476,30 +476,42 @@ function matchesTarget(targetAttr: TargetAttribute, targetAges: TargetAgeRange[]
   return targetAges.includes(userAge)
 }
 
+/**
+ * Cloud Functions は UTC 動作のため、JST の「その日の終わり」を UTC で表現する。
+ * JST 23:59:59 = UTC 14:59:59（UTC+9 なので 23-9=14）
+ */
+function jstEndOfDay(uy: number, um: number, ud: number): Date {
+  return new Date(Date.UTC(uy, um - 1, ud, 14, 59, 59, 999))
+}
+
 function computeExpiryDate(expiryType: ExpiryType, expiryDateStr: string | undefined, distributedDate: string): Date {
   const [y, m, d] = distributedDate.split('-').map(Number)
-  const dist = new Date(y, m - 1, d)
+  // distributedDate は JST 日付（"2026-03-27" 等）なので、JST での終端を求める
+  const dist = new Date(Date.UTC(y, m - 1, d))
   switch (expiryType) {
     case 'same_day':
-      return new Date(y, m - 1, d, 23, 59, 59, 999)
+      return jstEndOfDay(y, m, d)
     case 'end_of_week': {
-      const day = dist.getDay()
+      const day = dist.getUTCDay()
       const daysUntilSunday = (7 - day) % 7
       const sunday = new Date(dist)
-      sunday.setDate(sunday.getDate() + daysUntilSunday)
-      return new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 23, 59, 59, 999)
+      sunday.setUTCDate(sunday.getUTCDate() + daysUntilSunday)
+      return jstEndOfDay(sunday.getUTCFullYear(), sunday.getUTCMonth() + 1, sunday.getUTCDate())
     }
-    case 'end_of_month':
-      return new Date(y, m, 0, 23, 59, 59, 999)
+    case 'end_of_month': {
+      // 翌月0日 = 当月末日
+      const lastDay = new Date(Date.UTC(y, m, 0))
+      return jstEndOfDay(lastDay.getUTCFullYear(), lastDay.getUTCMonth() + 1, lastDay.getUTCDate())
+    }
     case 'date': {
       if (!expiryDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDateStr)) {
-        return new Date(y, m - 1, d, 23, 59, 59, 999)
+        return jstEndOfDay(y, m, d)
       }
       const [ey, em, ed] = expiryDateStr.split('-').map(Number)
-      return new Date(ey, em - 1, ed, 23, 59, 59, 999)
+      return jstEndOfDay(ey, em, ed)
     }
     default:
-      return new Date(y, m - 1, d, 23, 59, 59, 999)
+      return jstEndOfDay(y, m, d)
   }
 }
 
