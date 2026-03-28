@@ -18,11 +18,17 @@ interface NotificationSettings {
   sound?: boolean
 }
 
+type SendToUserOpts = {
+  /** メッセージ通知ごとに一意のタグ（iOS で同一タグによる置き換えを避ける） */
+  messageId?: string
+}
+
 async function sendToUser(
   uid: string,
   title: string,
   body: string,
   type: 'messages' | 'coupons' | 'news',
+  opts?: SendToUserOpts,
 ): Promise<void> {
   const userSnap = await db.collection('users').doc(uid).get()
   const user = userSnap.data()
@@ -33,21 +39,46 @@ async function sendToUser(
   }
 
   const settings = (user?.notificationSettings ?? {}) as NotificationSettings
-  if (settings.enabled === false) return
-  if (type === 'messages' && settings.messages === false) return
-  if (type === 'coupons' && settings.coupons === false) return
-  if (type === 'news' && settings.news === false) return
+  if (settings.enabled === false) {
+    console.warn(`[sendToUser] notifications disabled for ${uid}, skipping`)
+    return
+  }
+  if (type === 'messages' && settings.messages === false) {
+    console.warn(`[sendToUser] messages channel off for ${uid}, skipping`)
+    return
+  }
+  if (type === 'coupons' && settings.coupons === false) {
+    console.warn(`[sendToUser] coupons channel off for ${uid}, skipping`)
+    return
+  }
+  if (type === 'news' && settings.news === false) {
+    console.warn(`[sendToUser] news channel off for ${uid}, skipping`)
+    return
+  }
 
+  const displayBody =
+    body.trim() ||
+    (type === 'messages' ? '（内容を開いて確認してください）' : body)
   const sound = settings.sound !== false
+  const tag =
+    type === 'messages' && opts?.messageId
+      ? `fkt7-msg-${opts.messageId}`
+      : `fkt7-${type}`
+
   try {
     await messaging.send({
       token,
-      notification: { title, body },
+      notification: { title, body: displayBody },
       webpush: {
+        headers: {
+          Urgency: 'high',
+        },
         notification: {
+          title,
+          body: displayBody,
           icon: '/icons/icon-192x192.png',
           badge: '/icons/icon-192x192.png',
-          tag: 'fkt7-' + type,
+          tag,
           renotify: true,
           silent: !sound,
         },
@@ -58,8 +89,11 @@ async function sendToUser(
       data: {
         url: '/',
         sound: String(sound),
+        title,
+        body: displayBody,
       },
     })
+    console.log(`[sendToUser] OK uid=${uid} type=${type} tag=${tag}`)
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code ?? ''
     console.error(`[sendToUser] FCM send error for ${uid}:`, code, err)
@@ -81,23 +115,49 @@ export const onChatMessageCreated = onDocumentCreated(
   'chats/{chatId}/messages/{messageId}',
   async (event) => {
     const chatId = event.params.chatId
+    const messageId = event.params.messageId
     const snap = event.data
     if (!snap) return
     const data = snap.data()
     const senderId = data?.senderId as string | undefined
     const text = (data?.text as string) ?? ''
     const attachmentType = data?.attachmentType as string | undefined
-    if (!senderId) return
-    if (senderId === chatId) {
-      await db.collection('chats').doc(chatId).set({ unreadFromCustomer: true }, { merge: true })
+    if (!senderId) {
+      console.warn('[onChatMessageCreated] missing senderId, skip', { chatId, messageId })
       return
     }
+
+    if (senderId === chatId) {
+      /* 会員本人の送信: senderId === chatId。管理者が自分の会員チャットに送る場合も同じ形になるため role で分岐 */
+      const senderDoc = await db.collection('users').doc(senderId).get()
+      const role = senderDoc.data()?.role as string | undefined
+      if (role === 'admin') {
+        const body = text
+          ? text.slice(0, 80)
+          : attachmentType === 'image'
+            ? '画像が届きました'
+            : 'ファイルが届きました'
+        console.log('[onChatMessageCreated] admin self-chat → push', { chatId, messageId })
+        await sendToUser(chatId, '新しいメッセージ', body, 'messages', { messageId })
+        return
+      }
+      await db.collection('chats').doc(chatId).set({ unreadFromCustomer: true }, { merge: true })
+      console.log('[onChatMessageCreated] customer message, no push', { chatId, messageId })
+      return
+    }
+
     const body = text
       ? text.slice(0, 80)
       : attachmentType === 'image'
         ? '画像が届きました'
         : 'ファイルが届きました'
-    await sendToUser(chatId, '新しいメッセージ', body, 'messages')
+    console.log('[onChatMessageCreated] store → member push', {
+      chatId,
+      senderId,
+      messageId,
+      bodyLen: body.length,
+    })
+    await sendToUser(chatId, '新しいメッセージ', body, 'messages', { messageId })
   },
 )
 
