@@ -15,6 +15,7 @@ interface NewsItem {
   title: string
   content: string
   audioUrl: string
+  imageUrl: string
   createdAt: Date | null
   expiresAt: Date | null
 }
@@ -40,6 +41,7 @@ export default function VipNews() {
             title: d.data().title as string,
             content: d.data().content as string,
             audioUrl: (d.data().audioUrl as string) ?? '',
+            imageUrl: (d.data().imageUrl as string) ?? '',
             createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
             expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
           }))
@@ -116,7 +118,8 @@ export default function VipNews() {
               )}
               <span className="flex-1 text-[#1d1d1f] text-[15px] font-semibold truncate">{item.title}</span>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {item.audioUrl && <span className="text-[#0095B6]/70 text-[13px]">🎵</span>}
+                {item.imageUrl && <span className="text-[#0095B6]/70 text-[13px]" title="画像あり">🖼️</span>}
+                {item.audioUrl && <span className="text-[#0095B6]/70 text-[13px]" title="音声あり">🎵</span>}
                 <span className="text-[#86868b] text-[13px]">{formatDate(item.createdAt)}</span>
                 <svg
                   className={`w-4 h-4 text-[#86868b] transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -128,9 +131,20 @@ export default function VipNews() {
             </button>
 
             {isOpen && (
-              <div className="px-4 pb-4 space-y-2 border-t border-[#e5e5ea]">
+              <div className="px-4 pb-4 space-y-3 border-t border-[#e5e5ea]">
+                {item.imageUrl && (
+                  <div className="pt-3">
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full rounded-xl border border-[#e5e5ea] object-contain max-h-[min(70vh,480px)] bg-[#f5f5f7]"
+                    />
+                  </div>
+                )}
                 {item.content && (
-                  <p className="text-[#86868b] text-[15px] leading-relaxed pt-3 whitespace-pre-wrap">
+                  <p className="text-[#86868b] text-[15px] leading-relaxed whitespace-pre-wrap">
                     {item.content}
                   </p>
                 )}

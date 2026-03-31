@@ -12,7 +12,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { uploadAudio, deleteAudio, type UploadProgress } from '../lib/newsStorage'
+import { uploadAudio, uploadImage, deleteAudio, type UploadProgress } from '../lib/newsStorage'
 import AudioPlayer from './AudioPlayer'
 
 interface NewsItem {
@@ -20,6 +20,7 @@ interface NewsItem {
   title: string
   content: string
   audioUrl: string
+  imageUrl: string
   createdAt: Date | null
   expiresAt: Date | null
 }
@@ -29,6 +30,7 @@ export default function NewsManager() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingAudioUrl, setEditingAudioUrl] = useState<string>('')
+  const [editingImageUrl, setEditingImageUrl] = useState<string>('')
 
   // フォームフィールド
   const [title, setTitle] = useState('')
@@ -36,9 +38,12 @@ export default function NewsManager() {
   const [expiresAt, setExpiresAt] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [removeAudio, setRemoveAudio] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [removeImage, setRemoveImage] = useState(false)
   const [upload, setUpload] = useState<UploadProgress | null>(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     return onSnapshot(
@@ -50,6 +55,7 @@ export default function NewsManager() {
             title: d.data().title as string,
             content: d.data().content as string,
             audioUrl: (d.data().audioUrl as string) ?? '',
+            imageUrl: (d.data().imageUrl as string) ?? '',
             createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
             expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
           })),
@@ -68,8 +74,12 @@ export default function NewsManager() {
     setUpload(null)
     setEditingId(null)
     setEditingAudioUrl('')
+    setEditingImageUrl('')
+    setImageFile(null)
+    setRemoveImage(false)
     setShowForm(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (imageInputRef.current) imageInputRef.current.value = ''
   }
 
   function handleEdit(item: NewsItem) {
@@ -78,26 +88,34 @@ export default function NewsManager() {
     setExpiresAt(item.expiresAt ? item.expiresAt.toISOString().slice(0, 16) : '')
     setAudioFile(null)
     setRemoveAudio(false)
+    setImageFile(null)
+    setRemoveImage(false)
     setUpload(null)
     setEditingId(item.id)
     setEditingAudioUrl(item.audioUrl)
+    setEditingImageUrl(item.imageUrl)
     setShowForm(true)
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (imageInputRef.current) imageInputRef.current.value = ''
   }
 
   async function handleSave() {
     if (!title.trim()) return
     setSaving(true)
+    setUpload(null)
     try {
       let audioUrl = editingId ? editingAudioUrl : ''
+      let imageUrl = editingId ? editingImageUrl : ''
 
-      // 旧音声削除
       if (editingId && removeAudio && editingAudioUrl) {
         await deleteAudio(editingAudioUrl)
         audioUrl = ''
       }
+      if (editingId && removeImage && editingImageUrl) {
+        await deleteAudio(editingImageUrl)
+        imageUrl = ''
+      }
 
-      // 新音声アップロード
       if (audioFile) {
         if (editingId && editingAudioUrl && !removeAudio) {
           await deleteAudio(editingAudioUrl)
@@ -105,10 +123,18 @@ export default function NewsManager() {
         audioUrl = await uploadAudio(audioFile, (p) => setUpload(p))
       }
 
+      if (imageFile) {
+        if (editingId && editingImageUrl && !removeImage) {
+          await deleteAudio(editingImageUrl)
+        }
+        imageUrl = await uploadImage(imageFile, (p) => setUpload(p))
+      }
+
       const payload = {
         title: title.trim(),
         content: content.trim(),
         audioUrl,
+        imageUrl,
         expiresAt: expiresAt.trim()
           ? Timestamp.fromDate(new Date(expiresAt.trim()))
           : null,
@@ -126,12 +152,14 @@ export default function NewsManager() {
       alert(`保存に失敗しました${msg ? `: ${msg}` : ''}`)
     } finally {
       setSaving(false)
+      setUpload(null)
     }
   }
 
   async function handleDelete(item: NewsItem) {
     if (!confirm(`「${item.title}」を削除しますか？`)) return
     if (item.audioUrl) await deleteAudio(item.audioUrl)
+    if (item.imageUrl) await deleteAudio(item.imageUrl)
     await deleteDoc(doc(db, 'news', item.id))
   }
 
@@ -143,6 +171,10 @@ export default function NewsManager() {
   const currentAudioToShow = audioFile
     ? URL.createObjectURL(audioFile)
     : (!removeAudio && editingAudioUrl) ? editingAudioUrl : ''
+
+  const currentImageToShow = imageFile
+    ? URL.createObjectURL(imageFile)
+    : (!removeImage && editingImageUrl) ? editingImageUrl : ''
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -193,6 +225,73 @@ export default function NewsManager() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-[#86868b] text-[10px] block">画像・ポスター（任意・JPEG / PNG / WebP / GIF）</label>
+              <p className="text-[#86868b] text-[10px] -mt-1 mb-1">音声と同時に添付できます。画像のみ・音声のみでも投稿できます。</p>
+
+              {editingImageUrl && !removeImage && !imageFile && (
+                <div className="space-y-1">
+                  <img
+                    src={editingImageUrl}
+                    alt=""
+                    className="w-full max-h-48 object-contain rounded-lg border border-[#e5e5ea] bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setRemoveImage(true)}
+                    className="text-red-500/80 text-[10px] hover:text-red-500 transition"
+                  >
+                    ✕ この画像を削除する
+                  </button>
+                </div>
+              )}
+              {removeImage && (
+                <p className="text-red-500/80 text-[10px]">
+                  保存時に画像を削除します
+                  <button type="button" onClick={() => setRemoveImage(false)} className="ml-2 text-[#0095B6] hover:text-[#007A96]">
+                    取り消す
+                  </button>
+                </p>
+              )}
+
+              <div
+                onClick={() => imageInputRef.current?.click()}
+                className="flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 cursor-pointer hover:border-[#0095B6]/40 transition"
+              >
+                <span className="text-[#86868b] text-xs">
+                  {imageFile ? imageFile.name : '画像を選択'}
+                </span>
+                {imageFile && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setImageFile(null)
+                      if (imageInputRef.current) imageInputRef.current.value = ''
+                    }}
+                    className="ml-auto text-[#86868b] hover:text-red-500 text-xs transition"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                className="hidden"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              />
+
+              {imageFile && currentImageToShow && (
+                <img
+                  src={currentImageToShow}
+                  alt=""
+                  className="w-full max-h-48 object-contain rounded-lg border border-[#e5e5ea] bg-white"
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
               <label className="text-[#86868b] text-[10px] block">音声ファイル（任意）</label>
 
               {editingAudioUrl && !removeAudio && !audioFile && (
@@ -240,19 +339,19 @@ export default function NewsManager() {
               {audioFile && currentAudioToShow && (
                 <AudioPlayer src={currentAudioToShow} title={audioFile.name} />
               )}
-
-              {upload && upload.state === 'running' && (
-                <div className="space-y-1">
-                  <div className="h-1 rounded-full bg-[#e5e5ea] overflow-hidden">
-                    <div
-                      className="h-full bg-[#0095B6] transition-all"
-                      style={{ width: `${upload.percent}%` }}
-                    />
-                  </div>
-                  <p className="text-[#86868b] text-[10px]">アップロード中... {upload.percent}%</p>
-                </div>
-              )}
             </div>
+
+            {upload && upload.state === 'running' && (
+              <div className="space-y-1">
+                <div className="h-1 rounded-full bg-[#e5e5ea] overflow-hidden">
+                  <div
+                    className="h-full bg-[#0095B6] transition-all"
+                    style={{ width: `${upload.percent}%` }}
+                  />
+                </div>
+                <p className="text-[#86868b] text-[10px]">アップロード中... {upload.percent}%</p>
+              </div>
+            )}
 
             <button
               onClick={handleSave}
@@ -274,11 +373,14 @@ export default function NewsManager() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[#1d1d1f] text-sm font-bold truncate">{item.title}</p>
                   <p className="text-[#86868b] text-xs mt-0.5 line-clamp-2">{item.content}</p>
-                  {item.audioUrl && (
-                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-[#0095B6]">
-                      🎵 音声あり
-                    </span>
-                  )}
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {item.imageUrl && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#0095B6]">🖼️ 画像あり</span>
+                    )}
+                    {item.audioUrl && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#0095B6]">🎵 音声あり</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-[#86868b] text-[10px]">{formatDate(item.createdAt)}</span>
@@ -295,6 +397,13 @@ export default function NewsManager() {
                   >✕</button>
                 </div>
               </div>
+              {item.imageUrl && (
+                <img
+                  src={item.imageUrl}
+                  alt=""
+                  className="w-full max-h-48 object-contain rounded-lg border border-[#e5e5ea] bg-white"
+                />
+              )}
               {item.audioUrl && (
                 <AudioPlayer src={item.audioUrl} title={item.title} />
               )}
