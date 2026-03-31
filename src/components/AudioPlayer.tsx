@@ -54,6 +54,26 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     }
   }, [src])
 
+  /* 他アプリへ切り替え・タブ非表示時は再生を止める（バックグラウンドで鳴り続けないようにする） */
+  useEffect(() => {
+    const pausePlayback = () => {
+      const audio = audioRef.current
+      if (!audio) return
+      audio.pause()
+      setPlaying(false)
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') pausePlayback()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    /* iOS Safari / PWA で visibility だけ取りこぼす場合の補助 */
+    window.addEventListener('pagehide', pausePlayback)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', pausePlayback)
+    }
+  }, [])
+
   function togglePlay() {
     const audio = audioRef.current
     if (!audio || loading || error) return
