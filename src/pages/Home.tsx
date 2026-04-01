@@ -489,8 +489,10 @@ export default function Home() {
         </div>
       ) : homeTab === 'coupon' ? (
         <div className="flex-1 flex flex-col min-h-0 mt-2 overflow-hidden">
-          <AffiliateBannerCarousel />
-          <div className="flex-1 overflow-hidden mt-2">
+          <div className="flex-shrink-0">
+            <AffiliateBannerCarousel />
+          </div>
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden mt-2">
             <CouponWallet />
           </div>
         </div>
