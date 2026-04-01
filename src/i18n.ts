@@ -1,4 +1,5 @@
 import i18n from 'i18next'
+import type { TFunction } from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
@@ -32,12 +33,22 @@ void i18n
     },
     fallbackLng: 'ja',
     supportedLngs: ['ja', 'en', 'vi'],
+    /** en-US などを en に寄せ、リソースキーと一致させる */
+    nonExplicitSupportedLngs: true,
+    load: 'languageOnly',
     interpolation: { escapeValue: false },
+    react: { useSuspense: false },
     detection: {
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
       lookupLocalStorage: 'i18nextLng',
     },
   })
+
+/** returnObjects で読む配列が欠損・フォールバック文字列のときに落ちないようにする */
+export function translationStringArray(t: TFunction, key: string): string[] {
+  const v = t(key, { returnObjects: true })
+  return Array.isArray(v) ? (v as string[]) : []
+}
 
 export default i18n

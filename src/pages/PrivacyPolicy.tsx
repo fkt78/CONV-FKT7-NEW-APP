@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LegalPageLayout from '../components/LegalPageLayout'
+import { translationStringArray } from '../i18n'
 
 export default function PrivacyPolicy() {
   const { t } = useTranslation()
   const lp = (key: string) => t(`legal.privacy.${key}`)
 
-  const dates = t('legal.privacy.dates', { returnObjects: true }) as string[]
+  const dates = translationStringArray(t, 'legal.privacy.dates')
 
   return (
     <LegalPageLayout title={t('legal.privacy.title')}>

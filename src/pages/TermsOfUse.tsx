@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LegalPageLayout from '../components/LegalPageLayout'
+import { translationStringArray } from '../i18n'
 
 export default function TermsOfUse() {
   const { t } = useTranslation()
   const lt = (key: string) => t(`legal.terms.${key}`)
 
-  const dates = t('legal.terms.dates', { returnObjects: true }) as string[]
+  const dates = translationStringArray(t, 'legal.terms.dates')
 
   return (
     <LegalPageLayout title={t('legal.terms.title')}>

@@ -25,6 +25,7 @@ import CouponWallet from '../components/CouponWallet'
 import VipNews from '../components/VipNews'
 import VoiceCreditsPopup from '../components/VoiceCreditsPopup'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import AffiliateBannerCarousel from '../components/AffiliateBannerCarousel'
 
 type HomeTab = 'home' | 'chat' | 'coupon'
 
@@ -482,6 +483,8 @@ export default function Home() {
           <div className="mx-4 mt-4">
             <VipNews />
           </div>
+          <AffiliateBannerCarousel />
+          <div className="h-4" />
         </div>
       ) : homeTab === 'coupon' ? (
         <div className="flex-1 flex flex-col min-h-0 mt-2 overflow-hidden">

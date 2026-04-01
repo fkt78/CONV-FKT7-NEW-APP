@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import LegalPageLayout from '../components/LegalPageLayout'
+import { translationStringArray } from '../i18n'
 
 export default function Tokushoho() {
   const { t } = useTranslation()
   const lk = (key: string) => t(`legal.tokushoho.${key}`)
 
-  const dates = t('legal.tokushoho.dates', { returnObjects: true }) as string[]
+  const dates = translationStringArray(t, 'legal.tokushoho.dates')
 
   return (
     <LegalPageLayout title={t('legal.tokushoho.title')}>
