@@ -64,6 +64,14 @@
     "cancel": "キャンセル",
     "validThrough": " 〜 {{date}} まで有効"
   },
+  "banner": {
+    "vpn": {
+      "badge": "2ヶ月無料",
+      "title": "セカイVPN",
+      "subtitle": "日本の動画や母国のサイトを安全に閲覧",
+      "cta": "詳細を見る"
+    }
+  },
   "vipNews": {
     "sectionLabel": "VIP NEWS",
     "collapse": "折りたたむ",

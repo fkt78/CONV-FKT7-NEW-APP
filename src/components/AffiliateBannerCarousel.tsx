@@ -5,13 +5,9 @@ interface BannerSlide {
   id: string
   bgImage: string
   bgPosition: string
-  badge: string
-  badgeSub?: string
-  title: string
-  subtitle: string
+  /** i18n キーのプレフィックス（banner.xxx） */
+  i18nKey: string
   href: string
-  /** 'foreign' = vi/en ユーザー向け | 'japanese' = ja ユーザー向け | 'all' = 全員 */
-  audience: 'foreign' | 'japanese' | 'all'
 }
 
 const SLIDES: BannerSlide[] = [
@@ -19,67 +15,66 @@ const SLIDES: BannerSlide[] = [
     id: 'vpn',
     bgImage: '/banners/vpn-bg.png',
     bgPosition: 'right center',
-    badge: '2ヶ月無料',
-    badgeSub: '2 Months Free',
-    title: 'セカイVPN',
-    subtitle: '日本の動画や母国のサイトを安全に',
+    i18nKey: 'banner.vpn',
     href: 'https://fkt-office.com/life-support.html',
-    audience: 'foreign',
   },
 ]
 
-const AUTO_PLAY_MS = 5000
+const AUTO_PLAY_MS = 7000
 
-export default function AffiliateBannerCarousel() {
-  const { i18n } = useTranslation()
-  const lang = i18n.language
+interface Props {
+  /** true のとき: カード内下端に組み込む（外側マージンなし・角丸なし） */
+  inCard?: boolean
+}
 
-  const visibleSlides = SLIDES.filter((s) => {
-    if (s.audience === 'all') return true
-    if (s.audience === 'foreign') return lang !== 'ja'
-    if (s.audience === 'japanese') return lang === 'ja'
-    return false
-  })
-
+export default function AffiliateBannerCarousel({ inCard = false }: Props) {
+  const { t } = useTranslation()
   const [current, setCurrent] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const total = SLIDES.length
 
   const goTo = useCallback(
     (index: number) => {
-      setCurrent(((index % visibleSlides.length) + visibleSlides.length) % visibleSlides.length)
+      setCurrent(((index % total) + total) % total)
     },
-    [visibleSlides.length],
+    [total],
   )
 
   useEffect(() => {
-    if (visibleSlides.length <= 1) return
+    if (total <= 1) return
     timerRef.current = setTimeout(() => goTo(current + 1), AUTO_PLAY_MS)
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [current, goTo, visibleSlides.length])
+  }, [current, goTo, total])
 
-  if (visibleSlides.length === 0) return null
+  const slide = SLIDES[current]
 
-  const slide = visibleSlides[current]
+  const wrapperStyle: React.CSSProperties = inCard
+    ? {
+        borderTop: '1px solid rgba(0,0,0,0.07)',
+        borderRadius: '0 0 16px 16px',
+        overflow: 'hidden',
+      }
+    : {
+        margin: '16px 16px 0',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)',
+      }
 
   return (
-    <div className="mx-4 mt-4">
-      {/* バナー本体 */}
+    <div style={wrapperStyle}>
+      {/* ── バナー本体 ── */}
       <a
         href={slide.href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`${slide.title} — ${slide.subtitle}`}
-        className="block relative overflow-hidden select-none"
-        style={{
-          height: '130px',
-          borderRadius: '16px',
-          boxShadow:
-            '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-        }}
+        aria-label={`${t(`${slide.i18nKey}.title`)} — ${t(`${slide.i18nKey}.subtitle`)}`}
+        className="block relative select-none"
+        style={{ height: '118px' }}
       >
-        {/* ── 背景画像 ── */}
+        {/* 背景画像 */}
         <div
           aria-hidden
           style={{
@@ -92,18 +87,18 @@ export default function AffiliateBannerCarousel() {
           }}
         />
 
-        {/* ── グラデーションオーバーレイ（左→右、左側を暗く） ── */}
+        {/* グラデーションオーバーレイ（左→右: 左を暗く） */}
         <div
           aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
             background:
-              'linear-gradient(to right, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.52) 55%, rgba(0,0,0,0.10) 100%)',
+              'linear-gradient(to right, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.54) 52%, rgba(0,0,0,0.08) 100%)',
           }}
         />
 
-        {/* ── テキストコンテンツ（左寄せ） ── */}
+        {/* テキストエリア（左寄せ） */}
         <div
           style={{
             position: 'absolute',
@@ -116,29 +111,20 @@ export default function AffiliateBannerCarousel() {
           }}
         >
           {/* バッジ */}
-          <div style={{ marginBottom: '6px' }}>
+          <div style={{ marginBottom: '5px' }}>
             <span
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
+                display: 'inline-block',
                 backgroundColor: '#ff3b30',
-                color: '#ffffff',
+                color: '#fff',
                 fontSize: '11px',
                 fontWeight: 700,
-                letterSpacing: '0.02em',
+                letterSpacing: '0.03em',
                 padding: '2px 10px',
                 borderRadius: '100px',
-                textShadow: 'none',
               }}
             >
-              {slide.badge}
-              {slide.badgeSub && (
-                <>
-                  <span style={{ opacity: 0.7, margin: '0 2px' }}>／</span>
-                  {slide.badgeSub}
-                </>
-              )}
+              {t(`${slide.i18nKey}.badge`)}
             </span>
           </div>
 
@@ -146,15 +132,15 @@ export default function AffiliateBannerCarousel() {
           <p
             style={{
               margin: 0,
-              color: '#ffffff',
-              fontSize: '22px',
+              color: '#fff',
+              fontSize: '21px',
               fontWeight: 700,
               lineHeight: 1.2,
               letterSpacing: '-0.3px',
               textShadow: '0 1px 8px rgba(0,0,0,0.5)',
             }}
           >
-            {slide.title}
+            {t(`${slide.i18nKey}.title`)}
           </p>
 
           {/* サブタイトル */}
@@ -163,17 +149,16 @@ export default function AffiliateBannerCarousel() {
               margin: '5px 0 0',
               color: 'rgba(255,255,255,0.88)',
               fontSize: '12px',
-              fontWeight: 400,
               lineHeight: 1.45,
-              textShadow: '0 1px 4px rgba(0,0,0,0.45)',
+              textShadow: '0 1px 4px rgba(0,0,0,0.4)',
               maxWidth: '58%',
             }}
           >
-            {slide.subtitle}
+            {t(`${slide.i18nKey}.subtitle`)}
           </p>
         </div>
 
-        {/* ── 右下：詳細を見る ── */}
+        {/* 右下：CTA */}
         <div
           aria-hidden
           style={{
@@ -183,14 +168,14 @@ export default function AffiliateBannerCarousel() {
             display: 'flex',
             alignItems: 'center',
             gap: '3px',
-            color: 'rgba(255,255,255,0.75)',
+            color: 'rgba(255,255,255,0.80)',
             fontSize: '11px',
             fontFamily: '-apple-system, "SF Pro Text", sans-serif',
             fontWeight: 500,
             textShadow: '0 1px 3px rgba(0,0,0,0.4)',
           }}
         >
-          詳細を見る
+          {t(`${slide.i18nKey}.cta`)}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="12"
@@ -201,26 +186,28 @@ export default function AffiliateBannerCarousel() {
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
+            aria-hidden
           >
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </div>
       </a>
 
-      {/* ── ドットインジケーター（複数スライド時のみ） ── */}
-      {visibleSlides.length > 1 && (
+      {/* ドットインジケーター（複数スライド時のみ） */}
+      {total > 1 && (
         <div
           style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             gap: '6px',
-            marginTop: '8px',
+            padding: '6px 0',
+            backgroundColor: inCard ? '#fff' : 'transparent',
           }}
           role="tablist"
           aria-label="スライドインジケーター"
         >
-          {visibleSlides.map((s, idx) => (
+          {SLIDES.map((s, idx) => (
             <button
               key={s.id}
               role="tab"

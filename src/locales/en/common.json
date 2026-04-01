@@ -64,6 +64,14 @@
     "cancel": "Cancel",
     "validThrough": " – valid through {{date}}"
   },
+  "banner": {
+    "vpn": {
+      "badge": "2 Months Free",
+      "title": "Sekai VPN",
+      "subtitle": "Safely browse Japanese content & sites from home",
+      "cta": "Learn More"
+    }
+  },
   "vipNews": {
     "sectionLabel": "VIP NEWS",
     "collapse": "Show less",

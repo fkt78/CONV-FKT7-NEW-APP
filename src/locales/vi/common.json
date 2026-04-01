@@ -64,6 +64,14 @@
     "cancel": "Hủy",
     "validThrough": " – hiệu lực đến {{date}}"
   },
+  "banner": {
+    "vpn": {
+      "badge": "Miễn phí 2 tháng",
+      "title": "Sekai VPN",
+      "subtitle": "Xem nội dung Nhật Bản & trang web quê hương an toàn",
+      "cta": "Xem chi tiết"
+    }
+  },
   "vipNews": {
     "sectionLabel": "VIP NEWS",
     "collapse": "Thu gọn",

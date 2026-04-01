@@ -479,11 +479,12 @@ export default function Home() {
               </div>
             </div>
           )}
+          {/* アフィリエイトバナー：カード最下部に組み込み */}
+          <AffiliateBannerCarousel inCard />
         </div>
           <div className="mx-4 mt-4">
             <VipNews />
           </div>
-          <AffiliateBannerCarousel />
           <div className="h-4" />
         </div>
       ) : homeTab === 'coupon' ? (
