@@ -52,6 +52,14 @@ const SLIDES: BannerSlide[] = [
     badgeColor: '#ff9500',
     href: 'https://fkt-office.com/service-guide.html',
   },
+  {
+    id: 'rakuten',
+    bgImage: '/banners/rakuten-bg.png',
+    bgPosition: 'right center',
+    i18nKey: 'banner.rakuten',
+    badgeColor: '#bf0000',
+    href: 'https://fkt-office.com/service-guide.html',
+  },
 ]
 
 const AUTO_PLAY_MS = 5000
