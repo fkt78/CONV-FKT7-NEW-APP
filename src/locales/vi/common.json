@@ -1,0 +1,76 @@
+{
+  "common": {
+    "backWithArrow": "← Quay lại",
+    "back": "Quay lại"
+  },
+  "date": {
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua"
+  },
+  "footer": {
+    "privacy": "Chính sách quyền riêng tư",
+    "terms": "Điều khoản sử dụng",
+    "advertising": "Thông báo quảng cáo",
+    "tokushoho": "Thông tin pháp lý (giao dịch thương mại đặc định)",
+    "licenses": "Giấy phép",
+    "credits": "Ghi công"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "ja": "日本語",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "pwa": {
+    "newVersion": "Đã có phiên bản mới",
+    "update": "Cập nhật",
+    "later": "Để sau"
+  },
+  "mainLoadError": {
+    "title": "Tải không thành công",
+    "debugLink": "Trang chẩn đoán",
+    "reload": "Tải lại"
+  },
+  "voiceCredits": {
+    "title": "Ghi công giọng nói (giấy phép)",
+    "intro": "Hướng dẫn bằng giọng nói trong ứng dụng được tạo bằng phần mềm tổng hợp giọng nói miễn phí “VOICEVOX” và các thư viện giọng sau.",
+    "termsLink": "Điều khoản →",
+    "close": "Đóng"
+  },
+  "coupon": {
+    "notFound": "Không tìm thấy phiếu giảm giá",
+    "alreadyUsed": "Phiếu giảm giá này đã được sử dụng",
+    "expired": "Phiếu giảm giá này đã hết hạn",
+    "savedAmount": "Bạn đã tiết kiệm ¥{{amount}}!",
+    "usedToast": "Đã sử dụng phiếu giảm giá",
+    "failedToast": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "tabUnused": "Chưa dùng ({{count}})",
+    "tabHistory": "Lịch sử ({{count}})",
+    "preparing": "Đang chuẩn bị dữ liệu…",
+    "pleaseWait": "Vui lòng đợi một chút",
+    "emptyUnused": "Chưa có phiếu giảm giá",
+    "emptyUnusedHint": "Vui lòng chờ phiếu từ cửa hàng",
+    "emptyHistory": "Chưa có lịch sử dùng",
+    "emptyHistoryHint": "Phiếu đã dùng sẽ hiển thị ở đây",
+    "distributed": "Gửi {{date}}",
+    "validUntil": "– {{date}}",
+    "usedAt": "Đã dùng {{datetime}}",
+    "expiredLabel": "Hết hạn",
+    "tapToUse": "Chạm để dùng →",
+    "vipCoupon": "VIP COUPON",
+    "showToStaff": "Hãy cho nhân viên xem màn hình này",
+    "processing": "Đang xử lý…",
+    "markUsed": "✓ Đánh dấu đã dùng",
+    "cancel": "Hủy",
+    "validThrough": " – hiệu lực đến {{date}}"
+  },
+  "vipNews": {
+    "sectionLabel": "VIP NEWS",
+    "collapse": "Thu gọn",
+    "showMore": "Thêm {{count}} mục",
+    "openItem": "Mở {{title}}",
+    "closeItem": "Đóng {{title}}",
+    "hasImage": "Có hình ảnh",
+    "hasAudio": "Có âm thanh"
+  }
+}

@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -20,10 +22,20 @@ import AdvertisingNotice from './pages/AdvertisingNotice'
 import Licenses from './pages/Licenses'
 import NotificationSettings from './pages/NotificationSettings'
 
+function DocumentLangSync() {
+  const { i18n } = useTranslation()
+  useEffect(() => {
+    const base = i18n.language.split('-')[0]
+    document.documentElement.lang = base === 'en' ? 'en' : base === 'vi' ? 'vi' : 'ja'
+  }, [i18n.language])
+  return null
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
+        <DocumentLangSync />
         <HouseRulesAgreement />
         <VersionBadge />
         <PwaUpdatePrompt />

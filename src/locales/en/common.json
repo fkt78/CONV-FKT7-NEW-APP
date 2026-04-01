@@ -1,0 +1,76 @@
+{
+  "common": {
+    "backWithArrow": "← Back",
+    "back": "Back"
+  },
+  "date": {
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "advertising": "Advertising Notice",
+    "tokushoho": "Legal Notice (Specified Commercial Transactions)",
+    "licenses": "Licenses",
+    "credits": "Credits"
+  },
+  "language": {
+    "label": "Language",
+    "ja": "日本語",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "pwa": {
+    "newVersion": "A new version is available",
+    "update": "Update",
+    "later": "Later"
+  },
+  "mainLoadError": {
+    "title": "Failed to load",
+    "debugLink": "Diagnostics page",
+    "reload": "Reload"
+  },
+  "voiceCredits": {
+    "title": "Voice credits (licenses)",
+    "intro": "In-app voice guidance is generated using the free speech synthesis software “VOICEVOX” and the following voice libraries.",
+    "termsLink": "Terms →",
+    "close": "Close"
+  },
+  "coupon": {
+    "notFound": "Coupon not found",
+    "alreadyUsed": "This coupon has already been used",
+    "expired": "This coupon has expired",
+    "savedAmount": "You saved ¥{{amount}}!",
+    "usedToast": "Coupon used",
+    "failedToast": "Something went wrong. Please try again.",
+    "tabUnused": "Unused ({{count}})",
+    "tabHistory": "History ({{count}})",
+    "preparing": "Preparing data…",
+    "pleaseWait": "Please wait a moment",
+    "emptyUnused": "No coupons yet",
+    "emptyUnusedHint": "Please wait for a coupon from the store",
+    "emptyHistory": "No usage history",
+    "emptyHistoryHint": "Used coupons will appear here",
+    "distributed": "Sent {{date}}",
+    "validUntil": "– {{date}}",
+    "usedAt": "Used {{datetime}}",
+    "expiredLabel": "Expired",
+    "tapToUse": "Tap to use →",
+    "vipCoupon": "VIP COUPON",
+    "showToStaff": "Show this screen to staff",
+    "processing": "Processing…",
+    "markUsed": "✓ Mark as used",
+    "cancel": "Cancel",
+    "validThrough": " – valid through {{date}}"
+  },
+  "vipNews": {
+    "sectionLabel": "VIP NEWS",
+    "collapse": "Show less",
+    "showMore": "{{count}} more",
+    "openItem": "Open {{title}}",
+    "closeItem": "Close {{title}}",
+    "hasImage": "Has image",
+    "hasAudio": "Has audio"
+  }
+}

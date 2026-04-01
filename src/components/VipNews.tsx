@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   collection,
   query,
@@ -8,7 +9,9 @@ import {
   type Timestamp,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { getLocaleTag } from '../lib/formatTime'
 import AudioPlayer from './AudioPlayer'
+import i18n from '../i18n'
 
 interface NewsItem {
   id: string
@@ -23,6 +26,7 @@ interface NewsItem {
 const INITIAL_SHOW = 2
 
 export default function VipNews() {
+  const { t } = useTranslation()
   const [newsList, setNewsList] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -57,15 +61,15 @@ export default function VipNews() {
     if (!d) return ''
     const now = new Date()
     const isToday = d.toDateString() === now.toDateString()
-    if (isToday) return '今日'
-    return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
+    if (isToday) return i18n.t('date.today')
+    return d.toLocaleDateString(getLocaleTag(), { month: 'numeric', day: 'numeric' })
   }
 
   if (loading) {
     return (
       <div className="mx-4 mt-4 flex-shrink-0">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[#0095B6] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
+          <span className="text-[#0095B6] text-[13px] font-semibold tracking-wide">{t('vipNews.sectionLabel')}</span>
         </div>
         <div className="rounded-2xl bg-white border border-[#e5e5ea] p-4 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
           <span className="w-5 h-5 border-2 border-[#e5e5ea] border-t-[#0095B6] rounded-full animate-spin" />
@@ -84,15 +88,19 @@ export default function VipNews() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-[#0095B6] text-sm">📢</span>
-          <span className="text-[#0095B6] text-[13px] font-semibold tracking-wide">VIP NEWS</span>
+          <span className="text-[#0095B6] text-[13px] font-semibold tracking-wide">{t('vipNews.sectionLabel')}</span>
         </div>
         {newsList.length > INITIAL_SHOW && (
           <button
             onClick={() => setShowAll(!showAll)}
-            aria-label={showAll ? '折りたたむ' : `他 ${newsList.length - INITIAL_SHOW} 件を表示`}
+            aria-label={
+              showAll
+                ? t('vipNews.collapse')
+                : t('vipNews.showMore', { count: newsList.length - INITIAL_SHOW })
+            }
             className="min-h-[44px] min-w-[44px] flex items-center justify-center px-2 text-[#0095B6] text-[13px] hover:text-[#007A96] transition rounded-xl"
           >
-            {showAll ? '折りたたむ' : `他 ${newsList.length - INITIAL_SHOW} 件`}
+            {showAll ? t('vipNews.collapse') : t('vipNews.showMore', { count: newsList.length - INITIAL_SHOW })}
           </button>
         )}
       </div>
@@ -107,7 +115,9 @@ export default function VipNews() {
           >
             <button
               onClick={() => setExpanded(isOpen ? null : item.id)}
-              aria-label={isOpen ? `${item.title}を閉じる` : `${item.title}を開く`}
+              aria-label={
+                isOpen ? t('vipNews.closeItem', { title: item.title }) : t('vipNews.openItem', { title: item.title })
+              }
               aria-expanded={isOpen}
               className="w-full min-h-[44px] text-left px-4 py-3 flex items-center gap-2 hover:bg-[#f5f5f7] transition"
             >
@@ -118,8 +128,8 @@ export default function VipNews() {
               )}
               <span className="flex-1 text-[#1d1d1f] text-[15px] font-semibold truncate">{item.title}</span>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {item.imageUrl && <span className="text-[#0095B6]/70 text-[13px]" title="画像あり">🖼️</span>}
-                {item.audioUrl && <span className="text-[#0095B6]/70 text-[13px]" title="音声あり">🎵</span>}
+                {item.imageUrl && <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasImage')}>🖼️</span>}
+                {item.audioUrl && <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasAudio')}>🎵</span>}
                 <span className="text-[#86868b] text-[13px]">{formatDate(item.createdAt)}</span>
                 <svg
                   className={`w-4 h-4 text-[#86868b] transition-transform ${isOpen ? 'rotate-180' : ''}`}

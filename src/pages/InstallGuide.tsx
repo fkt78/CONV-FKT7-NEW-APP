@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 type DeviceTab = 'iphone' | 'android'
 type BrowserTab = 'safari' | 'chrome'
@@ -27,6 +29,7 @@ function StepItem({
 }
 
 export default function InstallGuide() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [deviceTab, setDeviceTab] = useState<DeviceTab>('iphone')
   const [browserTab, setBrowserTab] = useState<BrowserTab>('safari')
@@ -38,24 +41,25 @@ export default function InstallGuide() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-5 py-6 pb-10">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 gap-2">
             <button
               onClick={() => navigate(-1)}
               className="text-[#0095B6] text-[15px] hover:text-[#007A96] transition flex items-center gap-1"
             >
-              ← 戻る
+              {t('install.back')}
             </button>
+            <LanguageSwitcher className="flex-shrink-0" />
           </div>
 
           <div className="text-center mb-6">
             <span className="text-4xl block mb-3">📱</span>
             <h1 className="text-[#1d1d1f] font-semibold text-xl tracking-wide">
-              ホーム画面に追加
+              {t('install.title')}
             </h1>
             <p className="text-[#86868b] text-[15px] mt-2 leading-relaxed">
-              FKT7をアプリのように使うには
+              {t('install.subtitle')}
               <br />
-              ホーム画面に追加してください
+              {t('install.subtitle2')}
             </p>
           </div>
 
@@ -72,7 +76,7 @@ export default function InstallGuide() {
               }`}
             >
               <span className="text-xl">🍎</span>
-              iPhone・iPad
+              {t('install.iphoneIpad')}
             </button>
             <button
               onClick={() => setDeviceTab('android')}
@@ -83,7 +87,7 @@ export default function InstallGuide() {
               }`}
             >
               <span className="text-xl">🤖</span>
-              Android
+              {t('install.android')}
             </button>
           </div>
 
@@ -98,7 +102,7 @@ export default function InstallGuide() {
                 }`}
               >
                 <span className="text-base">🧭</span>
-                Safari
+                {t('install.safari')}
               </button>
               <button
                 onClick={() => setBrowserTab('chrome')}
@@ -109,7 +113,7 @@ export default function InstallGuide() {
                 }`}
               >
                 <span className="text-base">🌐</span>
-                Chrome
+                {t('install.chrome')}
               </button>
             </div>
           )}
@@ -120,11 +124,11 @@ export default function InstallGuide() {
                 <div className="flex items-center gap-2 pb-2 border-b border-[#e5e5ea]">
                   <span className="text-2xl">🧭</span>
                   <h2 className="text-[#1d1d1f] font-semibold text-[16px]">
-                    iPhone・iPad（Safari）
+                    {t('install.iphoneSafariTitle')}
                   </h2>
                 </div>
                 <p className="text-[#1d1d1f] text-[15px] leading-relaxed">
-                  Safariでこのページを開いた状態で、以下の手順で追加できます。
+                  {t('install.iphoneSafariIntro')}
                 </p>
                 <ol className="space-y-5">
                   <StepItem
@@ -132,25 +136,25 @@ export default function InstallGuide() {
                     title={
                       <>
                         <span className="text-2xl align-middle mr-1">📤</span>
-                        画面下の「共有ボタン」をタップ
+                        {t('install.step1SafariTitle')}
                       </>
                     }
-                    detail="画面下部中央付近にある、四角から矢印が出ているアイコン（共有ボタン）をタップします。"
+                    detail={t('install.step1SafariDetail')}
                   />
                   <StepItem
                     num={2}
                     title={
                       <>
                         <span className="text-2xl align-middle mr-1">➕</span>
-                        「ホーム画面に追加」を選択
+                        {t('install.step2Title')}
                       </>
                     }
-                    detail="表示されたメニューの中から「ホーム画面に追加」を探してタップします。"
+                    detail={t('install.step2SafariDetail')}
                   />
                   <StepItem
                     num={3}
-                    title="右上の「追加」をタップ"
-                    detail="画面右上の「追加」ボタンをタップして完了です。"
+                    title={t('install.step3Title')}
+                    detail={t('install.step3Detail')}
                   />
                 </ol>
               </>
@@ -161,11 +165,11 @@ export default function InstallGuide() {
                 <div className="flex items-center gap-2 pb-2 border-b border-[#e5e5ea]">
                   <span className="text-2xl">🌐</span>
                   <h2 className="text-[#1d1d1f] font-semibold text-[16px]">
-                    iPhone・iPad（Google Chrome）
+                    {t('install.iphoneChromeTitle')}
                   </h2>
                 </div>
                 <p className="text-[#1d1d1f] text-[15px] leading-relaxed">
-                  Chromeでこのページを開いた状態で、以下の手順で追加できます。
+                  {t('install.iphoneChromeIntro')}
                 </p>
                 <ol className="space-y-5">
                   <StepItem
@@ -173,20 +177,20 @@ export default function InstallGuide() {
                     title={
                       <>
                         <span className="text-2xl align-middle mr-1">📤</span>
-                        アドレスバー横の「共有ボタン」をタップ
+                        {t('install.step1ChromeTitle')}
                       </>
                     }
-                    detail="画面下部のアドレスバー（URLが表示されている部分）の横にある、共有アイコンをタップします。"
+                    detail={t('install.step1ChromeDetail')}
                   />
                   <StepItem
                     num={2}
                     title={
                       <>
                         <span className="text-2xl align-middle mr-1">➕</span>
-                        「ホーム画面に追加」を選択
+                        {t('install.step2Title')}
                       </>
                     }
-                    detail="メニューをスクロールして「ホーム画面に追加」を探し、タップします。"
+                    detail={t('install.step2ChromeDetail')}
                   />
                 </ol>
               </>
@@ -197,11 +201,11 @@ export default function InstallGuide() {
                 <div className="flex items-center gap-2 pb-2 border-b border-[#e5e5ea]">
                   <span className="text-2xl">🤖</span>
                   <h2 className="text-[#1d1d1f] font-semibold text-[16px]">
-                    Android（Google Chrome）
+                    {t('install.androidChromeTitle')}
                   </h2>
                 </div>
                 <p className="text-[#1d1d1f] text-[15px] leading-relaxed">
-                  Chromeでこのページを開いた状態で、以下の手順で追加できます。
+                  {t('install.androidChromeIntro')}
                 </p>
                 <ol className="space-y-5">
                   <StepItem
@@ -209,20 +213,20 @@ export default function InstallGuide() {
                     title={
                       <>
                         <span className="text-2xl align-middle mr-1">︙</span>
-                        画面右上の「メニュー」をタップ
+                        {t('install.androidStep1Title')}
                       </>
                     }
-                    detail="画面右上にある、縦に並んだ3つの点「︙」（メニューアイコン）をタップします。"
+                    detail={t('install.androidStep1Detail')}
                   />
                   <StepItem
                     num={2}
                     title={
                       <>
                         <span className="text-2xl align-middle mr-1">📲</span>
-                        「アプリをインストール」または「ホーム画面に追加」を選択
+                        {t('install.androidStep2Title')}
                       </>
                     }
-                    detail="表示されたメニューから「アプリをインストール」または「ホーム画面に追加」をタップします。機種やChromeのバージョンにより表示が異なる場合があります。"
+                    detail={t('install.androidStep2Detail')}
                   />
                 </ol>
               </>
@@ -230,24 +234,23 @@ export default function InstallGuide() {
           </div>
 
           <p className="text-[#86868b] text-[14px] mt-6 text-center leading-relaxed">
-            追加後はホーム画面にFKT7のアイコンが表示されます。
+            {t('install.footer')}
             <br />
-            アプリのようにサクサク使えます ♛
+            {t('install.footer2')}
           </p>
 
-          {/* LINEでリンクが開けない場合の案内 */}
           <div className="mt-8 p-4 rounded-2xl bg-[#0095B6]/5 border border-[#0095B6]/20">
             <h3 className="text-[#1d1d1f] font-semibold text-[15px] mb-2 flex items-center gap-2">
               <span>💬</span>
-              LINEでリンクが開けない場合
+              {t('install.lineTitle')}
             </h3>
             <p className="text-[#86868b] text-[14px] leading-relaxed mb-3">
-              LINEのアプリ内ブラウザでは開けない場合があります。以下の方法をお試しください。
+              {t('install.lineIntro')}
             </p>
             <ul className="text-[#1d1d1f] text-[14px] space-y-2 list-disc list-inside">
-              <li>リンクを長押しで「ブラウザで開く」を選択</li>
-              <li>LINE設定 → LINE Labs → 「リンクをデフォルトのブラウザで開く」をON</li>
-              <li>URLをコピーしてSafariやChromeに貼り付けて開く</li>
+              <li>{t('install.lineLi1')}</li>
+              <li>{t('install.lineLi2')}</li>
+              <li>{t('install.lineLi3')}</li>
             </ul>
           </div>
         </div>

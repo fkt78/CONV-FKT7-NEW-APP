@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import LegalPageLayout from '../components/LegalPageLayout'
 
 interface LicenseItem {
@@ -19,17 +20,21 @@ const LICENSES: LicenseItem[] = [
   { name: 'vite-plugin-pwa', version: '1.x', license: 'MIT', url: 'https://github.com/vite-pwa/vite-plugin-pwa' },
   { name: 'workbox-precaching', version: '7.x', license: 'Apache-2.0', url: 'https://github.com/GoogleChrome/workbox' },
   { name: 'TypeScript', version: '5.9.x', license: 'Apache-2.0', url: 'https://github.com/microsoft/TypeScript' },
+  { name: 'i18next', version: '26.x', license: 'MIT', url: 'https://github.com/i18next/i18next' },
+  { name: 'react-i18next', version: '17.x', license: 'MIT', url: 'https://github.com/i18next/react-i18next' },
+  { name: 'i18next-browser-languagedetector', version: '8.x', license: 'MIT', url: 'https://github.com/i18next/i18next-browser-languageDetector' },
 ]
 
 export default function Licenses() {
+  const { t } = useTranslation()
+  const ll = (key: string) => t(`legal.licenses.${key}`)
+
   return (
-    <LegalPageLayout title="オープンソースライセンス">
-      <p>
-        本アプリは、有限会社吹田総業が作成しました。以下のオープンソースソフトウェアおよびサービスを利用しており、各ライセンスに従い、著作権表示およびライセンス条項を保持しています。
-      </p>
+    <LegalPageLayout title={t('legal.licenses.title')}>
+      <p>{ll('intro')}</p>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">利用ライブラリ一覧</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{ll('listTitle')}</h2>
         <div className="space-y-3 mt-2">
           {LICENSES.map((item) => (
             <div
@@ -41,7 +46,9 @@ export default function Licenses() {
                 <span className="text-[#0095B6] text-xs font-medium">{item.license}</span>
               </div>
               {item.version && (
-                <p className="text-[#86868b] text-xs mt-1">バージョン: {item.version}</p>
+                <p className="text-[#86868b] text-xs mt-1">
+                  {t('legal.licenses.versionLabel', { version: item.version })}
+                </p>
               )}
               {item.url && (
                 <a
@@ -50,7 +57,7 @@ export default function Licenses() {
                   rel="noopener noreferrer"
                   className="text-[#0095B6] text-xs underline hover:text-[#007A96] mt-1 inline-block"
                 >
-                  プロジェクトページ
+                  {ll('projectPage')}
                 </a>
               )}
             </div>
@@ -59,45 +66,45 @@ export default function Licenses() {
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">主なライセンスについて</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{ll('aboutTitle')}</h2>
         <p>
-          <strong className="text-[#1d1d1f]">MIT License:</strong> 商用・非商用を問わず利用可能です。著作権表示および本ライセンスの複製を保持する限り、改変・再配布が許可されています。
+          <strong className="text-[#1d1d1f]">{ll('mit')}</strong> {ll('mitBody')}
         </p>
         <p className="mt-2">
-          <strong className="text-[#1d1d1f]">Apache-2.0:</strong> 同様に広く利用可能です。変更箇所の明示等、一定の表示義務があります。
+          <strong className="text-[#1d1d1f]">{ll('apache')}</strong> {ll('apacheBody')}
         </p>
         <p className="mt-2">
-          <strong className="text-[#1d1d1f]">Firebase:</strong> Googleが提供するサービスです。利用にあたっては
+          <strong className="text-[#1d1d1f]">{ll('firebase')}</strong> {ll('firebaseBefore')}
           <a
             href="https://firebase.google.com/terms"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#0095B6] underline hover:text-[#007A96] ml-1"
           >
-            Firebase利用規約
+            {ll('firebaseTerms')}
           </a>
-          に準拠します。
+          {ll('firebaseAfter')}
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">ライセンス全文</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{ll('fullTextTitle')}</h2>
         <p>
-          各ライセンスの全文は、上記プロジェクトページまたは
+          {ll('fullTextBody')}
           <a
             href="https://opensource.org/licenses"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#0095B6] underline hover:text-[#007A96] ml-1"
           >
-            Open Source Initiative
+            {ll('osi')}
           </a>
-          等でご確認いただけます。
+          {ll('fullTextAfter')}
         </p>
       </section>
 
       <p className="text-[#86868b] text-xs mt-8">
-        最終更新：2025年3月
+        {ll('lastUpdated')}
       </p>
     </LegalPageLayout>
   )

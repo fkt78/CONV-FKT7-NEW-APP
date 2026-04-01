@@ -1,0 +1,76 @@
+{
+  "common": {
+    "backWithArrow": "← 戻る",
+    "back": "戻る"
+  },
+  "date": {
+    "today": "今日",
+    "yesterday": "昨日"
+  },
+  "footer": {
+    "privacy": "プライバシーポリシー",
+    "terms": "利用規約",
+    "advertising": "広告・宣伝表記",
+    "tokushoho": "特商法表記",
+    "licenses": "ライセンス",
+    "credits": "クレジット"
+  },
+  "language": {
+    "label": "言語",
+    "ja": "日本語",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "pwa": {
+    "newVersion": "新しいバージョンが利用可能です",
+    "update": "更新する",
+    "later": "あとで"
+  },
+  "mainLoadError": {
+    "title": "読み込みに失敗しました",
+    "debugLink": "診断ページ",
+    "reload": "再読み込み"
+  },
+  "voiceCredits": {
+    "title": "音声クレジット（ライセンス情報）",
+    "intro": "本アプリ内の音声ガイダンスは、無料の音声合成ソフト「VOICEVOX」および以下の音声ライブラリを使用して生成されています。",
+    "termsLink": "規約 →",
+    "close": "閉じる"
+  },
+  "coupon": {
+    "notFound": "クーポンが見つかりません",
+    "alreadyUsed": "このクーポンはすでに使用済みです",
+    "expired": "このクーポンは期限切れです",
+    "savedAmount": "¥{{amount}} お得になりました！",
+    "usedToast": "クーポンを使用しました",
+    "failedToast": "処理に失敗しました。もう一度お試しください。",
+    "tabUnused": "未使用 ({{count}})",
+    "tabHistory": "使用履歴 ({{count}})",
+    "preparing": "データを準備中です…",
+    "pleaseWait": "しばらくお待ちください",
+    "emptyUnused": "クーポンはまだありません",
+    "emptyUnusedHint": "店長からの配信をお待ちください",
+    "emptyHistory": "使用履歴はありません",
+    "emptyHistoryHint": "クーポンを使うとここに表示されます",
+    "distributed": "{{date}} 配信",
+    "validUntil": "〜{{date}}",
+    "usedAt": "{{datetime}} 使用",
+    "expiredLabel": "期限切れ",
+    "tapToUse": "タップして使用 →",
+    "vipCoupon": "VIP COUPON",
+    "showToStaff": "この画面を店員にお見せください",
+    "processing": "処理中...",
+    "markUsed": "✓ 使用済みにする",
+    "cancel": "キャンセル",
+    "validThrough": " 〜 {{date}} まで有効"
+  },
+  "vipNews": {
+    "sectionLabel": "VIP NEWS",
+    "collapse": "折りたたむ",
+    "showMore": "他 {{count}} 件",
+    "openItem": "{{title}}を開く",
+    "closeItem": "{{title}}を閉じる",
+    "hasImage": "画像あり",
+    "hasAudio": "音声あり"
+  }
+}

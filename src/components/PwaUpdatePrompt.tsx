@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { registerSW } from 'virtual:pwa-register'
 
 /** 新バージョン検出時に表示する更新プロンプト */
 export default function PwaUpdatePrompt() {
+  const { t } = useTranslation()
   const [showPrompt, setShowPrompt] = useState(false)
   const updateSWRef = useRef<(() => Promise<void>) | null>(null)
 
@@ -47,20 +49,20 @@ export default function PwaUpdatePrompt() {
       aria-live="polite"
     >
       <p className="text-[15px] font-medium mb-3">
-        新しいバージョンが利用可能です
+        {t('pwa.newVersion')}
       </p>
       <div className="flex gap-3">
         <button
           onClick={handleUpdate}
           className="flex-1 min-h-[44px] bg-[#0095B6] text-white font-semibold text-[15px] rounded-xl hover:bg-[#007A96] active:scale-[0.98] transition"
         >
-          更新する
+          {t('pwa.update')}
         </button>
         <button
           onClick={() => setShowPrompt(false)}
           className="flex-1 min-h-[44px] bg-[#e5e5ea] text-[#1d1d1f] font-medium text-[15px] rounded-xl hover:bg-[#d1d1d6] active:scale-[0.98] transition"
         >
-          あとで
+          {t('pwa.later')}
         </button>
       </div>
     </div>

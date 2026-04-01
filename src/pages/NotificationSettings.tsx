@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import type { NotificationSettings as NotificationSettingsType } from '../lib/messaging'
 
 export default function NotificationSettings() {
+  const { t } = useTranslation()
   const { currentUser } = useAuth()
   const navigate = useNavigate()
   const [supported, setSupported] = useState(false)
@@ -94,34 +97,34 @@ export default function NotificationSettings() {
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
         <button
           onClick={() => navigate(-1)}
-          aria-label="戻る"
+          aria-label={t('common.back')}
           className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#0095B6]"
         >
           ←
         </button>
-        <h1 className="text-[#1d1d1f] font-semibold text-[17px]">通知設定</h1>
+        <h1 className="flex-1 text-[#1d1d1f] font-semibold text-[17px]">{t('notifications.title')}</h1>
+        <LanguageSwitcher className="flex-shrink-0" />
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         {loading ? (
-          <p className="text-[#86868b] text-center">読み込み中...</p>
+          <p className="text-[#86868b] text-center">{t('notifications.loading')}</p>
         ) : !supported ? (
           <div className="bg-white rounded-2xl p-4 border border-[#e5e5ea]">
             <p className="text-[#86868b] text-[15px]">
-              プッシュ通知はこのブラウザでは利用できません。Chrome、Firefox、Edge などでお試しください。
+              {t('notifications.unsupported')}
             </p>
             <p className="text-[#86868b] text-[13px] mt-2">
-              ※ iOS の Safari は Web Push の制限があります。
+              {t('notifications.iosNote')}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* 通知全体のオン/オフ */}
             <div className="bg-white rounded-2xl p-4 border border-[#e5e5ea]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#1d1d1f] font-medium text-[15px]">プッシュ通知</p>
-                  <p className="text-[#86868b] text-[13px] mt-0.5">新着メッセージ・クーポン・お知らせを受け取る</p>
+                  <p className="text-[#1d1d1f] font-medium text-[15px]">{t('notifications.pushTitle')}</p>
+                  <p className="text-[#86868b] text-[13px] mt-0.5">{t('notifications.pushDesc')}</p>
                 </div>
                 <button
                   role="switch"
@@ -142,7 +145,7 @@ export default function NotificationSettings() {
                   onClick={handleRequestPermission}
                   className="mt-3 w-full py-2.5 bg-[#0095B6] text-white text-[15px] font-medium rounded-xl"
                 >
-                  通知を許可する
+                  {t('notifications.allowNotifications')}
                 </button>
               )}
             </div>
@@ -150,11 +153,11 @@ export default function NotificationSettings() {
             {settings.enabled && (
               <>
                 <div className="bg-white rounded-2xl p-4 border border-[#e5e5ea] space-y-3">
-                  <p className="text-[#1d1d1f] font-medium text-[15px]">通知する種類</p>
+                  <p className="text-[#1d1d1f] font-medium text-[15px]">{t('notifications.typesTitle')}</p>
                   {[
-                    { key: 'messages' as const, label: 'メッセージ', desc: '店長からのチャット' },
-                    { key: 'coupons' as const, label: 'クーポン', desc: 'クーポンが届いたとき' },
-                    { key: 'news' as const, label: 'お知らせ', desc: 'VIPニュース' },
+                    { key: 'messages' as const, label: t('notifications.typeMessages'), desc: t('notifications.typeMessagesDesc') },
+                    { key: 'coupons' as const, label: t('notifications.typeCoupons'), desc: t('notifications.typeCouponsDesc') },
+                    { key: 'news' as const, label: t('notifications.typeNews'), desc: t('notifications.typeNewsDesc') },
                   ].map(({ key, label, desc }) => (
                     <div key={key} className="flex items-center justify-between py-2 border-b border-[#e5e5ea] last:border-0">
                       <div>
@@ -181,8 +184,8 @@ export default function NotificationSettings() {
                 <div className="bg-white rounded-2xl p-4 border border-[#e5e5ea]">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[#1d1d1f] font-medium text-[15px]">通知音</p>
-                      <p className="text-[#86868b] text-[13px] mt-0.5">通知時に音を鳴らす</p>
+                      <p className="text-[#1d1d1f] font-medium text-[15px]">{t('notifications.soundTitle')}</p>
+                      <p className="text-[#86868b] text-[13px] mt-0.5">{t('notifications.soundDesc')}</p>
                     </div>
                     <button
                       role="switch"

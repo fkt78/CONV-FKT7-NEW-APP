@@ -28,12 +28,15 @@ export function isAllowedType(mime: string): boolean {
   return isImageType(mime) || ALLOWED_FILE_TYPES.includes(mime)
 }
 
+export const FILE_ERROR_TOO_LARGE = 'FILE_TOO_LARGE'
+export const FILE_ERROR_TYPE = 'FILE_TYPE_NOT_SUPPORTED'
+
 export function validateFile(file: File): string | null {
   if (file.size > MAX_SIZE_BYTES) {
-    return 'ファイルサイズは5MB以下にしてください'
+    return FILE_ERROR_TOO_LARGE
   }
   if (!isAllowedType(file.type)) {
-    return '画像（JPEG/PNG/GIF/WebP）またはPDFのみ対応しています'
+    return FILE_ERROR_TYPE
   }
   return null
 }

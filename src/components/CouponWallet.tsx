@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   collection,
   query,
@@ -12,6 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import { getLocaleTag } from '../lib/formatTime'
 
 type WalletTab = 'unused' | 'history'
 
@@ -34,12 +36,12 @@ function toSafeNumber(val: unknown): number {
 
 function formatDate(d: Date | null): string {
   if (!d) return ''
-  return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
+  return d.toLocaleDateString(getLocaleTag(), { month: 'numeric', day: 'numeric' })
 }
 
 function formatDateTime(d: Date | null): string {
   if (!d) return ''
-  return d.toLocaleDateString('ja-JP', {
+  return d.toLocaleDateString(getLocaleTag(), {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -47,7 +49,12 @@ function formatDateTime(d: Date | null): string {
   })
 }
 
+const ERR_COUPON_NOT_FOUND = 'COUPON_NOT_FOUND'
+const ERR_COUPON_ALREADY_USED = 'COUPON_ALREADY_USED'
+const ERR_COUPON_EXPIRED = 'COUPON_EXPIRED'
+
 export default function CouponWallet() {
+  const { t } = useTranslation()
   const { currentUser } = useAuth()
   const [tab, setTab] = useState<WalletTab>('unused')
   const [unusedCoupons, setUnusedCoupons] = useState<OwnedCoupon[]>([])
@@ -157,14 +164,14 @@ export default function CouponWallet() {
 
         // ── 検証 ──
         if (!couponSnap.exists()) {
-          throw new Error('クーポンが見つかりません')
+          throw new Error(ERR_COUPON_NOT_FOUND)
         }
         if (couponSnap.data().status === 'used') {
-          throw new Error('このクーポンはすでに使用済みです')
+          throw new Error(ERR_COUPON_ALREADY_USED)
         }
         const exp = couponSnap.data().expiresAt as TimestampType | null
         if (exp && new Date() > exp.toDate()) {
-          throw new Error('このクーポンは期限切れです')
+          throw new Error(ERR_COUPON_EXPIRED)
         }
 
         // ── WRITE フェーズ（get の後にまとめて実行） ──
@@ -182,20 +189,29 @@ export default function CouponWallet() {
         }
       })
 
-      showToast(amount > 0 ? `¥${amount} お得になりました！` : 'クーポンを使用しました')
+      showToast(
+        amount > 0
+          ? t('coupon.savedAmount', { amount })
+          : t('coupon.usedToast'),
+      )
     } catch (err) {
       console.error('クーポン使用処理エラー:', err)
       const msg = err instanceof Error ? err.message : ''
 
-      if (msg.includes('すでに使用済み')) {
-        showToast('このクーポンはすでに使用済みです')
+      if (msg === ERR_COUPON_ALREADY_USED) {
+        showToast(t('coupon.alreadyUsed'))
       } else {
-        // 楽観的UIをロールバック
         processedIds.current.delete(coupon.id)
         setUnusedCoupons((prev) =>
           prev.some((c) => c.id === coupon.id) ? prev : [...prev, coupon],
         )
-        showToast('処理に失敗しました。もう一度お試しください。')
+        if (msg === ERR_COUPON_EXPIRED) {
+          showToast(t('coupon.expired'))
+        } else if (msg === ERR_COUPON_NOT_FOUND) {
+          showToast(t('coupon.notFound'))
+        } else {
+          showToast(t('coupon.failedToast'))
+        }
       }
     } finally {
       setMarking(false)
@@ -213,7 +229,7 @@ export default function CouponWallet() {
             tab === 'unused' ? 'bg-white text-[#0095B6] shadow-sm' : 'text-[#86868b]'
           }`}
         >
-          未使用 ({validUnusedCount})
+          {t('coupon.tabUnused', { count: validUnusedCount })}
         </button>
         <button
           onClick={() => setTab('history')}
@@ -221,7 +237,7 @@ export default function CouponWallet() {
             tab === 'history' ? 'bg-white text-[#0095B6] shadow-sm' : 'text-[#86868b]'
           }`}
         >
-          使用履歴 ({usedCoupons.length})
+          {t('coupon.tabHistory', { count: usedCoupons.length })}
         </button>
       </div>
 
@@ -231,8 +247,8 @@ export default function CouponWallet() {
         {((tab === 'unused' && unusedError) || (tab === 'history' && usedError)) ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-10 h-10 border-2 border-[#e5e5ea] border-t-[#0095B6] rounded-full animate-spin mb-4" />
-            <p className="text-[#86868b] text-sm">データを準備中です…</p>
-            <p className="text-[#86868b]/70 text-xs mt-1">しばらくお待ちください</p>
+            <p className="text-[#86868b] text-sm">{t('coupon.preparing')}</p>
+            <p className="text-[#86868b]/70 text-xs mt-1">{t('coupon.pleaseWait')}</p>
           </div>
         ) : displayCoupons.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -240,10 +256,10 @@ export default function CouponWallet() {
               <span className="text-3xl opacity-50">🎫</span>
             </div>
             <p className="text-[#86868b] text-sm">
-              {tab === 'unused' ? 'クーポンはまだありません' : '使用履歴はありません'}
+              {tab === 'unused' ? t('coupon.emptyUnused') : t('coupon.emptyHistory')}
             </p>
             <p className="text-[#86868b]/70 text-xs mt-1">
-              {tab === 'unused' ? '店長からの配信をお待ちください' : 'クーポンを使うとここに表示されます'}
+              {tab === 'unused' ? t('coupon.emptyUnusedHint') : t('coupon.emptyHistoryHint')}
             </p>
           </div>
         ) : (
@@ -289,20 +305,20 @@ export default function CouponWallet() {
                     )}
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-[#86868b] text-[10px]">
-                        {formatDate(c.distributedAt)} 配信
+                        {t('coupon.distributed', { date: formatDate(c.distributedAt) })}
                         {c.expiresAt && (
-                          <span className="ml-1">〜{formatDate(c.expiresAt)}</span>
+                          <span className="ml-1">{t('coupon.validUntil', { date: formatDate(c.expiresAt) })}</span>
                         )}
                       </span>
                       {isUsed ? (
                         <span className="text-[#86868b] text-[10px]">
-                          {formatDateTime(c.usedAt)} 使用
+                          {t('coupon.usedAt', { datetime: formatDateTime(c.usedAt) })}
                         </span>
                       ) : expired ? (
-                        <span className="text-[#FF3B30] text-[10px]">期限切れ</span>
+                        <span className="text-[#FF3B30] text-[10px]">{t('coupon.expiredLabel')}</span>
                       ) : (
                         <span className="text-[#0095B6] text-[10px] group-hover:text-[#007A96] transition">
-                          タップして使用 →
+                          {t('coupon.tapToUse')}
                         </span>
                       )}
                     </div>
@@ -329,7 +345,7 @@ export default function CouponWallet() {
             <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl flex flex-col max-h-[85dvh]">
               <div className="bg-[#0095B6] py-3 text-center flex-shrink-0">
                 <span className="inline-block text-2xl animate-[coupon-float_2s_ease-in-out_infinite]" aria-hidden>🎫</span>
-                <p className="text-white font-bold text-xs tracking-widest mt-1">VIP COUPON</p>
+                <p className="text-white font-bold text-xs tracking-widest mt-1">{t('coupon.vipCoupon')}</p>
               </div>
 
               <div className="flex-1 overflow-y-auto overscroll-contain p-6 text-center space-y-4">
@@ -370,9 +386,9 @@ export default function CouponWallet() {
                 )}
                 <div className="border-t border-dashed border-[#e5e5ea] pt-4">
                   <p className="text-[#86868b] text-[10px]">
-                    {formatDate(presenting.distributedAt)} 配信
+                    {t('coupon.distributed', { date: formatDate(presenting.distributedAt) })}
                     {presenting.expiresAt && (
-                      <span> 〜 {formatDate(presenting.expiresAt)} まで有効</span>
+                      <span>{t('coupon.validThrough', { date: formatDate(presenting.expiresAt) })}</span>
                     )}
                   </p>
                 </div>
@@ -380,7 +396,7 @@ export default function CouponWallet() {
 
               <div className="px-6 py-4 space-y-3 flex-shrink-0 border-t border-[#e5e5ea]">
                 <p className="text-center text-[#86868b] text-xs">
-                  この画面を店員にお見せください
+                  {t('coupon.showToStaff')}
                 </p>
                 <button
                   onClick={() => handleUse(presenting)}
@@ -395,9 +411,9 @@ export default function CouponWallet() {
                   {marking ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      処理中...
+                      {t('coupon.processing')}
                     </span>
-                  ) : '✓ 使用済みにする'}
+                  ) : t('coupon.markUsed')}
                   </span>
                 </button>
                 <button
@@ -405,7 +421,7 @@ export default function CouponWallet() {
                   disabled={marking}
                   className="w-full text-[#86868b] text-xs py-2 hover:text-[#1d1d1f] transition disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  キャンセル
+                  {t('coupon.cancel')}
                 </button>
               </div>
             </div>

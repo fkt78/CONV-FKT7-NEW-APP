@@ -1,16 +1,19 @@
 import { useState, useEffect, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 export default function Login() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const blockedFromRedirect = (location.state as { blocked?: boolean } | null)?.blocked
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(blockedFromRedirect ? 'アカウントが停止されています。' : '')
+  const [error, setError] = useState(blockedFromRedirect ? t('login.error.blocked') : '')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
@@ -21,6 +24,12 @@ export default function Login() {
     }
   }, [blockedFromRedirect])
 
+  useEffect(() => {
+    if (blockedFromRedirect) {
+      setError(t('login.error.blocked'))
+    }
+  }, [blockedFromRedirect, t])
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
@@ -30,14 +39,13 @@ export default function Login() {
     const trimmedEmail = email.trim()
     const trimmedPassword = password.trim()
     if (!trimmedEmail || !trimmedPassword) {
-      setError('メールアドレスとパスワードを入力してください。')
+      setError(t('login.error.empty'))
       setLoading(false)
       return
     }
 
     try {
       await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
-      // blacklist 判定は AuthContext + ProtectedRoute で行う
       navigate('/')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
@@ -49,25 +57,25 @@ export default function Login() {
         code === 'auth/wrong-password' ||
         code === 'auth/invalid-credential'
       ) {
-        setError('メールアドレスまたはパスワードが正しくありません。')
+        setError(t('login.error.invalidCredentials'))
       } else if (code === 'auth/network-request-failed') {
-        setError('ネットワークに接続できません。通信環境を確認して、しばらく経ってから再度お試しください。')
+        setError(t('login.error.network'))
       } else if (code === 'auth/too-many-requests') {
-        setError('ログイン試行が多すぎます。しばらく時間をおいてから再度お試しください。')
+        setError(t('login.error.tooManyRequests'))
       } else if (code === 'auth/invalid-email') {
-        setError('メールアドレスの形式が正しくありません。')
+        setError(t('login.error.invalidEmail'))
       } else if (code === 'auth/user-disabled') {
-        setError('このアカウントは無効化されています。')
+        setError(t('login.error.userDisabled'))
       } else if (code === 'auth/operation-not-allowed') {
-        setError('ログイン機能が利用できません。管理者にお問い合わせください。')
+        setError(t('login.error.operationNotAllowed'))
       } else if (code === 'auth/internal-error') {
-        setError('サーバーエラーが発生しました。しばらく経ってから再度お試しください。')
+        setError(t('login.error.internalError'))
       } else if (code === 'auth/unauthorized-domain') {
-        setError('このアプリではログインできません。管理者にお問い合わせください。')
+        setError(t('login.error.unauthorizedDomain'))
       } else if (code === 'auth/web-storage-unsupported' || code === 'auth/operation-not-supported-in-this-environment') {
-        setError('プライベート閲覧モードを解除するか、通常のブラウザでお試しください。')
+        setError(t('login.error.privateBrowsing'))
       } else {
-        setError('エラーが発生しました。通信環境を確認して、もう一度お試しください。')
+        setError(t('login.error.generic'))
       }
     } finally {
       setLoading(false)
@@ -76,7 +84,7 @@ export default function Login() {
 
   async function handlePasswordReset() {
     if (!email.trim()) {
-      setError('パスワードリセットには、上のフィールドにメールアドレスを入力してください。')
+      setError(t('login.error.resetEmailRequired'))
       return
     }
     setResetLoading(true)
@@ -85,16 +93,16 @@ export default function Login() {
 
     try {
       await sendPasswordResetEmail(auth, email.trim())
-      setInfo('パスワードリセットのメールを送信しました。メールをご確認ください。')
+      setInfo(t('login.info.resetSent'))
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       console.error('[Login] パスワードリセット失敗', code, err)
       if (code === 'auth/network-request-failed') {
-        setError('ネットワークに接続できません。通信環境を確認して再度お試しください。')
+        setError(t('login.error.resetNetwork'))
       } else if (code === 'auth/user-not-found') {
-        setError('このメールアドレスは登録されていません。')
+        setError(t('login.error.resetUserNotFound'))
       } else {
-        setError('メール送信に失敗しました。メールアドレスをご確認ください。')
+        setError(t('login.error.resetEmailFailed'))
       }
     } finally {
       setResetLoading(false)
@@ -104,12 +112,15 @@ export default function Login() {
   return (
     <div className="h-dvh bg-[#f5f5f7] flex flex-col overflow-y-auto p-5 safe-area-top safe-area-bottom">
       <div className="w-full max-w-md mx-auto flex-1 py-6">
+        <div className="flex justify-end mb-4">
+          <LanguageSwitcher />
+        </div>
         <div className="text-center mb-8">
           <span className="text-5xl" aria-hidden>♛</span>
           <h1 className="text-[#1d1d1f] font-semibold text-[22px] tracking-wide mt-3">
-            VIP Member
+            {t('login.title')}
           </h1>
-          <p className="text-[#86868b] text-[17px] mt-2">ログイン</p>
+          <p className="text-[#86868b] text-[17px] mt-2">{t('login.subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -126,7 +137,7 @@ export default function Login() {
 
           <div>
             <label htmlFor="login-email" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
-              メールアドレス
+              {t('login.email')}
             </label>
             <input
               id="login-email"
@@ -142,7 +153,7 @@ export default function Login() {
 
           <div>
             <label htmlFor="login-password" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
-              パスワード
+              {t('login.password')}
             </label>
             <input
               id="login-password"
@@ -161,7 +172,7 @@ export default function Login() {
             disabled={loading}
             className="w-full min-h-[44px] bg-[#0095B6] text-white font-semibold text-[17px] py-3 rounded-2xl hover:bg-[#007A96] active:scale-[0.98] transition disabled:opacity-50 shadow-sm"
           >
-            {loading ? 'ログイン中...' : 'ログイン'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </button>
 
           <div className="text-center">
@@ -169,21 +180,21 @@ export default function Login() {
               type="button"
               onClick={handlePasswordReset}
               disabled={resetLoading}
-              aria-label="パスワードを忘れた方"
+              aria-label={t('login.resetAria')}
               className="min-h-[44px] flex items-center justify-center mx-auto text-[#0095B6] text-[15px] hover:text-[#007A96] transition px-4 py-2"
             >
-              {resetLoading ? '送信中...' : 'パスワードを忘れた方はこちら'}
+              {resetLoading ? t('login.resetSending') : t('login.resetPassword')}
             </button>
           </div>
         </form>
 
         <p className="text-center text-[#86868b] text-[13px] mt-6 px-4">
-          ログインできない場合：プライベート閲覧モードを解除する、Wi-Fiやモバイルデータの接続を確認する、アプリを再起動してからお試しください。
+          {t('login.help')}
         </p>
         <p className="text-center text-[#86868b] text-[15px] mt-8">
-          アカウントをお持ちでない方は{' '}
+          {t('login.noAccount')}{' '}
           <Link to="/register" className="text-[#0095B6] hover:underline font-medium">
-            新規登録
+            {t('login.register')}
           </Link>
         </p>
         <p className="text-center mt-4">
@@ -191,28 +202,28 @@ export default function Login() {
             to="/install-guide"
             className="min-h-[44px] flex items-center justify-center text-[#0095B6] text-[15px] hover:text-[#007A96] transition"
           >
-            📱 ホーム画面に追加する方法
+            {t('login.installGuide')}
           </Link>
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 mt-6 pt-4 border-t border-[#e5e5ea] text-[13px]">
           <Link to="/privacy" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
-            プライバシーポリシー
+            {t('footer.privacy')}
           </Link>
           <span className="text-[#e5e5ea]" aria-hidden>|</span>
           <Link to="/terms" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
-            利用規約
+            {t('footer.terms')}
           </Link>
           <span className="text-[#e5e5ea]" aria-hidden>|</span>
           <Link to="/advertising" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
-            広告・宣伝表記
+            {t('footer.advertising')}
           </Link>
           <span className="text-[#e5e5ea]" aria-hidden>|</span>
           <Link to="/tokushoho" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
-            特商法表記
+            {t('footer.tokushoho')}
           </Link>
           <span className="text-[#e5e5ea]" aria-hidden>|</span>
           <Link to="/licenses" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
-            ライセンス
+            {t('footer.licenses')}
           </Link>
         </div>
       </div>

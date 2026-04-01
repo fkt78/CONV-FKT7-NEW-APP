@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const CREDITS = [
   {
@@ -41,6 +42,7 @@ interface VoiceCreditsPopupProps {
 }
 
 export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupProps) {
+  const { t } = useTranslation()
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -71,13 +73,13 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
             id="voice-credits-title"
             className="text-[#1d1d1f] font-semibold text-lg tracking-wide"
           >
-            音声クレジット（ライセンス情報）
+            {t('voiceCredits.title')}
           </h2>
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
           <p className="text-[#1d1d1f] text-[14px] leading-relaxed">
-            本アプリ内の音声ガイダンスは、無料の音声合成ソフト「VOICEVOX」および以下の音声ライブラリを使用して生成されています。
+            {t('voiceCredits.intro')}
           </p>
           <ul className="space-y-4">
             {CREDITS.map((item, i) => (
@@ -89,7 +91,7 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
                   rel="noopener noreferrer"
                   className="text-[#0095B6] text-[13px] hover:text-[#007A96] hover:underline transition"
                 >
-                  規約 →
+                  {t('voiceCredits.termsLink')}
                 </a>
               </li>
             ))}
@@ -101,7 +103,7 @@ export default function VoiceCreditsPopup({ open, onClose }: VoiceCreditsPopupPr
             onClick={onClose}
             className="w-full py-3 bg-[#0095B6] text-white font-semibold text-base rounded-2xl hover:bg-[#007A96] transition active:scale-[0.98]"
           >
-            閉じる
+            {t('voiceCredits.close')}
           </button>
         </div>
       </div>

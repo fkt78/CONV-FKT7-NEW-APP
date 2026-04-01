@@ -1,48 +1,38 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import LegalPageLayout from '../components/LegalPageLayout'
 
 export default function PrivacyPolicy() {
+  const { t } = useTranslation()
+  const lp = (key: string) => t(`legal.privacy.${key}`)
+
+  const dates = t('legal.privacy.dates', { returnObjects: true }) as string[]
+
   return (
-    <LegalPageLayout title="プライバシーポリシー">
-      <p>
-        FKT7（以下「本アプリ」）は、有限会社吹田総業が作成し、セブン-イレブン 伊賀平野東町店・伊賀平野北谷店・伊賀忍者市駅南店（以下「当店」）のVIP会員様向けに提供するサービスです。本プライバシーポリシーでは、本アプリにおける個人情報の取り扱いについて定めます。
-      </p>
+    <LegalPageLayout title={t('legal.privacy.title')}>
+      <p>{lp('intro')}</p>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">1. 収集する情報</h2>
-        <p>
-          本アプリでは、以下の情報を収集することがあります。<br />
-          ・氏名、メールアドレス、生年月、属性（性別等）<br />
-          ・アプリの利用状況（チャット内容、クーポン利用履歴等）<br />
-          ・端末情報（ブラウザ種類、OS等）
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s1_title')}</h2>
+        <p className="whitespace-pre-line">{lp('s1_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">2. 利用目的</h2>
-        <p>
-          収集した情報は、以下の目的で利用します。<br />
-          ・会員認証およびアカウント管理<br />
-          ・チャット・クーポン・お知らせ等のサービス提供<br />
-          ・お問い合わせへの対応<br />
-          ・サービスの改善・開発
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s2_title')}</h2>
+        <p className="whitespace-pre-line">{lp('s2_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">3. 第三者提供</h2>
-        <p>
-          お客様の個人情報を、法令に基づく場合を除き、ご本人の同意なく第三者に提供することはありません。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s3_title')}</h2>
+        <p>{lp('s3_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">4. 第三者サービスの利用</h2>
-        <p>
-          本アプリは、認証・データベース・ストレージ等の機能提供のため、Googleが提供するFirebase（Firebase Authentication、Cloud Firestore、Cloud Storage等）を利用しています。お客様の情報の一部は、これらのサービスにより処理される場合があります。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s4_title')}</h2>
+        <p>{lp('s4_p1')}</p>
         <p className="mt-2">
-          FirebaseおよびGoogleのプライバシーに関する詳細は、以下のリンクをご参照ください。<br />
+          {lp('s4_p2_intro')}
+          <br />
           ・
           <a
             href="https://firebase.google.com/support/privacy"
@@ -50,7 +40,7 @@ export default function PrivacyPolicy() {
             rel="noopener noreferrer"
             className="text-[#0095B6] underline hover:text-[#007A96]"
           >
-            Firebase プライバシーとセキュリティ
+            {lp('firebasePrivacy')}
           </a>
           <br />
           ・
@@ -60,92 +50,68 @@ export default function PrivacyPolicy() {
             rel="noopener noreferrer"
             className="text-[#0095B6] underline hover:text-[#007A96]"
           >
-            Google プライバシーポリシー
+            {lp('googlePrivacy')}
           </a>
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">5. Cookie・ローカルストレージ</h2>
-        <p>
-          本アプリでは、以下の目的でCookieおよびローカルストレージ（ブラウザの保存領域）を利用することがあります。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s5_title')}</h2>
+        <p>{lp('s5_p1')}</p>
         <ul className="list-disc list-inside mt-2 space-y-1">
-          <li>ログイン状態の維持（認証トークンの保存）</li>
-          <li>アプリの動作に必要な設定の保存</li>
-          <li>オフライン時の利用体験の向上（PWA機能）</li>
+          <li>{lp('s5_li1')}</li>
+          <li>{lp('s5_li2')}</li>
+          <li>{lp('s5_li3')}</li>
         </ul>
-        <p className="mt-2">
-          これらは本アプリの提供に必要な範囲で使用します。
-          将来、広告・アフィリエイトの表示・効果測定のためにCookie等を利用する場合は、本ポリシーを改定し、本アプリ上でお知らせします。
-          ブラウザの設定により無効化することも可能ですが、その場合、一部機能が正常に動作しないことがあります。
-        </p>
+        <p className="mt-2">{lp('s5_p2')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">6. 広告・アフィリエイトリンク・外部サービス</h2>
-        <p>
-          本アプリ上に広告・アフィリエイトリンク等を掲載する場合、当店が提携先に対して会員様の個人情報を直接提供するためのトラッキングを行うことは、当該広告の仕様がそう定める場合を除き、原則として行いません。
-          会員様が当該リンクから外部サイトに遷移した後の個人情報の取り扱いは、当該外部サイトの事業者が定めるプライバシーポリシー等に従います。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s6_title')}</h2>
+        <p>{lp('s6_p1')}</p>
         <p className="mt-2">
-          表示の方針については、
+          {lp('s6_p2_before')}
           <Link to="/advertising" className="text-[#0095B6] underline hover:text-[#007A96]">
-            広告・宣伝・アフィリエイトに関する表記
+            {t('footer.advertising')}
           </Link>
-          をご参照ください。
+          {lp('s6_p2_after')}
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">7. データの保存期間</h2>
-        <p>
-          お客様の情報は、以下の方針に基づき保存します。<br />
-          ・アカウント情報：退会または削除のご請求まで保存し、その後は合理的な期間内に削除します。<br />
-          ・チャット履歴・クーポン利用履歴：サービス提供に必要な期間、および法令で定められた保存期間に応じて保存します。<br />
-          ・当店は、保存期間経過後またはご請求に基づき、速やかにデータを削除します。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s7_title')}</h2>
+        <p className="whitespace-pre-line">{lp('s7_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">8. お客様の権利（開示・訂正・削除等）</h2>
-        <p>
-          お客様は、当店が保有するご自身の個人情報について、開示、訂正、削除、利用停止等を請求する権利を有します。これらのご請求は、本アプリ内のチャット機能よりお申し付けください。ご本人確認のうえ、法令に従って対応いたします。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s8_title')}</h2>
+        <p>{lp('s8_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">9. プッシュ通知</h2>
-        <p>
-          本アプリでプッシュ通知機能を提供する場合、新着メッセージやお知らせ等の通知をお送りすることがあります。通知の受信は、端末の設定または本アプリ内の設定により、いつでも停止することができます。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s9_title')}</h2>
+        <p>{lp('s9_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">10. 安全管理</h2>
-        <p>
-          個人情報の漏洩、滅失、毀損の防止のため、適切な安全管理措置を講じます。また、Firebase等の第三者サービスにおいても、各事業者が定めるセキュリティ基準に従ってデータが取り扱われます。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s10_title')}</h2>
+        <p>{lp('s10_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">11. お問い合わせ</h2>
-        <p>
-          個人情報の取り扱いに関するお問い合わせは、本アプリ内のチャット機能よりご連絡ください。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s11_title')}</h2>
+        <p>{lp('s11_body')}</p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">12. 改定</h2>
-        <p>
-          本プライバシーポリシーは、法令の変更やサービス内容の変更に伴い、必要に応じて改定することがあります。改定後のポリシーは、本アプリ上での表示をもって効力が生じるものとします。重要な変更がある場合は、本アプリ内でお知らせいたします。
-        </p>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s12_title')}</h2>
+        <p>{lp('s12_body')}</p>
       </section>
 
       <div className="text-[#86868b] text-xs mt-8 space-y-1">
-        <p>制定日：2025年3月</p>
-        <p>改定日：2025年3月（商用利用対応のため拡充）</p>
-        <p>改定日：2026年3月（広告・アフィリエイト等に関する記載の追加）</p>
+        {dates.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
       </div>
     </LegalPageLayout>
   )
