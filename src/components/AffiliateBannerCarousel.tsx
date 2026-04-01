@@ -60,6 +60,14 @@ const SLIDES: BannerSlide[] = [
     badgeColor: '#bf0000',
     href: 'https://fkt-office.com/service-guide.html',
   },
+  {
+    id: 'onamae',
+    bgImage: '/banners/onamae-bg.png',
+    bgPosition: 'right center',
+    i18nKey: 'banner.onamae',
+    badgeColor: '#007aff',
+    href: 'https://fkt-office.com/service-guide.html',
+  },
 ]
 
 const AUTO_PLAY_MS = 5000
