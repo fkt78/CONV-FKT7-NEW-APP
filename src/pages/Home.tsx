@@ -784,34 +784,37 @@ export default function Home() {
         </>
       )}
 
-      {/* ── フッター（Apple風：薄いグレー背景） ── */}
-      <footer className="flex-shrink-0 px-4 py-3 border-t border-[#e5e5ea] bg-white">
-        <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 text-[13px]">
+      {/* ── フッター（横スクロール1行固定・言語に関わらず高さ一定） ── */}
+      <footer className="flex-shrink-0 border-t border-[#e5e5ea] bg-white safe-area-bottom">
+        <div
+          className="flex items-center overflow-x-auto text-[11px] px-2 py-1"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <button
             onClick={() => setCreditsOpen(true)}
             aria-label={t('footer.credits')}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl"
+            className="flex-shrink-0 flex items-center h-9 px-2.5 text-[#86868b] hover:text-[#0095B6] transition whitespace-nowrap rounded-lg active:bg-[#f5f5f7]"
           >
             {t('footer.credits')}
           </button>
-          <span className="text-[#e5e5ea]" aria-hidden>|</span>
-          <Link to="/privacy" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
+          <span className="flex-shrink-0 text-[#d1d1d6] mx-0.5" aria-hidden>|</span>
+          <Link to="/privacy" className="flex-shrink-0 flex items-center h-9 px-2.5 text-[#86868b] hover:text-[#0095B6] transition whitespace-nowrap rounded-lg active:bg-[#f5f5f7]">
             {t('footer.privacy')}
           </Link>
-          <span className="text-[#e5e5ea]" aria-hidden>|</span>
-          <Link to="/terms" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
+          <span className="flex-shrink-0 text-[#d1d1d6] mx-0.5" aria-hidden>|</span>
+          <Link to="/terms" className="flex-shrink-0 flex items-center h-9 px-2.5 text-[#86868b] hover:text-[#0095B6] transition whitespace-nowrap rounded-lg active:bg-[#f5f5f7]">
             {t('footer.terms')}
           </Link>
-          <span className="text-[#e5e5ea]" aria-hidden>|</span>
-          <Link to="/advertising" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
+          <span className="flex-shrink-0 text-[#d1d1d6] mx-0.5" aria-hidden>|</span>
+          <Link to="/advertising" className="flex-shrink-0 flex items-center h-9 px-2.5 text-[#86868b] hover:text-[#0095B6] transition whitespace-nowrap rounded-lg active:bg-[#f5f5f7]">
             {t('footer.advertising')}
           </Link>
-          <span className="text-[#e5e5ea]" aria-hidden>|</span>
-          <Link to="/tokushoho" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
+          <span className="flex-shrink-0 text-[#d1d1d6] mx-0.5" aria-hidden>|</span>
+          <Link to="/tokushoho" className="flex-shrink-0 flex items-center h-9 px-2.5 text-[#86868b] hover:text-[#0095B6] transition whitespace-nowrap rounded-lg active:bg-[#f5f5f7]">
             {t('footer.tokushoho')}
           </Link>
-          <span className="text-[#e5e5ea]" aria-hidden>|</span>
-          <Link to="/licenses" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
+          <span className="flex-shrink-0 text-[#d1d1d6] mx-0.5" aria-hidden>|</span>
+          <Link to="/licenses" className="flex-shrink-0 flex items-center h-9 px-2.5 text-[#86868b] hover:text-[#0095B6] transition whitespace-nowrap rounded-lg active:bg-[#f5f5f7]">
             {t('footer.licenses')}
           </Link>
         </div>
