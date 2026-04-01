@@ -82,6 +82,12 @@
       "title": "SIM Trả Trước",
       "subtitle": "Không cần thẻ tín dụng. Mua bằng tiền mặt tại 7-Eleven.",
       "cta": "Xem chi tiết"
+    },
+    "sim": {
+      "badge": "Save Money",
+      "title": "SIM Giá Rẻ (Excite)",
+      "subtitle": "Tiết kiệm chi phí điện thoại hàng tháng. Trả theo lượng dùng.",
+      "cta": "Xem chi tiết"
     }
   },
   "vipNews": {

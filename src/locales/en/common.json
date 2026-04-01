@@ -82,6 +82,12 @@
       "title": "Prepaid SIM / Data",
       "subtitle": "No credit card needed. Buy with cash at 7-Eleven.",
       "cta": "Learn More"
+    },
+    "sim": {
+      "badge": "Save Money",
+      "title": "Budget SIM (Excite)",
+      "subtitle": "Cut your monthly phone bill. Pay only for what you use.",
+      "cta": "Learn More"
     }
   },
   "vipNews": {

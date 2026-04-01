@@ -36,6 +36,14 @@ const SLIDES: BannerSlide[] = [
     badgeColor: '#34c759',
     href: 'https://fkt-office.com/life-support.html',
   },
+  {
+    id: 'sim',
+    bgImage: '/banners/sim-bg.png',
+    bgPosition: 'right center',
+    i18nKey: 'banner.sim',
+    badgeColor: '#007aff',
+    href: 'https://fkt-office.com/life-support.html',
+  },
 ]
 
 const AUTO_PLAY_MS = 5000
