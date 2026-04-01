@@ -44,6 +44,14 @@ const SLIDES: BannerSlide[] = [
     badgeColor: '#007aff',
     href: 'https://fkt-office.com/life-support.html',
   },
+  {
+    id: 'commufa',
+    bgImage: '/banners/commufa-bg.png',
+    bgPosition: 'right center',
+    i18nKey: 'banner.commufa',
+    badgeColor: '#ff9500',
+    href: 'https://fkt-office.com/service-guide.html',
+  },
 ]
 
 const AUTO_PLAY_MS = 5000
