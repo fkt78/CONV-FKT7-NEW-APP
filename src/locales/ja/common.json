@@ -70,6 +70,12 @@
       "title": "セカイVPN",
       "subtitle": "日本の動画や母国のサイトを安全に閲覧",
       "cta": "詳細を見る"
+    },
+    "abema": {
+      "badge": "Anime & TV",
+      "title": "ABEMAプレミアム",
+      "subtitle": "アニメや番組が盛りだくさん。日本語の勉強にも最適",
+      "cta": "詳細を見る"
     }
   },
   "vipNews": {

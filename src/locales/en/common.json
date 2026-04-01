@@ -70,6 +70,12 @@
       "title": "Sekai VPN",
       "subtitle": "Safely browse Japanese content & sites from home",
       "cta": "Learn More"
+    },
+    "abema": {
+      "badge": "Anime & TV",
+      "title": "ABEMA Premium",
+      "subtitle": "Tons of anime & shows. Perfect for learning Japanese!",
+      "cta": "Learn More"
     }
   },
   "vipNews": {

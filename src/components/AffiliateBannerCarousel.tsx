@@ -5,8 +5,9 @@ interface BannerSlide {
   id: string
   bgImage: string
   bgPosition: string
-  /** i18n キーのプレフィックス（banner.xxx） */
+  /** i18n キープレフィックス（例: banner.vpn） */
   i18nKey: string
+  badgeColor: string
   href: string
 }
 
@@ -16,39 +17,57 @@ const SLIDES: BannerSlide[] = [
     bgImage: '/banners/vpn-bg.png',
     bgPosition: 'right center',
     i18nKey: 'banner.vpn',
+    badgeColor: '#ff3b30',
+    href: 'https://fkt-office.com/life-support.html',
+  },
+  {
+    id: 'abema',
+    bgImage: '/banners/abema-bg.png',
+    bgPosition: 'right center',
+    i18nKey: 'banner.abema',
+    badgeColor: '#ff2d55',
     href: 'https://fkt-office.com/life-support.html',
   },
 ]
 
-const AUTO_PLAY_MS = 7000
+const AUTO_PLAY_MS = 5000
+const FADE_MS = 600
 
 interface Props {
-  /** true のとき: カード内下端に組み込む（外側マージンなし・角丸なし） */
+  /** true のとき: カード内下端に組み込む（外側マージンなし） */
   inCard?: boolean
 }
 
 export default function AffiliateBannerCarousel({ inCard = false }: Props) {
   const { t } = useTranslation()
   const [current, setCurrent] = useState(0)
+  const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）
+  const [fading, setFading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const total = SLIDES.length
 
   const goTo = useCallback(
-    (index: number) => {
-      setCurrent(((index % total) + total) % total)
+    (next: number) => {
+      const idx = ((next % total) + total) % total
+      if (idx === current) return
+      setFading(true)
+      setTimeout(() => {
+        setVisible(idx)
+        setCurrent(idx)
+        setFading(false)
+      }, FADE_MS)
     },
-    [total],
+    [current, total],
   )
 
   useEffect(() => {
-    if (total <= 1) return
     timerRef.current = setTimeout(() => goTo(current + 1), AUTO_PLAY_MS)
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [current, goTo, total])
+  }, [current, goTo])
 
-  const slide = SLIDES[current]
+  const slide = SLIDES[visible]
 
   const wrapperStyle: React.CSSProperties = inCard
     ? {
@@ -65,14 +84,18 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
 
   return (
     <div style={wrapperStyle}>
-      {/* ── バナー本体 ── */}
+      {/* ── バナー本体（フェード付き） ── */}
       <a
         href={slide.href}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${t(`${slide.i18nKey}.title`)} — ${t(`${slide.i18nKey}.subtitle`)}`}
         className="block relative select-none"
-        style={{ height: '118px' }}
+        style={{
+          height: '118px',
+          opacity: fading ? 0 : 1,
+          transition: `opacity ${FADE_MS}ms ease-in-out`,
+        }}
       >
         {/* 背景画像 */}
         <div
@@ -87,14 +110,14 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
           }}
         />
 
-        {/* グラデーションオーバーレイ（左→右: 左を暗く） */}
+        {/* グラデーションオーバーレイ（左→右で左を暗く） */}
         <div
           aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
             background:
-              'linear-gradient(to right, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.54) 52%, rgba(0,0,0,0.08) 100%)',
+              'linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 52%, rgba(0,0,0,0.10) 100%)',
           }}
         />
 
@@ -115,7 +138,7 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
             <span
               style={{
                 display: 'inline-block',
-                backgroundColor: '#ff3b30',
+                backgroundColor: slide.badgeColor,
                 color: '#fff',
                 fontSize: '11px',
                 fontWeight: 700,
@@ -151,14 +174,14 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
               fontSize: '12px',
               lineHeight: 1.45,
               textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-              maxWidth: '58%',
+              maxWidth: '60%',
             }}
           >
             {t(`${slide.i18nKey}.subtitle`)}
           </p>
         </div>
 
-        {/* 右下：CTA */}
+        {/* 右下 CTA */}
         <div
           aria-hidden
           style={{
@@ -193,44 +216,42 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
         </div>
       </a>
 
-      {/* ドットインジケーター（複数スライド時のみ） */}
-      {total > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 0',
-            backgroundColor: inCard ? '#fff' : 'transparent',
-          }}
-          role="tablist"
-          aria-label="スライドインジケーター"
-        >
-          {SLIDES.map((s, idx) => (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={idx === current}
-              aria-label={`スライド ${idx + 1}`}
-              onClick={() => {
-                if (timerRef.current) clearTimeout(timerRef.current)
-                goTo(idx)
-              }}
-              style={{
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                borderRadius: '100px',
-                transition: 'all 0.3s ease',
-                width: idx === current ? '16px' : '6px',
-                height: '6px',
-                backgroundColor: idx === current ? '#0095B6' : '#c7c7cc',
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {/* ── ドットインジケーター ── */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 0 5px',
+          backgroundColor: inCard ? '#fff' : 'transparent',
+        }}
+        role="tablist"
+        aria-label="スライドインジケーター"
+      >
+        {SLIDES.map((s, idx) => (
+          <button
+            key={s.id}
+            role="tab"
+            aria-selected={idx === current}
+            aria-label={`スライド ${idx + 1}`}
+            onClick={() => {
+              if (timerRef.current) clearTimeout(timerRef.current)
+              goTo(idx)
+            }}
+            style={{
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              borderRadius: '100px',
+              transition: 'all 0.35s ease',
+              width: idx === current ? '18px' : '6px',
+              height: '6px',
+              backgroundColor: idx === current ? '#0095B6' : '#c7c7cc',
+            }}
+          />
+        ))}
+      </div>
     </div>
   )
 }
