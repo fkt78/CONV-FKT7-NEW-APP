@@ -489,10 +489,17 @@ export default function Home() {
         </div>
       ) : homeTab === 'coupon' ? (
         <div className="flex-1 flex flex-col min-h-0 mt-2 overflow-hidden">
-          <CouponWallet />
+          <AffiliateBannerCarousel />
+          <div className="flex-1 overflow-hidden mt-2">
+            <CouponWallet />
+          </div>
         </div>
       ) : (
         <>
+          {/* ── チャットタブ上部バナー ── */}
+          <div className="flex-shrink-0">
+            <AffiliateBannerCarousel />
+          </div>
           {/* ── メッセージ検索 ── */}
           {messages.length > 0 && (
             <div className="px-4 py-2 bg-white border-b border-[#e5e5ea] flex-shrink-0">
