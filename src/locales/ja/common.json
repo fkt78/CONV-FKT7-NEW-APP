@@ -76,6 +76,12 @@
       "title": "ABEMAプレミアム",
       "subtitle": "アニメや番組が盛りだくさん。日本語の勉強にも最適",
       "cta": "詳細を見る"
+    },
+    "prepaid": {
+      "badge": "No Credit Card",
+      "title": "スマホプリペイド",
+      "subtitle": "クレカ不要。セブン-イレブンのレジで現金購入できます。",
+      "cta": "詳細を見る"
     }
   },
   "vipNews": {

@@ -76,6 +76,12 @@
       "title": "ABEMA Premium",
       "subtitle": "Anime & chương trình TV phong phú. Tuyệt vời để học tiếng Nhật!",
       "cta": "Xem chi tiết"
+    },
+    "prepaid": {
+      "badge": "No Credit Card",
+      "title": "SIM Trả Trước",
+      "subtitle": "Không cần thẻ tín dụng. Mua bằng tiền mặt tại 7-Eleven.",
+      "cta": "Xem chi tiết"
     }
   },
   "vipNews": {

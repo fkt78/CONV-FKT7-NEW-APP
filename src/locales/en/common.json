@@ -76,6 +76,12 @@
       "title": "ABEMA Premium",
       "subtitle": "Tons of anime & shows. Perfect for learning Japanese!",
       "cta": "Learn More"
+    },
+    "prepaid": {
+      "badge": "No Credit Card",
+      "title": "Prepaid SIM / Data",
+      "subtitle": "No credit card needed. Buy with cash at 7-Eleven.",
+      "cta": "Learn More"
     }
   },
   "vipNews": {
