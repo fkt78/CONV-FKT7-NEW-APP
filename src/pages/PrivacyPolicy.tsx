@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import LegalPageLayout from '../components/LegalPageLayout'
 
 export default function PrivacyPolicy() {
@@ -75,12 +76,29 @@ export default function PrivacyPolicy() {
           <li>オフライン時の利用体験の向上（PWA機能）</li>
         </ul>
         <p className="mt-2">
-          これらは本アプリの提供に必要な範囲で使用し、第三者による広告配信等には利用しません。ブラウザの設定により無効化することも可能ですが、その場合、一部機能が正常に動作しないことがあります。
+          これらは本アプリの提供に必要な範囲で使用します。
+          将来、広告・アフィリエイトの表示・効果測定のためにCookie等を利用する場合は、本ポリシーを改定し、本アプリ上でお知らせします。
+          ブラウザの設定により無効化することも可能ですが、その場合、一部機能が正常に動作しないことがあります。
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">6. データの保存期間</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">6. 広告・アフィリエイトリンク・外部サービス</h2>
+        <p>
+          本アプリ上に広告・アフィリエイトリンク等を掲載する場合、当店が提携先に対して会員様の個人情報を直接提供するためのトラッキングを行うことは、当該広告の仕様がそう定める場合を除き、原則として行いません。
+          会員様が当該リンクから外部サイトに遷移した後の個人情報の取り扱いは、当該外部サイトの事業者が定めるプライバシーポリシー等に従います。
+        </p>
+        <p className="mt-2">
+          表示の方針については、
+          <Link to="/advertising" className="text-[#0095B6] underline hover:text-[#007A96]">
+            広告・宣伝・アフィリエイトに関する表記
+          </Link>
+          をご参照ください。
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">7. データの保存期間</h2>
         <p>
           お客様の情報は、以下の方針に基づき保存します。<br />
           ・アカウント情報：退会または削除のご請求まで保存し、その後は合理的な期間内に削除します。<br />
@@ -90,35 +108,35 @@ export default function PrivacyPolicy() {
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">7. お客様の権利（開示・訂正・削除等）</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">8. お客様の権利（開示・訂正・削除等）</h2>
         <p>
           お客様は、当店が保有するご自身の個人情報について、開示、訂正、削除、利用停止等を請求する権利を有します。これらのご請求は、本アプリ内のチャット機能よりお申し付けください。ご本人確認のうえ、法令に従って対応いたします。
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">8. プッシュ通知</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">9. プッシュ通知</h2>
         <p>
           本アプリでプッシュ通知機能を提供する場合、新着メッセージやお知らせ等の通知をお送りすることがあります。通知の受信は、端末の設定または本アプリ内の設定により、いつでも停止することができます。
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">9. 安全管理</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">10. 安全管理</h2>
         <p>
           個人情報の漏洩、滅失、毀損の防止のため、適切な安全管理措置を講じます。また、Firebase等の第三者サービスにおいても、各事業者が定めるセキュリティ基準に従ってデータが取り扱われます。
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">10. お問い合わせ</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">11. お問い合わせ</h2>
         <p>
           個人情報の取り扱いに関するお問い合わせは、本アプリ内のチャット機能よりご連絡ください。
         </p>
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">11. 改定</h2>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">12. 改定</h2>
         <p>
           本プライバシーポリシーは、法令の変更やサービス内容の変更に伴い、必要に応じて改定することがあります。改定後のポリシーは、本アプリ上での表示をもって効力が生じるものとします。重要な変更がある場合は、本アプリ内でお知らせいたします。
         </p>
@@ -127,6 +145,7 @@ export default function PrivacyPolicy() {
       <div className="text-[#86868b] text-xs mt-8 space-y-1">
         <p>制定日：2025年3月</p>
         <p>改定日：2025年3月（商用利用対応のため拡充）</p>
+        <p>改定日：2026年3月（広告・アフィリエイト等に関する記載の追加）</p>
       </div>
     </LegalPageLayout>
   )

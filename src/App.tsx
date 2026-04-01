@@ -16,6 +16,7 @@ import InstallGuide from './pages/InstallGuide'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfUse from './pages/TermsOfUse'
 import Tokushoho from './pages/Tokushoho'
+import AdvertisingNotice from './pages/AdvertisingNotice'
 import Licenses from './pages/Licenses'
 import NotificationSettings from './pages/NotificationSettings'
 
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfUse />} />
             <Route path="/tokushoho" element={<Tokushoho />} />
+            <Route path="/advertising" element={<AdvertisingNotice />} />
             <Route path="/licenses" element={<Licenses />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />

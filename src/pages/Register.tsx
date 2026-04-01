@@ -258,6 +258,10 @@ export default function Register() {
             利用規約
           </Link>
           <span className="text-[#e5e5ea]" aria-hidden>|</span>
+          <Link to="/advertising" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
+            広告・宣伝表記
+          </Link>
+          <span className="text-[#e5e5ea]" aria-hidden>|</span>
           <Link to="/tokushoho" className="min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 text-[#86868b] hover:text-[#0095B6] transition rounded-xl">
             特商法表記
           </Link>

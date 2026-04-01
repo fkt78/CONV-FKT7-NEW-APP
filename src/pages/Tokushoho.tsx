@@ -88,9 +88,18 @@ export default function Tokushoho() {
         </p>
       </section>
 
+      <section>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">第三者による商品・サービス（広告・アフィリエイト）</h2>
+        <p>
+          本アプリに掲載される広告・リンクのうち、上記「販売業者」以外の第三者が提供する商品・サービスについては、当該第三者が販売主体となります。
+          当該取引における契約条件、価格、支払、引渡し、返品・キャンセル等は、当該第三者の定めに従います。
+        </p>
+      </section>
+
       <div className="text-[#86868b] text-xs mt-8 space-y-1">
         <p>制定日：2025年3月</p>
         <p>改定日：2025年3月（商用利用対応のため拡充）</p>
+        <p>改定日：2026年3月（第三者広告・アフィリエイトに関する表記の追加）</p>
       </div>
     </LegalPageLayout>
   )
