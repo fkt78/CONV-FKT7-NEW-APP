@@ -72,6 +72,10 @@ const SLIDES: BannerSlide[] = [
 
 const AUTO_PLAY_MS = 5000
 const FADE_MS = 600
+/** これ以上横に動かしたらスワイプとみなす（px） */
+const SWIPE_THRESHOLD = 48
+/** 縦スクロールと区別するため、横移動が縦のこの倍率以上ならスワイプ */
+const SWIPE_RATIO = 1.15
 
 interface Props {
   /** true のとき: カード内下端に組み込む（外側マージンなし） */
@@ -84,7 +88,15 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
   const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）
   const [fading, setFading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** スワイプ直後の誤タップでリンクが開かないようにする */
+  const blockLinkClickRef = useRef(false)
+  const pointerStartRef = useRef<{ x: number; y: number; id: number } | null>(null)
+  const currentRef = useRef(current)
   const total = SLIDES.length
+
+  useEffect(() => {
+    currentRef.current = current
+  }, [current])
 
   const goTo = useCallback(
     (next: number) => {
@@ -106,6 +118,48 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [current, goTo])
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    pointerStartRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId }
+    try {
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const start = pointerStartRef.current
+    pointerStartRef.current = null
+    if (!start || start.id !== e.pointerId) return
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {
+      /* ignore */
+    }
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return
+    e.preventDefault()
+    blockLinkClickRef.current = true
+    if (timerRef.current) clearTimeout(timerRef.current)
+    const i = currentRef.current
+    // 左にフリック（次へ）／右にフリック（前へ）— iOS カルーセルと同じ
+    if (dx < 0) goTo(i + 1)
+    else goTo(i - 1)
+  }
+
+  const handlePointerCancel = () => {
+    pointerStartRef.current = null
+  }
+
+  const handleBannerClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (blockLinkClickRef.current) {
+      e.preventDefault()
+      blockLinkClickRef.current = false
+    }
+  }
 
   const slide = SLIDES[visible]
 
@@ -130,12 +184,17 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${t(`${slide.i18nKey}.title`)} — ${t(`${slide.i18nKey}.subtitle`)}`}
-        className="block relative select-none"
+        className="block relative select-none cursor-grab active:cursor-grabbing"
         style={{
           height: '118px',
+          touchAction: 'pan-y',
           opacity: fading ? 0 : 1,
           transition: `opacity ${FADE_MS}ms ease-in-out`,
         }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onClick={handleBannerClick}
       >
         {/* 背景画像 */}
         <div
