@@ -705,8 +705,17 @@ async function batchGetExistingUserCouponUids(
   return existing
 }
 
+type CouponDistributionOptions = {
+  /** 指定時はそのIDのテンプレのみ処理（自動配信ON不要・Firestore上に存在すれば非アクティブも可） */
+  onlyCouponIds?: string[]
+}
+
 /** クーポン自動配信の本体ロジック（スケジュール / 手動テスト共通） */
-async function runCouponDistribution(): Promise<{ distributedCount: number; weather: WeatherData | null }> {
+async function runCouponDistribution(
+  options?: CouponDistributionOptions | null,
+): Promise<{ distributedCount: number; weather: WeatherData | null }> {
+    const onlyIds = options?.onlyCouponIds?.length ? [...new Set(options.onlyCouponIds)] : null
+
     const settingsSnap = await db.collection('settings').doc('coupon').get()
     const settings = settingsSnap.data() ?? {}
     const dailyLimit = (settings.dailyLimit as number) ?? DEFAULT_DAILY_COUPON_LIMIT
@@ -722,7 +731,19 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
       )
     }
 
-    const cSnap = await db.collection('coupons').where('active', '==', true).get()
+    let allTemplates: CouponTemplate[]
+    if (onlyIds) {
+      const snaps = await Promise.all(onlyIds.map((id) => db.collection('coupons').doc(id).get()))
+      allTemplates = snaps
+        .filter((s) => s.exists)
+        .map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
+      console.log(
+        `[couponDistribution] テスト対象 ${onlyIds.length} 件指定 → 存在するテンプレ ${allTemplates.length} 件`,
+      )
+    } else {
+      const cSnap = await db.collection('coupons').where('active', '==', true).get()
+      allTemplates = cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
+    }
     const now = new Date()
     /* Cloud Functions は UTC で動作するため、JST (UTC+9) に変換して日付を求める。
      * 例: 朝7時JST = 前日22:00 UTC → now.getDate() だと前日になってしまう */
@@ -730,7 +751,6 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
     const today = `${jstNow.getUTCFullYear()}-${String(jstNow.getUTCMonth() + 1).padStart(2, '0')}-${String(jstNow.getUTCDate()).padStart(2, '0')}`
     console.log(`[couponDistribution] today(JST)=${today} (UTC=${now.toISOString()})`)
 
-    const allTemplates = cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
     const uSnap = await db.collection('users').where('status', '==', 'active').get()
 
     /** 当日分の配信枚数（テンプレ横断で共有）。ループ内で log を毎回読まない */
@@ -766,7 +786,7 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
     }
 
     for (const coupon of allTemplates) {
-      if (!coupon.autoDistribute) continue
+      if (!onlyIds && !coupon.autoDistribute) continue
 
       const s = coupon.autoDistributeSchedule
       const isBirthMonth = s?.type === 'birth_month'
@@ -924,8 +944,24 @@ export const testCouponDistribution = onCall(
     const role = userSnap.data()?.role as string | undefined
     if (role !== 'admin') throw new HttpsError('permission-denied', '管理者権限が必要です')
 
-    console.log('[testCouponDistribution] 管理者', req.auth.uid, 'が手動テスト実行')
-    const result = await runCouponDistribution()
+    const raw = req.data as { couponIds?: unknown } | undefined
+    const couponIds = Array.isArray(raw?.couponIds)
+      ? raw.couponIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : undefined
+
+    if (couponIds !== undefined && couponIds.length === 0) {
+      throw new HttpsError('invalid-argument', 'テスト配信するクーポンを1件以上選択してください')
+    }
+
+    console.log(
+      '[testCouponDistribution] 管理者',
+      req.auth.uid,
+      'が手動テスト実行',
+      couponIds?.length ? `（選択 ${couponIds.length} 件）` : '（全テンプレ・従来どおり）',
+    )
+    const result = await runCouponDistribution(
+      couponIds?.length ? { onlyCouponIds: couponIds } : null,
+    )
     return {
       distributedCount: result.distributedCount,
       weather: result.weather,

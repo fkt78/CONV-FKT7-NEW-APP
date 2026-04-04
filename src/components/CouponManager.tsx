@@ -66,8 +66,9 @@ export default function CouponManager() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
 
-  // テスト配信
+  // テスト配信（選択したテンプレIDのみ Cloud Function に渡す）
   const [testRunning, setTestRunning] = useState(false)
+  const [testSelectedIds, setTestSelectedIds] = useState<Set<string>>(new Set())
 
   // 個人配信
   const [showIndividualModal, setShowIndividualModal] = useState(false)
@@ -339,18 +340,50 @@ export default function CouponManager() {
     }
   }
 
+  function toggleTestCouponSelection(id: string) {
+    setTestSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function selectAllTestCoupons() {
+    setTestSelectedIds(new Set(coupons.map((c) => c.id)))
+  }
+
+  function clearTestCouponSelection() {
+    setTestSelectedIds(new Set())
+  }
+
   /* ── テスト配信実行 ── */
   async function handleTestDistribution() {
-    if (!confirm('自動配信ロジックをテスト実行します（実際にクーポンが配信されます）。よろしいですか？')) return
+    if (testSelectedIds.size === 0) {
+      alert('テスト配信するクーポンを、一覧のチェックボックスで1件以上選択してください。')
+      return
+    }
+    if (
+      !confirm(
+        `選択したテンプレート ${testSelectedIds.size} 件について、自動配信ロジックをテスト実行します（実際にクーポンが配信されます）。よろしいですか？`,
+      )
+    ) {
+      return
+    }
     setTestRunning(true)
     try {
-      const fn = httpsCallable<unknown, { distributedCount: number; weather: unknown }>(functions, 'testCouponDistribution')
-      const res = await fn()
+      const fn = httpsCallable<
+        { couponIds: string[] },
+        { distributedCount: number; weather: unknown }
+      >(functions, 'testCouponDistribution')
+      const res = await fn({ couponIds: Array.from(testSelectedIds) })
       const d = res.data
       alert(`テスト完了: ${d.distributedCount}件 配信\n\n天気データ:\n${JSON.stringify(d.weather, null, 2)}`)
     } catch (err) {
       console.error('[testCouponDistribution]', err)
-      alert('テスト実行に失敗しました: ' + (err as Error).message)
+      const code = (err as { code?: string })?.code
+      const msg = (err as Error)?.message ?? String(err)
+      alert(code === 'functions/invalid-argument' ? msg : 'テスト実行に失敗しました: ' + msg)
     } finally {
       setTestRunning(false)
     }
@@ -412,10 +445,15 @@ export default function CouponManager() {
             </button>
             <button
               onClick={handleTestDistribution}
-              disabled={testRunning}
+              disabled={testRunning || testSelectedIds.size === 0}
+              title={
+                testSelectedIds.size === 0
+                  ? '一覧でクーポンを選択してから実行してください'
+                  : `選択中 ${testSelectedIds.size} 件をテスト配信`
+              }
               className="text-xs bg-[#ff9500]/10 hover:bg-[#ff9500]/20 text-[#ff9500] px-3 py-1.5 rounded-lg transition disabled:opacity-30 font-semibold"
             >
-              {testRunning ? '実行中...' : 'テスト配信'}
+              {testRunning ? '実行中...' : `テスト配信${testSelectedIds.size > 0 ? ` (${testSelectedIds.size})` : ''}`}
             </button>
           </div>
         </div>
@@ -438,16 +476,40 @@ export default function CouponManager() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-[#86868b] text-xs font-medium tracking-wide">
-            クーポンテンプレート ({coupons.length}件)
-          </h3>
-          <button
-            onClick={() => showForm ? resetForm() : handleNewForm()}
-            className="text-[#0095B6] text-xs font-semibold hover:text-[#007A96] transition"
-          >
-            {showForm ? '✕ 閉じる' : '＋ 新規作成'}
-          </button>
+        <div className="flex items-center justify-between px-4 py-3 gap-2 flex-wrap">
+          <div>
+            <h3 className="text-[#86868b] text-xs font-medium tracking-wide">
+              クーポンテンプレート ({coupons.length}件)
+            </h3>
+            <p className="text-[#86868b]/80 text-[10px] mt-0.5">
+              テスト配信は、☑で選んだテンプレのみ対象（自動配信OFFでも試せます）
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={selectAllTestCoupons}
+              disabled={coupons.length === 0}
+              className="text-[#0095B6] text-[10px] font-semibold hover:text-[#007A96] transition disabled:opacity-30"
+            >
+              テスト対象を全選択
+            </button>
+            <span className="text-[#e5e5ea] text-[10px]">|</span>
+            <button
+              type="button"
+              onClick={clearTestCouponSelection}
+              disabled={testSelectedIds.size === 0}
+              className="text-[#86868b] text-[10px] font-medium hover:text-[#1d1d1f] transition disabled:opacity-30"
+            >
+              クリア
+            </button>
+            <button
+              onClick={() => (showForm ? resetForm() : handleNewForm())}
+              className="text-[#0095B6] text-xs font-semibold hover:text-[#007A96] transition"
+            >
+              {showForm ? '✕ 閉じる' : '＋ 新規作成'}
+            </button>
+          </div>
         </div>
 
         {/* 新規作成 / 編集フォーム */}
@@ -732,7 +794,15 @@ export default function CouponManager() {
               }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
+                <label className="flex items-start gap-2 flex-1 min-w-0 cursor-pointer pt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={testSelectedIds.has(c.id)}
+                    onChange={() => toggleTestCouponSelection(c.id)}
+                    className="mt-1 w-4 h-4 rounded border-[#e5e5ea] text-[#ff9500] focus:ring-[#ff9500] flex-shrink-0"
+                    title="テスト配信の対象に含める"
+                  />
+                  <span className="flex-1 min-w-0">
                   <p className="text-[#1d1d1f] text-sm font-medium truncate">{c.title}</p>
                   {c.description && (
                     <p className="text-[#86868b] text-xs mt-0.5 truncate">{c.description}</p>
@@ -758,7 +828,8 @@ export default function CouponManager() {
                       </span>
                     )}
                   </div>
-                </div>
+                  </span>
+                </label>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     onClick={() => handleOpenIndividualModal(c)}

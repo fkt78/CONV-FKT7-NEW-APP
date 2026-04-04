@@ -176,11 +176,16 @@ export default function NewsManager() {
     ? URL.createObjectURL(imageFile)
     : (!removeImage && editingImageUrl) ? editingImageUrl : ''
 
+  /** 公開期限を過ぎたものは一覧に出さない（ユーザー向け VipNews と同じ基準） */
+  const visibleNewsList = newsList.filter(
+    (item) => !item.expiresAt || item.expiresAt.getTime() > Date.now(),
+  )
+
   return (
     <div className="flex flex-col h-full bg-white">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#e5e5ea] flex-shrink-0">
         <h3 className="text-[#86868b] text-xs font-medium tracking-wide">
-          VIP NEWS ({newsList.length}件)
+          VIP NEWS ({visibleNewsList.length}件)
         </h3>
         <button
           onClick={() => showForm ? resetForm() : setShowForm(true)}
@@ -367,7 +372,12 @@ export default function NewsManager() {
           {newsList.length === 0 && !showForm && (
             <p className="text-[#86868b] text-sm text-center py-10">お知らせはまだありません</p>
           )}
-          {newsList.map((item) => (
+          {newsList.length > 0 && visibleNewsList.length === 0 && !showForm && (
+            <p className="text-[#86868b] text-sm text-center py-10">
+              表示できるお知らせはありません（公開期限を過ぎた投稿のみが登録されています）
+            </p>
+          )}
+          {visibleNewsList.map((item) => (
             <div key={item.id} className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
