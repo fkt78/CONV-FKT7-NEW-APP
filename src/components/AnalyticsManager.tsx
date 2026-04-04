@@ -65,6 +65,55 @@ function formatDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function periodLabel(p: Period): string {
+  return p === '7d' ? '7日間' : p === '30d' ? '30日間' : '全期間'
+}
+
+function escapeCsvField(value: string | number): string {
+  const s = String(value)
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`
+  }
+  return s
+}
+
+function buildAnalyticsCsv(data: AnalyticsData, period: Period): string {
+  const lines: string[] = []
+  const pLabel = periodLabel(period)
+  const generated = new Date().toISOString()
+
+  lines.push(`分析レポート,期間:${pLabel},生成:${generated}`)
+  lines.push('')
+  lines.push('サマリー')
+  lines.push(['指標', '値'].map(escapeCsvField).join(','))
+  lines.push(['クーポン利用率(%)', data.couponUsageRate].map(escapeCsvField).join(','))
+  lines.push(['クーポン配布数', data.couponDistributed].map(escapeCsvField).join(','))
+  lines.push(['クーポン使用数', data.couponUsed].map(escapeCsvField).join(','))
+  lines.push(['チャットメッセージ数', data.totalMessages].map(escapeCsvField).join(','))
+  lines.push(['会員メッセージ数', data.customerMessages].map(escapeCsvField).join(','))
+  lines.push(['管理者メッセージ数', data.adminMessages].map(escapeCsvField).join(','))
+  lines.push(['アクティブ会員（チャットした会員数）', data.activeChats].map(escapeCsvField).join(','))
+  lines.push(['新規登録数', data.newUsers].map(escapeCsvField).join(','))
+  lines.push(['累計会員数', data.totalUsers].map(escapeCsvField).join(','))
+  lines.push(['累計節約額', data.totalSavedAmount].map(escapeCsvField).join(','))
+  lines.push('')
+  lines.push('クーポン（テンプレート別）')
+  lines.push(['クーポン名', '配布', '使用', '利用率(%)'].map(escapeCsvField).join(','))
+  for (const row of data.byTemplate) {
+    lines.push(
+      [row.title, row.distributed, row.used, row.rate].map(escapeCsvField).join(','),
+    )
+  }
+  lines.push('')
+  lines.push('メッセージ数（日別）')
+  lines.push(['日付', '件数'].map(escapeCsvField).join(','))
+  for (const row of data.byDay) {
+    lines.push([row.date, row.messages].map(escapeCsvField).join(','))
+  }
+
+  return '\uFEFF' + lines.join('\r\n')
+}
+
 export default function AnalyticsManager() {
   const [period, setPeriod] = useState<Period>('30d')
   const [loading, setLoading] = useState(false)
@@ -211,6 +260,18 @@ export default function AnalyticsManager() {
     fetchAnalytics()
   }, [fetchAnalytics])
 
+  function handleExportCsv() {
+    if (!data) return
+    const csv = buildAnalyticsCsv(data, period)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `analytics_${period}_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading && !data) {
     return (
       <div className="flex flex-col h-full bg-white items-center justify-center py-16">
@@ -221,22 +282,32 @@ export default function AnalyticsManager() {
 
   return (
     <div className="flex flex-col h-full bg-white overflow-y-auto">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e5e5ea] flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e5e5ea] flex-shrink-0 gap-2 flex-wrap">
         <h3 className="text-[#86868b] text-xs font-medium tracking-wide">分析・レポート</h3>
-        <div className="flex gap-1">
-          {(['7d', '30d', 'all'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
-                period === p
-                  ? 'bg-[#0095B6] text-white'
-                  : 'bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f]'
-              }`}
-            >
-              {p === '7d' ? '7日間' : p === '30d' ? '30日間' : '全期間'}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={!data || loading}
+            className="px-3 py-1 rounded-lg text-xs font-medium bg-[#0095B6] text-white hover:bg-[#007A96] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            CSV出力
+          </button>
+          <div className="flex gap-1">
+            {(['7d', '30d', 'all'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                  period === p
+                    ? 'bg-[#0095B6] text-white'
+                    : 'bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
+              >
+                {p === '7d' ? '7日間' : p === '30d' ? '30日間' : '全期間'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
