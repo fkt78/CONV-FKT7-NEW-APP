@@ -101,6 +101,18 @@
       "subtitle": "銀行口座で契約OK",
       "cta": "詳細を見る"
     },
+    "biglobeWimax": {
+      "badge": "工事不要の爆速Wi-Fi",
+      "title": "BIGLOBE WiMAX +5G",
+      "subtitle": "届いてすぐ使い放題・初月0円",
+      "cta": "詳細を見る"
+    },
+    "biglobeWimaxVn": {
+      "badge": "外国人も安心・口座振替OK",
+      "title": "BIGLOBE WiMAX",
+      "subtitle": "クレジットカード不要で高速インターネット",
+      "cta": "詳細を見る"
+    },
     "commufa": {
       "badge": "三重・中部限定",
       "title": "コミュファ光",

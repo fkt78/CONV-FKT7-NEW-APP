@@ -61,6 +61,22 @@ const SLIDES: BannerSlide[] = [
     href: 'https://fkt-office.com/life-support.html#goen-mobile',
   },
   {
+    id: 'biglobe-wimax',
+    bgImage: '/banners/biglobe-wimax-jp.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.biglobeWimax',
+    badgeColor: '#ff6600',
+    href: 'https://fkt-office.com/service-guide.html#biglobe-wimax',
+  },
+  {
+    id: 'biglobe-wimax-vn',
+    bgImage: '/banners/biglobe-wimax-vn.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.biglobeWimaxVn',
+    badgeColor: '#007aff',
+    href: 'https://fkt-office.com/life-support.html#biglobe-wimax',
+  },
+  {
     id: 'commufa',
     bgImage: '/banners/commufa-bg.png',
     bgPosition: 'right center',

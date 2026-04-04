@@ -101,6 +101,18 @@
       "subtitle": "Đăng ký bằng tài khoản ngân hàng",
       "cta": "Xem chi tiết"
     },
+    "biglobeWimax": {
+      "badge": "Wi-Fi tốc độ cao",
+      "title": "BIGLOBE WiMAX +5G",
+      "subtitle": "Dùng tẹt ga ngay khi nhận・Miễn phí tháng đầu",
+      "cta": "Xem chi tiết"
+    },
+    "biglobeWimaxVn": {
+      "badge": "Người nước ngoài OK・Thanh toán ngân hàng",
+      "title": "BIGLOBE WiMAX",
+      "subtitle": "Internet tốc độ cao không cần thẻ tín dụng",
+      "cta": "Xem chi tiết"
+    },
     "commufa": {
       "badge": "Giới hạn Mie・Chubu",
       "title": "Commufa Hikari",

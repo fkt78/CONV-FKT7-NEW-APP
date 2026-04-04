@@ -101,6 +101,18 @@
       "subtitle": "Bank account payment OK",
       "cta": "Learn More"
     },
+    "biglobeWimax": {
+      "badge": "High-speed Wi-Fi",
+      "title": "BIGLOBE WiMAX +5G",
+      "subtitle": "Unlimited data ready・First mo 0 JPY",
+      "cta": "Learn More"
+    },
+    "biglobeWimaxVn": {
+      "badge": "Foreigners welcome・Bank pay",
+      "title": "BIGLOBE WiMAX",
+      "subtitle": "High-speed internet, no credit card needed",
+      "cta": "Learn More"
+    },
     "commufa": {
       "badge": "Mie & Chubu Only",
       "title": "Commufa Hikari",
