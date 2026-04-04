@@ -37,6 +37,14 @@ const SLIDES: BannerSlide[] = [
     href: 'https://fkt-office.com/life-support.html',
   },
   {
+    id: 'furnished-share-house',
+    bgImage: '/banners/furnished-share-house.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.furnishedShareHouse',
+    badgeColor: '#ea580c',
+    href: 'https://fkt-office.com/life-support.html#furnished-share-house',
+  },
+  {
     id: 'sim',
     bgImage: '/banners/sim-bg.png',
     bgPosition: 'right center',
@@ -75,6 +83,14 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.biglobeWimaxVn',
     badgeColor: '#007aff',
     href: 'https://fkt-office.com/life-support.html#biglobe-wimax',
+  },
+  {
+    id: 'daiwan-telecom',
+    bgImage: '/banners/daiwan-telecom.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.daiwanTelecom',
+    badgeColor: '#e30613',
+    href: 'https://fkt-office.com/life-support.html#daiwan-telecom',
   },
   {
     id: 'commufa',

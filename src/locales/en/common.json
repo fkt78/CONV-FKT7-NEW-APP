@@ -83,6 +83,12 @@
       "subtitle": "No credit card needed. Buy with cash at 7-Eleven.",
       "cta": "Learn More"
     },
+    "furnishedShareHouse": {
+      "badge": "No guarantor",
+      "title": "Furnished share house",
+      "subtitle": "Fully furnished, move in today",
+      "cta": "Learn More"
+    },
     "sim": {
       "badge": "Save Money",
       "title": "Budget SIM (Excite)",
@@ -111,6 +117,12 @@
       "badge": "Foreigners welcome・Bank pay",
       "title": "BIGLOBE WiMAX",
       "subtitle": "High-speed internet, no credit card needed",
+      "cta": "Learn More"
+    },
+    "daiwanTelecom": {
+      "badge": "High-price buyback",
+      "title": "Daiwan Telecom",
+      "subtitle": "Sell your old phone at a high price",
       "cta": "Learn More"
     },
     "commufa": {

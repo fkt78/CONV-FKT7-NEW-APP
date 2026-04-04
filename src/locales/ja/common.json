@@ -83,6 +83,12 @@
       "subtitle": "クレカ不要。セブン-イレブンのレジで現金購入できます。",
       "cta": "詳細を見る"
     },
+    "furnishedShareHouse": {
+      "badge": "保証人不要",
+      "title": "家具家電付きシェアハウス",
+      "subtitle": "カバン1つで即入居OK",
+      "cta": "詳細を見る"
+    },
     "sim": {
       "badge": "Save Money",
       "title": "格安SIM（エキサイト）",
@@ -111,6 +117,12 @@
       "badge": "外国人も安心・口座振替OK",
       "title": "BIGLOBE WiMAX",
       "subtitle": "クレジットカード不要で高速インターネット",
+      "cta": "詳細を見る"
+    },
+    "daiwanTelecom": {
+      "badge": "スマホ高額買取",
+      "title": "ダイワンテレコム",
+      "subtitle": "不要なスマホを高く売ろう",
       "cta": "詳細を見る"
     },
     "commufa": {

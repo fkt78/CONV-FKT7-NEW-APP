@@ -83,6 +83,12 @@
       "subtitle": "Không cần thẻ tín dụng. Mua bằng tiền mặt tại 7-Eleven.",
       "cta": "Xem chi tiết"
     },
+    "furnishedShareHouse": {
+      "badge": "Không cần người bảo lãnh",
+      "title": "Share house đầy đủ nội thất",
+      "subtitle": "Đầy đủ nội thất, vào ở ngay",
+      "cta": "Xem chi tiết"
+    },
     "sim": {
       "badge": "Save Money",
       "title": "SIM Giá Rẻ (Excite)",
@@ -111,6 +117,12 @@
       "badge": "Người nước ngoài OK・Thanh toán ngân hàng",
       "title": "BIGLOBE WiMAX",
       "subtitle": "Internet tốc độ cao không cần thẻ tín dụng",
+      "cta": "Xem chi tiết"
+    },
+    "daiwanTelecom": {
+      "badge": "Thu mua giá cao",
+      "title": "Daiwan Telecom",
+      "subtitle": "Bán điện thoại cũ với giá cao",
       "cta": "Xem chi tiết"
     },
     "commufa": {
