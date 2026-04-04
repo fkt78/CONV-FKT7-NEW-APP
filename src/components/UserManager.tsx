@@ -24,6 +24,8 @@ interface UserRecord {
   totalSavedAmount: number
   usedCouponCount: number
   memberNumber: number | null
+  /** 例: food_support（食料支援）。管理者のみ編集 */
+  memberGroups: string[]
 }
 
 const ATTRIBUTE_LABELS: Record<string, string> = {
@@ -91,6 +93,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
             totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
             usedCouponCount: 0,
             memberNumber: (data.memberNumber as number) ?? null,
+            memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
           }
         }),
       )
@@ -125,6 +128,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
           usedCouponCount: usedSnap.size,
           memberNumber: (data.memberNumber as number) ?? null,
+          memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
         })
       }
 
@@ -135,6 +139,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
         'メール',
         '属性',
         '誕生月',
+        'メンバーグループ',
         'ステータス',
         '累計節約額',
         'クーポン使用回数',
@@ -146,6 +151,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
         escapeCsvField(r.email),
         escapeCsvField(ATTRIBUTE_LABELS[r.attribute] ?? r.attribute),
         escapeCsvField(r.birthMonth),
+        escapeCsvField(r.memberGroups.join(';')),
         escapeCsvField(STATUS_LABELS[r.status] ?? r.status),
         escapeCsvField(r.totalSavedAmount),
         escapeCsvField(r.usedCouponCount),
@@ -236,6 +242,23 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
       await updateDoc(doc(db, 'users', user.uid), { status: 'blacklisted', yellowCards: 3 })
     } catch (err) {
       console.error('レッドカード更新エラー:', err)
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingUid(null)
+    }
+  }
+
+  async function handleToggleFoodSupport(user: UserRecord) {
+    if (user.uid === currentUser?.uid) return
+    const has = user.memberGroups.includes('food_support')
+    const next = has
+      ? user.memberGroups.filter((g) => g !== 'food_support')
+      : [...user.memberGroups, 'food_support']
+    setUpdatingUid(user.uid)
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { memberGroups: next })
+    } catch (err) {
+      console.error('食料支援フラグ更新エラー:', err)
       alert('更新に失敗しました')
     } finally {
       setUpdatingUid(null)
@@ -386,6 +409,9 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">氏名</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">メール</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">属性</th>
+                    <th className="text-center px-2 py-3 text-[#86868b] font-medium text-xs whitespace-nowrap" title="食料支援クーポン配信対象">
+                      食料<br />支援
+                    </th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">誕生月</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">カード</th>
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">ステータス</th>
@@ -441,6 +467,22 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                       <td className="px-4 py-3 text-[#86868b] font-mono text-xs">{user.email}</td>
                       <td className="px-4 py-3 text-[#86868b]">
                         {ATTRIBUTE_LABELS[user.attribute] ?? user.attribute}
+                      </td>
+                      <td className="px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {user.uid !== currentUser?.uid ? (
+                          <label className="inline-flex items-center justify-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={user.memberGroups.includes('food_support')}
+                              onChange={() => handleToggleFoodSupport(user)}
+                              disabled={updatingUid === user.uid}
+                              className="rounded border-[#e5e5ea] text-[#34C759] focus:ring-[#34C759] w-4 h-4"
+                              title="食料支援メンバー（自動配信の対象）"
+                            />
+                          </label>
+                        ) : (
+                          <span className="text-[#86868b]">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-[#86868b]">{user.birthMonth}</td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>

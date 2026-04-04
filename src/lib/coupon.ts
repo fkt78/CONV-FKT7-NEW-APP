@@ -13,6 +13,20 @@ import { db } from './firebase'
 
 export type WeatherCondition = 'any' | 'rain' | 'snow' | 'cold_below' | 'hot_above' | 'warning'
 
+/** メンバーグループ（自動配信の対象絞り込み）。`all`＝全員。`food_support` は1日5枚上限の対象外 */
+export type TargetMemberGroup = 'all' | 'food_support' | string
+
+/** 管理画面・表示用ラベル（キーは Firestore の memberGroups と一致） */
+export const MEMBER_GROUP_LABELS: Record<string, string> = {
+  all: '全員',
+  food_support: '食料支援',
+}
+
+/** 食料支援テンプレのみ true（デイリーリミットにカウントしない） */
+export function isDailyLimitExempt(c: Pick<CouponTemplate, 'targetMemberGroup'>): boolean {
+  return c.targetMemberGroup === 'food_support'
+}
+
 /** 属性（性別・その他） */
 export type TargetAttribute = 'all' | 'male' | 'female' | 'student' | 'other'
 
@@ -45,6 +59,13 @@ export interface CouponTemplate {
   targetAgeRange?: TargetAgeRange
   /** @deprecated 後方互換。targetAttribute + targetAgeRanges を優先 */
   targetSegment?: TargetSegment
+  /**
+   * 自動配信の対象メンバー。
+   * - `all` または未設定: 属性・年代のみで絞り込み（従来どおり）
+   * - `food_support`: `users.memberGroups` に `food_support` が含まれる会員のみ。デイリーリミット対象外。
+   * - その他のキー: 同様に memberGroups に含まれる会員のみ（リミットは通常カウント）
+   */
+  targetMemberGroup?: TargetMemberGroup
   active: boolean
   createdAt: Date | null
   /** 有効期限の種類（未設定時は当日） */
@@ -154,9 +175,16 @@ export function getTargetFromCoupon(c: CouponTemplate): { attr: TargetAttribute;
 export function formatTargetLabel(c: CouponTemplate): string {
   const { attr, ages } = getTargetFromCoupon(c)
   const attrLabel = ATTRIBUTE_LABELS[attr]
-  if (ages.length === 0) return attrLabel
-  const ageLabels = ages.map((a) => AGE_RANGE_LABELS[a]).join('・')
-  return attr === 'all' ? ageLabels : `${attrLabel}の${ageLabels}`
+  const segment =
+    ages.length === 0
+      ? attrLabel
+      : attr === 'all'
+        ? ages.map((a) => AGE_RANGE_LABELS[a]).join('・')
+        : `${attrLabel}の${ages.map((a) => AGE_RANGE_LABELS[a]).join('・')}`
+  const mg = c.targetMemberGroup && c.targetMemberGroup !== 'all'
+    ? MEMBER_GROUP_LABELS[c.targetMemberGroup] ?? c.targetMemberGroup
+    : null
+  return mg ? `${mg} / ${segment}` : segment
 }
 
 /** 配布日から有効期限の日付を計算（23:59:59.999） */

@@ -27,9 +27,11 @@ import {
   type TargetAgeRange,
   type ExpiryType,
   type IndividualDistributionResult,
+  type TargetMemberGroup,
   ATTRIBUTE_LABELS,
   AGE_RANGE_LABELS,
   AGE_RANGE_KEYS,
+  MEMBER_GROUP_LABELS,
   CONDITION_LABELS,
   CONDITION_OPTIONS,
   EXPIRY_LABELS,
@@ -49,6 +51,7 @@ export default function CouponManager() {
   const [cond, setCond] = useState<WeatherCondition>('any')
   const [threshold, setThreshold] = useState(10)
   const [targetAttribute, setTargetAttribute] = useState<TargetAttribute>('all')
+  const [targetMemberGroup, setTargetMemberGroup] = useState<TargetMemberGroup>('all')
   const [targetAgeRanges, setTargetAgeRanges] = useState<TargetAgeRange[]>([])
   const [expiryType, setExpiryType] = useState<ExpiryType>('same_day')
   const [expiryDate, setExpiryDate] = useState('')
@@ -170,6 +173,7 @@ export default function CouponManager() {
     setCond('any')
     setThreshold(10)
     setTargetAttribute('all')
+    setTargetMemberGroup('all')
     setTargetAgeRanges([])
     setExpiryType('same_day')
     setExpiryDate('')
@@ -191,6 +195,7 @@ export default function CouponManager() {
     setThreshold(c.temperatureThreshold ?? 10)
     const t = getTargetFromCoupon(c)
     setTargetAttribute(t.attr)
+    setTargetMemberGroup((c.targetMemberGroup as TargetMemberGroup) ?? 'all')
     setTargetAgeRanges(t.ages)
     setExpiryType(c.expiryType ?? 'same_day')
     setExpiryDate(c.expiryDate ?? '')
@@ -223,6 +228,7 @@ export default function CouponManager() {
         weatherCondition: cond,
         temperatureThreshold: cond === 'cold_below' || cond === 'hot_above' ? threshold : null,
         targetAttribute: targetAttribute,
+        targetMemberGroup: targetMemberGroup === 'all' ? null : targetMemberGroup,
         targetAgeRanges: targetAgeRanges,
         expiryType,
         expiryDate: expiryType === 'date' ? expiryDate : null,
@@ -426,7 +432,7 @@ export default function CouponManager() {
                 <option key={n} value={n} className="bg-white text-[#1d1d1f]">{n}回</option>
               ))}
             </select>
-            <span className="text-[#86868b] text-[10px]">（毎朝7時・1ユーザー1日の自動配信合計）</span>
+            <span className="text-[#86868b] text-[10px]">（毎朝7時・食料支援テンプレは上限に含めない）</span>
           </div>
         </div>
       </div>
@@ -534,6 +540,21 @@ export default function CouponManager() {
                 </div>
                 <p className="text-[#86868b] text-[10px] mt-1">未選択＝全年代</p>
               </div>
+            </div>
+
+            <div>
+              <label className="text-[#86868b] text-[10px] block mb-1">対象メンバーグループ</label>
+              <select
+                value={targetMemberGroup}
+                onChange={(e) => setTargetMemberGroup(e.target.value as TargetMemberGroup)}
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm focus:outline-none focus:border-[#0095B6]"
+              >
+                <option value="all">{MEMBER_GROUP_LABELS.all}（属性・年代のみで絞り込み）</option>
+                <option value="food_support">{MEMBER_GROUP_LABELS.food_support}（users の「食料支援」チェック済みのみ）</option>
+              </select>
+              <p className="text-[#86868b] text-[10px] mt-1 leading-relaxed">
+                食料支援を選ぶと、自動配信は「1日◯枚」上限の<strong className="text-[#1d1d1f]">カウント外</strong>です（毎日1枚＋他クーポン最大5枚）。
+              </p>
             </div>
 
             <div>

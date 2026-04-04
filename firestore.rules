@@ -22,6 +22,7 @@ service cloud.firestore {
           (request.auth.uid == uid
             && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
             && (!('status' in request.resource.data) || request.resource.data.status == resource.data.status)
+            && (!('memberGroups' in request.resource.data) || request.resource.data.memberGroups == resource.data.memberGroups)
           )
           || isAdmin()
         );

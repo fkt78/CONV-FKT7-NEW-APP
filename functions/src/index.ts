@@ -1,7 +1,7 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { getFirestore, Timestamp, type DocumentReference } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { initializeApp } from 'firebase-admin/app'
 
@@ -330,6 +330,8 @@ interface CouponTemplate {
   targetAgeRanges?: TargetAgeRange[]
   targetAgeRange?: TargetAgeRange
   targetSegment?: TargetSegment
+  /** `food_support` のとき自動配信は1日5枚上限に含めない */
+  targetMemberGroup?: string
   expiryType?: ExpiryType
   expiryDate?: string
   autoDistribute?: boolean
@@ -339,6 +341,19 @@ interface CouponTemplate {
     dayOfMonth?: number
     months?: number[]
   }
+}
+
+/** 食料支援テンプレのみ true（couponLogs の件数に含めない） */
+function isDailyLimitExempt(coupon: CouponTemplate): boolean {
+  return coupon.targetMemberGroup === 'food_support'
+}
+
+/** users.memberGroups にテンプレの targetMemberGroup が含まれるか */
+function matchesMemberGroup(coupon: CouponTemplate, memberGroups: unknown): boolean {
+  const g = coupon.targetMemberGroup ?? 'all'
+  if (g === 'all' || g === '') return true
+  const arr = Array.isArray(memberGroups) ? (memberGroups as string[]) : []
+  return arr.includes(g)
 }
 
 /** 気象庁の警報・注意報コードから名称を返す（ログ用） */
@@ -647,11 +662,17 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
           if (!isBirthMonthDay(birth ?? '', dayOfMonthForBirth, jstNow)) continue
           const t = getTargetFromCoupon(coupon)
           if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', birth ?? '01-2000')) continue
+          if (!matchesMemberGroup(coupon, u.memberGroups)) continue
 
-          const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
-          const logSnap = await logRef.get()
-          const count = logSnap.exists ? (logSnap.data()?.count as number) : 0
-          if (count >= dailyLimit) continue
+          const exempt = isDailyLimitExempt(coupon)
+          let count = 0
+          let logRef: DocumentReference | null = null
+          if (!exempt) {
+            logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
+            const logSnap = await logRef.get()
+            count = logSnap.exists ? (logSnap.data()?.count as number) : 0
+            if (count >= dailyLimit) continue
+          }
 
           const couponDocId = `${coupon.id}_${today}`
           const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
@@ -671,7 +692,9 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             expiresAt: Timestamp.fromDate(expiresAtDate),
             usedAt: null,
           })
-          await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          if (!exempt && logRef) {
+            await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          }
           distributedCount++
         }
       } else {
@@ -698,11 +721,17 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
           const uid = uDoc.id
           const t = getTargetFromCoupon(coupon)
           if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
+          if (!matchesMemberGroup(coupon, u.memberGroups)) continue
 
-          const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
-          const logSnap = await logRef.get()
-          const count = logSnap.exists ? (logSnap.data()?.count as number) : 0
-          if (count >= dailyLimit) continue
+          const exempt = isDailyLimitExempt(coupon)
+          let count = 0
+          let logRef: DocumentReference | null = null
+          if (!exempt) {
+            logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
+            const logSnap = await logRef.get()
+            count = logSnap.exists ? (logSnap.data()?.count as number) : 0
+            if (count >= dailyLimit) continue
+          }
 
           const couponDocId = `${coupon.id}_${today}`
           const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
@@ -719,7 +748,9 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             expiresAt: Timestamp.fromDate(expiresAtDate),
             usedAt: null,
           })
-          await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          if (!exempt && logRef) {
+            await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          }
           distributedCount++
         }
       }
