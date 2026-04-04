@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   collection,
   query,
@@ -40,6 +40,59 @@ const STATUS_LABELS: Record<string, string> = {
   blacklisted: 'ブラックリスト',
 }
 
+type UserSortKey =
+  | 'memberNumber'
+  | 'fullName'
+  | 'email'
+  | 'attribute'
+  | 'birthMonth'
+  | 'status'
+  | 'totalSavedAmount'
+
+function sortUsersList(
+  list: UserRecord[],
+  sortKey: UserSortKey,
+  sortDir: 'asc' | 'desc',
+): UserRecord[] {
+  const mul = sortDir === 'asc' ? 1 : -1
+  return [...list].sort((a, b) => {
+    let cmp = 0
+    switch (sortKey) {
+      case 'memberNumber': {
+        const av = a.memberNumber
+        const bv = b.memberNumber
+        if (av == null && bv == null) cmp = 0
+        else if (av == null) cmp = 1
+        else if (bv == null) cmp = -1
+        else cmp = av - bv
+        break
+      }
+      case 'fullName':
+        cmp = a.fullName.localeCompare(b.fullName, 'ja')
+        break
+      case 'email':
+        cmp = a.email.localeCompare(b.email, 'ja', { sensitivity: 'base' })
+        break
+      case 'attribute':
+        cmp = a.attribute.localeCompare(b.attribute, 'ja')
+        break
+      case 'birthMonth':
+        cmp = a.birthMonth.localeCompare(b.birthMonth, 'ja')
+        break
+      case 'status':
+        cmp = a.status.localeCompare(b.status)
+        break
+      case 'totalSavedAmount':
+        cmp = (a.totalSavedAmount ?? 0) - (b.totalSavedAmount ?? 0)
+        break
+      default:
+        cmp = 0
+    }
+    if (cmp !== 0) return mul * cmp
+    return a.uid.localeCompare(b.uid)
+  })
+}
+
 interface UserManagerProps {
   onOpenChat?: (uid: string) => void
   onSendToSelected?: (uids: string[]) => void
@@ -75,6 +128,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
   const [couponModalUser, setCouponModalUser] = useState<UserRecord | null>(null)
   const [userCoupons, setUserCoupons] = useState<UserCoupon[]>([])
   const [loadingCoupons, setLoadingCoupons] = useState(false)
+  const [sortKey, setSortKey] = useState<UserSortKey>('memberNumber')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     const q = query(collection(db, 'users'))
@@ -265,10 +320,19 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     }
   }
 
-  const sortedUsers = [...users].sort((a, b) => {
-    if (a.status !== b.status) return a.status === 'active' ? -1 : 1
-    return b.totalSavedAmount - a.totalSavedAmount
-  })
+  const sortedUsers = useMemo(
+    () => sortUsersList(users, sortKey, sortDir),
+    [users, sortKey, sortDir],
+  )
+
+  function toggleUserSort(key: UserSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
 
   const couponFetchIdRef = useRef(0)
 
@@ -350,6 +414,40 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     setSelectedUids(new Set())
   }
 
+  function sortHeader(
+    label: string,
+    key: UserSortKey,
+    opts?: { align?: 'left' | 'right' | 'center'; nowrap?: boolean },
+  ) {
+    const align = opts?.align ?? 'left'
+    const alignClass =
+      align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+    const active = sortKey === key
+    const btnRow = align === 'right' ? 'w-full justify-end' : ''
+    return (
+      <th
+        className={`${alignClass} px-4 py-3 text-[#86868b] font-medium ${opts?.nowrap ? 'whitespace-nowrap' : ''}`}
+      >
+        <button
+          type="button"
+          onClick={() => toggleUserSort(key)}
+          className={`inline-flex items-center gap-1 hover:text-[#1d1d1f] transition ${btnRow} ${
+            active ? 'text-[#1d1d1f] font-semibold' : ''
+          }`}
+          aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+        >
+          <span>{label}</span>
+          <span
+            className={`inline-flex w-4 justify-center text-[10px] ${active ? 'text-[#0095B6]' : 'text-[#c7c7cc]'}`}
+            aria-hidden
+          >
+            {active ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+          </span>
+        </button>
+      </th>
+    )
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f5f7]">
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e5ea]">
@@ -405,19 +503,19 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                         />
                       </th>
                     )}
-                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">会員番号</th>
-                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">氏名</th>
-                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">メール</th>
-                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">属性</th>
+                    {sortHeader('会員番号', 'memberNumber', { nowrap: true })}
+                    {sortHeader('氏名', 'fullName')}
+                    {sortHeader('メール', 'email')}
+                    {sortHeader('属性', 'attribute')}
                     <th className="text-center px-2 py-3 text-[#86868b] font-medium text-xs whitespace-nowrap" title="食料支援クーポン配信対象">
                       食料<br />支援
                     </th>
-                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">誕生月</th>
+                    {sortHeader('誕生月', 'birthMonth')}
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">カード</th>
-                    <th className="text-left px-4 py-3 text-[#86868b] font-medium">ステータス</th>
+                    {sortHeader('ステータス', 'status')}
                     <th className="text-left px-4 py-3 text-[#86868b] font-medium">操作</th>
                     <th className="text-right px-4 py-3 text-[#86868b] font-medium">使用回数</th>
-                    <th className="text-right px-4 py-3 text-[#86868b] font-medium">累計節約</th>
+                    {sortHeader('累計節約', 'totalSavedAmount', { align: 'right' })}
                   </tr>
                 </thead>
                 <tbody>

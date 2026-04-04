@@ -1,7 +1,8 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { getFirestore, Timestamp, type DocumentReference } from 'firebase-admin/firestore'
+import { onCall, HttpsError, type CallableRequest } from 'firebase-functions/v2/https'
+import { createHash } from 'node:crypto'
+import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { initializeApp } from 'firebase-admin/app'
 
@@ -196,8 +197,66 @@ export const onUserCreated = onDocumentCreated('users/{uid}', async (event) => {
   console.log('Assigned memberNumber', nextNumber, 'to', uid)
 })
 
-/** ブラックリスト照合（未認証でも呼び出し可能） */
+/** checkBlacklist 用：同一クライアントあたりの呼び出し上限（窓内） */
+const CHECK_BLACKLIST_MAX_PER_WINDOW = 40
+const CHECK_BLACKLIST_WINDOW_MS = 15 * 60 * 1000
+
+function getCallableClientIp(req: CallableRequest): string {
+  const raw = req.rawRequest
+  if (!raw) return 'unknown'
+  const xf = raw.headers['x-forwarded-for']
+  if (typeof xf === 'string' && xf.trim()) return xf.split(',')[0].trim()
+  const rip = raw.socket?.remoteAddress
+  return typeof rip === 'string' && rip ? rip : 'unknown'
+}
+
+/** Firestore に窓単位でカウントし、総当たり緩和 */
+async function assertCheckBlacklistRateLimit(req: CallableRequest): Promise<void> {
+  const ip = getCallableClientIp(req)
+  const id = createHash('sha256').update(`checkBlacklist:${ip}`).digest('hex').slice(0, 40)
+  const ref = db.collection('callableRateLimits').doc(id)
+  const now = Date.now()
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    const data = snap.data()
+    const windowStartMs = (data?.windowStartMs as number | undefined) ?? 0
+    let count = (data?.count as number | undefined) ?? 0
+    if (now - windowStartMs > CHECK_BLACKLIST_WINDOW_MS) {
+      tx.set(
+        ref,
+        {
+          windowStartMs: now,
+          count: 1,
+          bucket: 'checkBlacklist',
+          updatedAt: Timestamp.now(),
+        },
+        { merge: true },
+      )
+      return
+    }
+    if (count >= CHECK_BLACKLIST_MAX_PER_WINDOW) {
+      throw new HttpsError(
+        'resource-exhausted',
+        'リクエストが多すぎます。しばらくしてから再試行してください。',
+      )
+    }
+    tx.set(
+      ref,
+      {
+        count: count + 1,
+        windowStartMs,
+        bucket: 'checkBlacklist',
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true },
+    )
+  })
+}
+
+/** ブラックリスト照合（未認証でも呼び出し可能・レート制限あり） */
 export const checkBlacklist = onCall(async (request) => {
+  await assertCheckBlacklistRateLimit(request)
+
   const { fullName, email } = request.data as { fullName?: string; email?: string }
   if (!fullName && !email) {
     throw new HttpsError('invalid-argument', '照合するデータがありません')
@@ -567,8 +626,9 @@ function computeExpiryDate(expiryType: ExpiryType, expiryDateStr: string | undef
     case 'same_day':
       return jstEndOfDay(y, m, d)
     case 'end_of_week': {
+      // 日曜のみ (7-0)%7=0 だと配信日当日で切れる → 翌週日曜まで（+7日）
       const day = dist.getUTCDay()
-      const daysUntilSunday = (7 - day) % 7
+      const daysUntilSunday = day === 0 ? 7 : (7 - day) % 7
       const sunday = new Date(dist)
       sunday.setUTCDate(sunday.getUTCDate() + daysUntilSunday)
       return jstEndOfDay(sunday.getUTCFullYear(), sunday.getUTCMonth() + 1, sunday.getUTCDate())
@@ -617,6 +677,30 @@ function isBirthMonthDay(birthMonth: string, dayOfMonth: number, now: Date): boo
   return m === now.getMonth() + 1 && now.getDate() === dayOfMonth
 }
 
+/** Firestore の getAll は 1 回あたり最大 10 ドキュメント */
+const GET_ALL_COUPON_CHUNK = 10
+
+/**
+ * 同一テンプレ・同一日のクーポンが既に存在するユーザーを一括判定（ユーザー数ぶんの個別 get を避ける）
+ */
+async function batchGetExistingUserCouponUids(
+  couponDocId: string,
+  uids: string[],
+): Promise<Set<string>> {
+  const existing = new Set<string>()
+  for (let i = 0; i < uids.length; i += GET_ALL_COUPON_CHUNK) {
+    const chunk = uids.slice(i, i + GET_ALL_COUPON_CHUNK)
+    const refs = chunk.map((uid) =>
+      db.collection('users').doc(uid).collection('coupons').doc(couponDocId),
+    )
+    const snaps = await db.getAll(...refs)
+    snaps.forEach((snap, j) => {
+      if (snap.exists) existing.add(chunk[j]!)
+    })
+  }
+  return existing
+}
+
 /** クーポン自動配信の本体ロジック（スケジュール / 手動テスト共通） */
 async function runCouponDistribution(): Promise<{ distributedCount: number; weather: WeatherData | null }> {
     const settingsSnap = await db.collection('settings').doc('coupon').get()
@@ -645,6 +729,15 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
     const allTemplates = cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
     const uSnap = await db.collection('users').where('status', '==', 'active').get()
 
+    /** 当日分の配信枚数（テンプレ横断で共有）。ループ内で log を毎回読まない */
+    const logCountByUid = new Map<string, number>()
+    const logSnap = await db.collection('couponLogs').where('date', '==', today).get()
+    for (const d of logSnap.docs) {
+      const data = d.data()
+      const uid = data.uid as string
+      logCountByUid.set(uid, (data.count as number) ?? 0)
+    }
+
     let distributedCount = 0
 
     for (const coupon of allTemplates) {
@@ -655,6 +748,7 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
       const dayOfMonthForBirth = s?.dayOfMonth ?? 1
 
       if (isBirthMonth) {
+        const eligibleUids: string[] = []
         for (const uDoc of uSnap.docs) {
           const u = uDoc.data()
           const uid = uDoc.id
@@ -663,23 +757,23 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
           const t = getTargetFromCoupon(coupon)
           if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', birth ?? '01-2000')) continue
           if (!matchesMemberGroup(coupon, u.memberGroups)) continue
+          eligibleUids.push(uid)
+        }
+
+        const couponDocId = `${coupon.id}_${today}`
+        const existingUids = await batchGetExistingUserCouponUids(couponDocId, eligibleUids)
+
+        const expiryType = coupon.expiryType ?? 'same_day'
+        const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
+
+        for (const uid of eligibleUids) {
+          if (existingUids.has(uid)) continue
 
           const exempt = isDailyLimitExempt(coupon)
-          let count = 0
-          let logRef: DocumentReference | null = null
           if (!exempt) {
-            logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
-            const logSnap = await logRef.get()
-            count = logSnap.exists ? (logSnap.data()?.count as number) : 0
+            const count = logCountByUid.get(uid) ?? 0
             if (count >= dailyLimit) continue
           }
-
-          const couponDocId = `${coupon.id}_${today}`
-          const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
-          if (existing.exists) continue
-
-          const expiryType = coupon.expiryType ?? 'same_day'
-          const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
 
           await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
             couponId: coupon.id,
@@ -692,8 +786,14 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             expiresAt: Timestamp.fromDate(expiresAtDate),
             usedAt: null,
           })
-          if (!exempt && logRef) {
-            await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          if (!exempt) {
+            const count = logCountByUid.get(uid) ?? 0
+            const next = count + 1
+            logCountByUid.set(uid, next)
+            await db.collection('couponLogs').doc(`${uid}_${today}`).set(
+              { uid, date: today, count: next },
+              { merge: true },
+            )
           }
           distributedCount++
         }
@@ -716,26 +816,27 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
         const expiryType = coupon.expiryType ?? 'same_day'
         const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
 
+        const eligibleUids: string[] = []
         for (const uDoc of uSnap.docs) {
           const u = uDoc.data()
           const uid = uDoc.id
           const t = getTargetFromCoupon(coupon)
           if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
           if (!matchesMemberGroup(coupon, u.memberGroups)) continue
+          eligibleUids.push(uid)
+        }
+
+        const couponDocId = `${coupon.id}_${today}`
+        const existingUids = await batchGetExistingUserCouponUids(couponDocId, eligibleUids)
+
+        for (const uid of eligibleUids) {
+          if (existingUids.has(uid)) continue
 
           const exempt = isDailyLimitExempt(coupon)
-          let count = 0
-          let logRef: DocumentReference | null = null
           if (!exempt) {
-            logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
-            const logSnap = await logRef.get()
-            count = logSnap.exists ? (logSnap.data()?.count as number) : 0
+            const count = logCountByUid.get(uid) ?? 0
             if (count >= dailyLimit) continue
           }
-
-          const couponDocId = `${coupon.id}_${today}`
-          const existing = await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).get()
-          if (existing.exists) continue
 
           await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
             couponId: coupon.id,
@@ -748,8 +849,14 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             expiresAt: Timestamp.fromDate(expiresAtDate),
             usedAt: null,
           })
-          if (!exempt && logRef) {
-            await logRef.set({ uid, date: today, count: count + 1 }, { merge: true })
+          if (!exempt) {
+            const count = logCountByUid.get(uid) ?? 0
+            const next = count + 1
+            logCountByUid.set(uid, next)
+            await db.collection('couponLogs').doc(`${uid}_${today}`).set(
+              { uid, date: today, count: next },
+              { merge: true },
+            )
           }
           distributedCount++
         }

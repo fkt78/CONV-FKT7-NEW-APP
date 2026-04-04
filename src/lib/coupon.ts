@@ -95,7 +95,7 @@ export interface CouponTemplate {
 
 export const EXPIRY_LABELS: Record<ExpiryType, string> = {
   same_day: '当日',
-  end_of_week: '今週中',
+  end_of_week: '今週の日曜まで',
   end_of_month: '今月いっぱい',
   date: '日付を指定',
 }
@@ -200,9 +200,9 @@ function computeExpiryDate(
     case 'same_day':
       return new Date(y, m - 1, d, 23, 59, 59, 999)
     case 'end_of_week': {
-      // 月曜始まり → 今週の日曜 23:59:59
+      // 月〜土: その週の日曜 23:59:59 まで。日曜配信のみ (7-0)%7=0 だと当日終了になるため、翌週日曜まで（+7日）とする
       const day = dist.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
-      const daysUntilSunday = (7 - day) % 7
+      const daysUntilSunday = day === 0 ? 7 : (7 - day) % 7
       const sunday = new Date(dist)
       sunday.setDate(sunday.getDate() + daysUntilSunday)
       return new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 23, 59, 59, 999)

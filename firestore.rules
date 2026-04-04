@@ -9,6 +9,15 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // ── 本人によるクーポン使用（unused→used）のみ許可。金額・テンプレID等の改ざんは不可 ──
+    function isUserCouponMarkUsedOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'usedAt'])
+        && resource.data.status == 'unused'
+        && request.resource.data.status == 'used'
+        && (resource.data.usedAt == null)
+        && request.resource.data.usedAt is timestamp;
+    }
+
     // ── ユーザー：本人のみ読み書き、管理者は全件読み取り可 ──
     // ※ role / status の書き換えは管理者のみ許可し、一般ユーザーの権限昇格を防止
     match /users/{uid} {
@@ -33,7 +42,9 @@ service cloud.firestore {
     match /users/{uid}/coupons/{couponId} {
       allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
       allow create: if request.auth != null && isAdmin();
-      allow update: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null
+        && (isAdmin()
+          || (request.auth.uid == uid && isUserCouponMarkUsedOnly()));
       allow delete: if false;
     }
 
@@ -90,6 +101,11 @@ service cloud.firestore {
     // ── メッセージテンプレート：管理者のみ ──
     match /messageTemplates/{templateId} {
       allow read, write: if request.auth != null && isAdmin();
+    }
+
+    // ── Callable レート制限カウンタ（Admin SDK のみ書き込み。クライアントは不可） ──
+    match /callableRateLimits/{docId} {
+      allow read, write: if false;
     }
   }
 }

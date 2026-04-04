@@ -3,6 +3,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   updateProfile,
 } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
@@ -71,19 +72,28 @@ export default function Register() {
       const credential = await createUserWithEmailAndPassword(auth, email, password)
       const uid = credential.user.uid
 
-      await updateProfile(credential.user, { displayName: fullName.trim() })
+      try {
+        await updateProfile(credential.user, { displayName: fullName.trim() })
 
-      await setDoc(doc(db, 'users', uid), {
-        uid,
-        fullName: fullName.trim(),
-        birthMonth,
-        attribute,
-        email: email.trim(),
-        status: 'active',
-        createdAt: serverTimestamp(),
-      })
+        await setDoc(doc(db, 'users', uid), {
+          uid,
+          fullName: fullName.trim(),
+          birthMonth,
+          attribute,
+          email: email.trim(),
+          status: 'active',
+          createdAt: serverTimestamp(),
+        })
 
-      navigate('/')
+        navigate('/')
+      } catch {
+        try {
+          await deleteUser(credential.user)
+        } catch (delErr) {
+          console.error('登録取り消し（Auth アカウント削除）に失敗:', delErr)
+        }
+        setError(t('register.error.generic'))
+      }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === 'auth/email-already-in-use') {
