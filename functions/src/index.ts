@@ -567,11 +567,15 @@ function matchesWeather(cond: WeatherCondition, threshold: number | null, w: Wea
   }
 }
 
+/** 誕生月から年齢帯を返す。未設定・不正形式・10歳未満は ''（年代ターゲットにマッチさせない） */
 function getAgeDecade(birthMonth: string): TargetAgeRange {
+  if (!birthMonth || !/^\d{4}-(0[1-9]|1[0-2])$/.test(birthMonth)) return ''
   const [y, m] = birthMonth.split('-').map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return ''
   const now = new Date()
   let age = now.getFullYear() - y
   if (now.getMonth() + 1 < m) age--
+  if (age < 10) return ''
   if (age < 20) return '10s'
   if (age < 30) return '20s'
   if (age < 40) return '30s'
@@ -755,7 +759,7 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
           const birth = u.birthMonth as string
           if (!isBirthMonthDay(birth ?? '', dayOfMonthForBirth, jstNow)) continue
           const t = getTargetFromCoupon(coupon)
-          if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', birth ?? '01-2000')) continue
+          if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', birth ?? '')) continue
           if (!matchesMemberGroup(coupon, u.memberGroups)) continue
           eligibleUids.push(uid)
         }
@@ -821,7 +825,7 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
           const u = uDoc.data()
           const uid = uDoc.id
           const t = getTargetFromCoupon(coupon)
-          if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', u.birthMonth ?? '01-2000')) continue
+          if (!matchesTarget(t.attr, t.ages, u.attribute ?? '', (u.birthMonth as string) ?? '')) continue
           if (!matchesMemberGroup(coupon, u.memberGroups)) continue
           eligibleUids.push(uid)
         }

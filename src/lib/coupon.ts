@@ -187,37 +187,46 @@ export function formatTargetLabel(c: CouponTemplate): string {
   return mg ? `${mg} / ${segment}` : segment
 }
 
-/** 配布日から有効期限の日付を計算（23:59:59.999） */
+/**
+ * 配布日・期限日の YYYY-MM-DD は日本（JST）の暦日。終日 23:59:59.999 JST を UTC の Date で表す（Cloud Functions と同一）。
+ * ブラウザのローカルタイムゾーンに依存させない。
+ */
+function jstEndOfDay(uy: number, um: number, ud: number): Date {
+  return new Date(Date.UTC(uy, um - 1, ud, 14, 59, 59, 999))
+}
+
+/** 配布日から有効期限を計算（Functions の computeExpiryDate と同ロジック） */
 function computeExpiryDate(
   expiryType: ExpiryType,
   expiryDateStr: string | undefined,
   distributedDate: string,
 ): Date {
   const [y, m, d] = distributedDate.split('-').map(Number)
-  const dist = new Date(y, m - 1, d)
+  const dist = new Date(Date.UTC(y, m - 1, d))
 
   switch (expiryType) {
     case 'same_day':
-      return new Date(y, m - 1, d, 23, 59, 59, 999)
+      return jstEndOfDay(y, m, d)
     case 'end_of_week': {
-      // 月〜土: その週の日曜 23:59:59 まで。日曜配信のみ (7-0)%7=0 だと当日終了になるため、翌週日曜まで（+7日）とする
-      const day = dist.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+      const day = dist.getUTCDay()
       const daysUntilSunday = day === 0 ? 7 : (7 - day) % 7
       const sunday = new Date(dist)
-      sunday.setDate(sunday.getDate() + daysUntilSunday)
-      return new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 23, 59, 59, 999)
+      sunday.setUTCDate(sunday.getUTCDate() + daysUntilSunday)
+      return jstEndOfDay(sunday.getUTCFullYear(), sunday.getUTCMonth() + 1, sunday.getUTCDate())
     }
-    case 'end_of_month':
-      return new Date(y, m, 0, 23, 59, 59, 999) // 翌月0日 = 今月末
+    case 'end_of_month': {
+      const lastDay = new Date(Date.UTC(y, m, 0))
+      return jstEndOfDay(lastDay.getUTCFullYear(), lastDay.getUTCMonth() + 1, lastDay.getUTCDate())
+    }
     case 'date': {
       if (!expiryDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDateStr)) {
-        return new Date(y, m - 1, d, 23, 59, 59, 999)
+        return jstEndOfDay(y, m, d)
       }
       const [ey, em, ed] = expiryDateStr.split('-').map(Number)
-      return new Date(ey, em - 1, ed, 23, 59, 59, 999)
+      return jstEndOfDay(ey, em, ed)
     }
     default:
-      return new Date(y, m - 1, d, 23, 59, 59, 999)
+      return jstEndOfDay(y, m, d)
   }
 }
 
