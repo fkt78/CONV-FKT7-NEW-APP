@@ -50,7 +50,9 @@ export default function Login() {
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       const message = (err as { message?: string }).message
-      console.error('[Login]', code, message, err)
+      if (import.meta.env.DEV) {
+        console.error('[Login]', code, message, err)
+      }
 
       if (
         code === 'auth/user-not-found' ||
@@ -96,7 +98,9 @@ export default function Login() {
       setInfo(t('login.info.resetSent'))
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
-      console.error('[Login] パスワードリセット失敗', code, err)
+      if (import.meta.env.DEV) {
+        console.error('[Login] パスワードリセット失敗', code, err)
+      }
       if (code === 'auth/network-request-failed') {
         setError(t('login.error.resetNetwork'))
       } else if (code === 'auth/user-not-found') {
