@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   collection,
   query,
@@ -27,15 +27,27 @@ interface NewsItem {
   expiresAt: Date | null
 }
 
+/** 追加予定の画像（ファイル本体 + プレビューURL をセットで管理） */
+interface PendingImage {
+  file: File
+  previewUrl: string
+}
+
 export default function NewsManager() {
   const [newsList, setNewsList] = useState<NewsItem[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingAudioUrl, setEditingAudioUrl] = useState<string>('')
-  /** 編集開始時点の画像URL（保存時に削除分を Storage から消す） */
+  const [editingAudioUrl, setEditingAudioUrl] = useState('')
+  /** 編集開始時点の画像URL（保存後に削除分を Storage から消す用） */
   const initialImageUrlsRef = useRef<string[]>([])
   const [editingImageUrls, setEditingImageUrls] = useState<string[]>([])
-  const [newImageFiles, setNewImageFiles] = useState<File[]>([])
+  /**
+   * 新規追加の画像リスト。
+   * プレビューURLはここで作成・破棄する（useMemo に入れると副作用が安全に扱えないため）。
+   */
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
+  /** アンマウント時やリセット時に全プレビューURLをまとめて revoke するための記録 */
+  const pendingUrlsRef = useRef<Set<string>>(new Set())
 
   // フォームフィールド
   const [title, setTitle] = useState('')
@@ -48,13 +60,12 @@ export default function NewsManager() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
-  const newImagePreviewUrls = useMemo(
-    () => newImageFiles.map((f) => URL.createObjectURL(f)),
-    [newImageFiles],
-  )
+  /** コンポーネントアンマウント時に残っているプレビューURLを全破棄 */
   useEffect(() => {
-    return () => newImagePreviewUrls.forEach((u) => URL.revokeObjectURL(u))
-  }, [newImagePreviewUrls])
+    return () => {
+      pendingUrlsRef.current.forEach((u) => URL.revokeObjectURL(u))
+    }
+  }, [])
 
   useEffect(() => {
     return onSnapshot(
@@ -76,6 +87,53 @@ export default function NewsManager() {
     )
   }, [])
 
+  /** プレビューURL を安全に作成して pendingImages に追加する */
+  function addImageFiles(files: FileList | null) {
+    if (!files?.length) return
+    const usedSlots = editingImageUrls.length + pendingImages.length
+    const available = MAX_NEWS_IMAGES - usedSlots
+    if (available <= 0) {
+      alert(`画像は最大${MAX_NEWS_IMAGES}枚までです`)
+      return
+    }
+    const toAdd = Array.from(files).slice(0, available)
+    if (toAdd.length < files.length) {
+      alert(`追加できるのはあと${available}枚です（合計${MAX_NEWS_IMAGES}枚まで）`)
+    }
+    const newEntries: PendingImage[] = toAdd.map((file) => {
+      const previewUrl = URL.createObjectURL(file)
+      pendingUrlsRef.current.add(previewUrl)
+      return { file, previewUrl }
+    })
+    setPendingImages((prev) => [...prev, ...newEntries])
+  }
+
+  /** 既存URL（編集中）を削除 */
+  function removeEditingUrl(index: number) {
+    setEditingImageUrls((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  /** 追加予定画像を削除してプレビューURLを破棄 */
+  function removePendingImage(index: number) {
+    setPendingImages((prev) => {
+      const entry = prev[index]
+      if (entry) {
+        URL.revokeObjectURL(entry.previewUrl)
+        pendingUrlsRef.current.delete(entry.previewUrl)
+      }
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  /** 追加予定画像を全破棄してリセット */
+  function clearPendingImages() {
+    pendingImages.forEach((e) => {
+      URL.revokeObjectURL(e.previewUrl)
+      pendingUrlsRef.current.delete(e.previewUrl)
+    })
+    setPendingImages([])
+  }
+
   function resetForm() {
     setTitle('')
     setContent('')
@@ -87,7 +145,7 @@ export default function NewsManager() {
     setEditingAudioUrl('')
     initialImageUrlsRef.current = []
     setEditingImageUrls([])
-    setNewImageFiles([])
+    clearPendingImages()
     setShowForm(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (imageInputRef.current) imageInputRef.current.value = ''
@@ -105,34 +163,10 @@ export default function NewsManager() {
     const urls = [...item.imageUrls]
     initialImageUrlsRef.current = urls
     setEditingImageUrls(urls)
-    setNewImageFiles([])
+    clearPendingImages()
     setShowForm(true)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (imageInputRef.current) imageInputRef.current.value = ''
-  }
-
-  function addImageFiles(files: FileList | null) {
-    if (!files?.length) return
-    const maxTotal = MAX_NEWS_IMAGES - editingImageUrls.length
-    if (maxTotal <= 0) {
-      alert(`画像は最大${MAX_NEWS_IMAGES}枚までです`)
-      return
-    }
-    setNewImageFiles((prev) => {
-      const next = [...prev, ...Array.from(files)]
-      if (next.length > maxTotal) {
-        alert(`追加できるのは最大${maxTotal}枚までです（合計${MAX_NEWS_IMAGES}枚まで）`)
-      }
-      return next.slice(0, maxTotal)
-    })
-  }
-
-  function removeEditingUrl(index: number) {
-    setEditingImageUrls((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function removeNewFile(index: number) {
-    setNewImageFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function handleSave() {
@@ -146,34 +180,27 @@ export default function NewsManager() {
         await deleteAudio(editingAudioUrl)
         audioUrl = ''
       }
-
       if (audioFile) {
-        if (editingId && editingAudioUrl && !removeAudio) {
-          await deleteAudio(editingAudioUrl)
-        }
+        if (editingId && editingAudioUrl && !removeAudio) await deleteAudio(editingAudioUrl)
         audioUrl = await uploadAudio(audioFile, (p) => setUpload(p))
       }
 
       let finalUrls = [...editingImageUrls]
-      for (const f of newImageFiles) {
+      for (const entry of pendingImages) {
         if (finalUrls.length >= MAX_NEWS_IMAGES) break
-        finalUrls.push(await uploadImage(f, (p) => setUpload(p)))
+        finalUrls.push(await uploadImage(entry.file, (p) => setUpload(p)))
       }
       finalUrls = finalUrls.slice(0, MAX_NEWS_IMAGES)
 
       const toDelete = initialImageUrlsRef.current.filter((u) => !finalUrls.includes(u))
-      for (const u of toDelete) {
-        await deleteAudio(u)
-      }
+      for (const u of toDelete) await deleteAudio(u)
 
       const payload: Record<string, unknown> = {
         title: title.trim(),
         content: content.trim(),
         audioUrl,
         imageUrls: finalUrls,
-        expiresAt: expiresAt.trim()
-          ? Timestamp.fromDate(new Date(expiresAt.trim()))
-          : null,
+        expiresAt: expiresAt.trim() ? Timestamp.fromDate(new Date(expiresAt.trim())) : null,
       }
       if (finalUrls.length > 0) {
         payload.imageUrl = finalUrls[0]
@@ -200,9 +227,7 @@ export default function NewsManager() {
   async function handleDelete(item: NewsItem) {
     if (!confirm(`「${item.title}」を削除しますか？`)) return
     if (item.audioUrl) await deleteAudio(item.audioUrl)
-    for (const u of item.imageUrls) {
-      await deleteAudio(u)
-    }
+    for (const u of item.imageUrls) await deleteAudio(u)
     await deleteDoc(doc(db, 'news', item.id))
   }
 
@@ -213,14 +238,14 @@ export default function NewsManager() {
 
   const currentAudioToShow = audioFile
     ? URL.createObjectURL(audioFile)
-    : (!removeAudio && editingAudioUrl) ? editingAudioUrl : ''
+    : !removeAudio && editingAudioUrl ? editingAudioUrl : ''
 
-  /** 公開期限を過ぎたものは一覧に出さない（ユーザー向け VipNews と同じ基準） */
   const visibleNewsList = newsList.filter(
     (item) => !item.expiresAt || item.expiresAt.getTime() > Date.now(),
   )
 
-  const imageSlotLeft = MAX_NEWS_IMAGES - editingImageUrls.length - newImageFiles.length
+  const totalImageCount = editingImageUrls.length + pendingImages.length
+  const imageSlotLeft = MAX_NEWS_IMAGES - totalImageCount
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -229,7 +254,7 @@ export default function NewsManager() {
           VIP NEWS ({visibleNewsList.length}件)
         </h3>
         <button
-          onClick={() => showForm ? resetForm() : setShowForm(true)}
+          onClick={() => (showForm ? resetForm() : setShowForm(true))}
           className="text-[#0095B6] text-xs font-semibold hover:text-[#007A96] transition"
         >
           {showForm ? '✕ 閉じる' : '＋ 新規投稿'}
@@ -270,40 +295,51 @@ export default function NewsManager() {
               <p className="text-[#86868b] text-[10px] mt-0.5">設定すると、期限を過ぎると自動で非表示になります</p>
             </div>
 
+            {/* 画像セクション */}
             <div className="space-y-2">
-              <label className="text-[#86868b] text-[10px] block">
-                画像・ポスター（任意・最大{MAX_NEWS_IMAGES}枚・JPEG / PNG / WebP / GIF）
-              </label>
-              <p className="text-[#86868b] text-[10px] -mt-1 mb-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[#86868b] text-[10px]">
+                  画像・ポスター（任意・最大{MAX_NEWS_IMAGES}枚・JPEG / PNG / WebP / GIF）
+                </label>
+                <span className="text-[#86868b] text-[10px]">
+                  {totalImageCount} / {MAX_NEWS_IMAGES}枚
+                </span>
+              </div>
+              <p className="text-[#86868b] text-[10px] -mt-1">
                 複数枚を一度に選べます。音声と同時に添付できます。
               </p>
 
-              {(editingImageUrls.length > 0 || newImageFiles.length > 0) && (
+              {/* プレビューグリッド */}
+              {totalImageCount > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {editingImageUrls.map((url, i) => (
-                    <div key={`u-${url}-${i}`} className="relative rounded-lg border border-[#e5e5ea] bg-white overflow-hidden">
+                    <div
+                      key={`existing-${i}`}
+                      className="relative rounded-lg border border-[#e5e5ea] bg-white overflow-hidden"
+                    >
                       <img src={url} alt="" className="w-full h-28 object-contain" />
                       <button
                         type="button"
                         onClick={() => removeEditingUrl(i)}
-                        className="absolute top-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded"
+                        className="absolute top-1 right-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded"
                       >
                         削除
                       </button>
                     </div>
                   ))}
-                  {newImageFiles.map((_, i) => (
-                    <div key={`n-${i}`} className="relative rounded-lg border border-[#0095B6]/30 bg-white overflow-hidden">
-                      <img
-                        src={newImagePreviewUrls[i]}
-                        alt=""
-                        className="w-full h-28 object-contain"
-                      />
-                      <span className="absolute bottom-1 left-1 text-[9px] bg-[#0095B6]/90 text-white px-1 rounded">未保存</span>
+                  {pendingImages.map((entry, i) => (
+                    <div
+                      key={`pending-${i}`}
+                      className="relative rounded-lg border border-[#0095B6]/40 bg-white overflow-hidden"
+                    >
+                      <img src={entry.previewUrl} alt="" className="w-full h-28 object-contain" />
+                      <span className="absolute bottom-1 left-1 text-[9px] bg-[#0095B6]/90 text-white px-1.5 py-0.5 rounded">
+                        未保存
+                      </span>
                       <button
                         type="button"
-                        onClick={() => removeNewFile(i)}
-                        className="absolute top-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded"
+                        onClick={() => removePendingImage(i)}
+                        className="absolute top-1 right-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded"
                       >
                         削除
                       </button>
@@ -312,26 +348,30 @@ export default function NewsManager() {
                 </div>
               )}
 
-              <label
-                htmlFor="news-image-input"
-                className={`flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 transition ${
-                  imageSlotLeft > 0 ? 'cursor-pointer hover:border-[#0095B6]/40' : 'opacity-40 cursor-not-allowed pointer-events-none'
-                }`}
-              >
-                <span className="text-[#86868b] text-xs">
-                  {imageSlotLeft > 0
-                    ? `📷 画像を追加（あと${imageSlotLeft}枚まで選択可）`
-                    : `画像は最大${MAX_NEWS_IMAGES}枚です`}
-                </span>
-              </label>
+              {/* 追加ボタン（label → input 直結） */}
+              {imageSlotLeft > 0 && (
+                <label
+                  htmlFor="news-image-input"
+                  className="flex items-center justify-center gap-1.5 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-3 cursor-pointer hover:border-[#0095B6]/60 hover:bg-[#f0f9fc] transition"
+                >
+                  <span className="text-[#0095B6] text-sm">＋</span>
+                  <span className="text-[#86868b] text-xs">
+                    画像を追加（あと{imageSlotLeft}枚まで選択可）
+                  </span>
+                </label>
+              )}
+              {imageSlotLeft <= 0 && (
+                <p className="text-[#86868b] text-[10px] text-center py-1">
+                  画像は最大{MAX_NEWS_IMAGES}枚です
+                </p>
+              )}
               <input
                 ref={imageInputRef}
                 id="news-image-input"
                 type="file"
                 multiple
-                disabled={imageSlotLeft <= 0}
                 accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-                className="hidden"
+                style={{ display: 'none' }}
                 onChange={(e) => {
                   addImageFiles(e.target.files)
                   e.target.value = ''
@@ -339,6 +379,7 @@ export default function NewsManager() {
               />
             </div>
 
+            {/* 音声セクション */}
             <div className="space-y-2">
               <label className="text-[#86868b] text-[10px] block">音声ファイル（任意）</label>
 
@@ -356,7 +397,10 @@ export default function NewsManager() {
               {removeAudio && (
                 <p className="text-red-500/80 text-[10px]">
                   保存時に音声を削除します
-                  <button onClick={() => setRemoveAudio(false)} className="ml-2 text-[#0095B6] hover:text-[#007A96]">
+                  <button
+                    onClick={() => setRemoveAudio(false)}
+                    className="ml-2 text-[#0095B6] hover:text-[#007A96]"
+                  >
                     取り消す
                   </button>
                 </p>
@@ -371,9 +415,15 @@ export default function NewsManager() {
                 </span>
                 {audioFile && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); setAudioFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setAudioFile(null)
+                      if (fileInputRef.current) fileInputRef.current.value = ''
+                    }}
                     className="ml-auto text-[#86868b] hover:text-red-500 text-xs transition"
-                  >✕</button>
+                  >
+                    ✕
+                  </button>
                 )}
               </div>
               <input
@@ -383,7 +433,6 @@ export default function NewsManager() {
                 className="hidden"
                 onChange={(e) => setAudioFile(e.target.files?.[0] ?? null)}
               />
-
               {audioFile && currentAudioToShow && (
                 <AudioPlayer src={currentAudioToShow} title={audioFile.name} />
               )}
@@ -433,7 +482,9 @@ export default function NewsManager() {
                       </span>
                     )}
                     {item.audioUrl && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-[#0095B6]">🎵 音声あり</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#0095B6]">
+                        🎵 音声あり
+                      </span>
                     )}
                   </div>
                 </div>
@@ -445,11 +496,15 @@ export default function NewsManager() {
                   <button
                     onClick={() => handleEdit(item)}
                     className="text-[10px] px-2 py-1 rounded-md bg-[#e5e5ea]/60 text-[#86868b] hover:bg-[#0095B6]/10 hover:text-[#0095B6] transition"
-                  >✏️</button>
+                  >
+                    ✏️
+                  </button>
                   <button
                     onClick={() => handleDelete(item)}
                     className="text-[#86868b] hover:text-red-500 transition text-xs p-1"
-                  >✕</button>
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
               {item.imageUrls.length > 0 && (
@@ -464,9 +519,7 @@ export default function NewsManager() {
                   ))}
                 </div>
               )}
-              {item.audioUrl && (
-                <AudioPlayer src={item.audioUrl} title={item.title} />
-              )}
+              {item.audioUrl && <AudioPlayer src={item.audioUrl} title={item.title} />}
             </div>
           ))}
         </div>
