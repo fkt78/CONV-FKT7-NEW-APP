@@ -1,0 +1,66 @@
+;(function () {
+  var out = document.getElementById('out')
+  function log(msg, ok) {
+    var p = document.createElement('p')
+    p.className = ok === true ? 'ok' : ok === false ? 'fail' : ''
+    p.textContent = msg
+    out.appendChild(p)
+  }
+  log('✓ このページが表示されていれば、HTML と JavaScript は動作しています。', true)
+  log('User-Agent: ' + navigator.userAgent)
+  log('プラットフォーム: ' + (navigator.platform || '不明'))
+  log('オンライン: ' + navigator.onLine)
+  log('Service Worker: ' + ('serviceWorker' in navigator ? '対応' : '非対応'))
+  fetch('/', { method: 'GET' })
+    .then(function (r) {
+      return r.text()
+    })
+    .then(function (html) {
+      var m = html.match(/src="(\/assets\/[^"]+\.js)"/)
+      if (m) {
+        window._mainScript = m[1]
+        log('index.html からメインスクリプト: ' + m[1], true)
+      } else {
+        log('index.html に script タグが見つかりません', false)
+      }
+    })
+    .catch(function (e) {
+      log('index.html 取得失敗: ' + e.message, false)
+    })
+
+  function testAsset() {
+    var outEl = document.getElementById('out')
+    var p = document.createElement('p')
+    p.textContent = 'アセットテスト中...'
+    outEl.appendChild(p)
+    var url = window._mainScript || '/assets/index.js'
+    fetch(url)
+      .then(function (r) {
+        var ct = r.headers.get('content-type') || ''
+        return r.text().then(function (t) {
+          return { ok: r.ok, ct: ct, text: t }
+        })
+      })
+      .then(function (result) {
+        var isHtml = result.text.indexOf('<!') === 0 || result.text.indexOf('<html') >= 0
+        if (isHtml) {
+          p.textContent =
+            '問題: JS の代わりに HTML が返されています (Content-Type: ' + result.ct + ')'
+          p.className = 'fail'
+        } else if (result.ct.indexOf('javascript') >= 0 || result.text.length > 500) {
+          p.textContent = 'OK: JavaScript が正しく返されています (' + result.text.length + ' 文字)'
+          p.className = 'ok'
+        } else {
+          p.textContent = '結果: ' + result.ct + ', ' + result.text.length + ' 文字'
+          p.className = 'ok'
+        }
+      })
+      .catch(function (e) {
+        p.textContent = 'アセット取得失敗: ' + e.message
+        p.className = 'fail'
+      })
+  }
+
+  var btn = document.querySelector('button')
+  if (btn) btn.addEventListener('click', testAsset)
+})()
