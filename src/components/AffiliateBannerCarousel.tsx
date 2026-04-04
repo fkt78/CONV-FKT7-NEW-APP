@@ -45,6 +45,14 @@ const SLIDES: BannerSlide[] = [
     href: 'https://fkt-office.com/life-support.html',
   },
   {
+    id: 'dtisim',
+    bgImage: '/banners/dtisim.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.dtisim',
+    badgeColor: '#007aff',
+    href: 'https://fkt-office.com/life-support.html#dtisim',
+  },
+  {
     id: 'commufa',
     bgImage: '/banners/commufa-bg.png',
     bgPosition: 'right center',
