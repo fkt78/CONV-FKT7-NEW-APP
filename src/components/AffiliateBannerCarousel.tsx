@@ -93,6 +93,14 @@ const SLIDES: BannerSlide[] = [
     href: 'https://fkt-office.com/life-support.html#daiwan-telecom',
   },
   {
+    id: 'kojo-kyujin-navi',
+    bgImage: '/banners/kojo-kyujin-navi.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.kojoKyujinNavi',
+    badgeColor: '#1e3a5f',
+    href: 'https://fkt-office.com/life-support.html#kojo-kyujin-navi',
+  },
+  {
     id: 'commufa',
     bgImage: '/banners/commufa-bg.png',
     bgPosition: 'right center',
