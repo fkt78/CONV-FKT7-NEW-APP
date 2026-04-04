@@ -681,8 +681,8 @@ function isBirthMonthDay(birthMonth: string, dayOfMonth: number, now: Date): boo
   return m === now.getMonth() + 1 && now.getDate() === dayOfMonth
 }
 
-/** Firestore の getAll は 1 回あたり最大 10 ドキュメント */
-const GET_ALL_COUPON_CHUNK = 10
+/** batchGetExistingUserCouponUids の getAll チャンク（Admin SDK は大きなまとめ読みに対応） */
+const GET_ALL_COUPON_CHUNK = 500
 
 /**
  * 同一テンプレ・同一日のクーポンが既に存在するユーザーを一括判定（ユーザー数ぶんの個別 get を避ける）
@@ -744,6 +744,27 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
 
     let distributedCount = 0
 
+    /** WriteBatch は 1 回の commit で最大 500 操作 */
+    const MAX_WRITE_BATCH_OPS = 500
+    let writeBatch = db.batch()
+    let writeBatchOpCount = 0
+
+    async function flushWriteBatchIfNeeded(opsNeeded: number): Promise<void> {
+      if (writeBatchOpCount + opsNeeded > MAX_WRITE_BATCH_OPS) {
+        await writeBatch.commit()
+        writeBatch = db.batch()
+        writeBatchOpCount = 0
+      }
+    }
+
+    async function commitWriteBatchIfAny(): Promise<void> {
+      if (writeBatchOpCount > 0) {
+        await writeBatch.commit()
+        writeBatch = db.batch()
+        writeBatchOpCount = 0
+      }
+    }
+
     for (const coupon of allTemplates) {
       if (!coupon.autoDistribute) continue
 
@@ -779,7 +800,9 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             if (count >= dailyLimit) continue
           }
 
-          await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
+          await flushWriteBatchIfNeeded(exempt ? 1 : 2)
+          const couponRef = db.collection('users').doc(uid).collection('coupons').doc(couponDocId)
+          writeBatch.set(couponRef, {
             couponId: coupon.id,
             title: coupon.title,
             description: coupon.description ?? '',
@@ -790,14 +813,14 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             expiresAt: Timestamp.fromDate(expiresAtDate),
             usedAt: null,
           })
+          writeBatchOpCount++
           if (!exempt) {
             const count = logCountByUid.get(uid) ?? 0
             const next = count + 1
             logCountByUid.set(uid, next)
-            await db.collection('couponLogs').doc(`${uid}_${today}`).set(
-              { uid, date: today, count: next },
-              { merge: true },
-            )
+            const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
+            writeBatch.set(logRef, { uid, date: today, count: next }, { merge: true })
+            writeBatchOpCount++
           }
           distributedCount++
         }
@@ -842,7 +865,9 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             if (count >= dailyLimit) continue
           }
 
-          await db.collection('users').doc(uid).collection('coupons').doc(couponDocId).set({
+          await flushWriteBatchIfNeeded(exempt ? 1 : 2)
+          const couponRef = db.collection('users').doc(uid).collection('coupons').doc(couponDocId)
+          writeBatch.set(couponRef, {
             couponId: coupon.id,
             title: coupon.title,
             description: coupon.description ?? '',
@@ -853,19 +878,21 @@ async function runCouponDistribution(): Promise<{ distributedCount: number; weat
             expiresAt: Timestamp.fromDate(expiresAtDate),
             usedAt: null,
           })
+          writeBatchOpCount++
           if (!exempt) {
             const count = logCountByUid.get(uid) ?? 0
             const next = count + 1
             logCountByUid.set(uid, next)
-            await db.collection('couponLogs').doc(`${uid}_${today}`).set(
-              { uid, date: today, count: next },
-              { merge: true },
-            )
+            const logRef = db.collection('couponLogs').doc(`${uid}_${today}`)
+            writeBatch.set(logRef, { uid, date: today, count: next }, { merge: true })
+            writeBatchOpCount++
           }
           distributedCount++
         }
       }
     }
+
+    await commitWriteBatchIfAny()
 
     console.log(
       '[couponDistribution] 完了:',

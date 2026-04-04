@@ -25,7 +25,10 @@ service cloud.firestore {
         && (request.auth.uid == uid || isAdmin());
       allow create: if request.auth != null
         && request.auth.uid == uid
-        && !request.resource.data.keys().hasAny(['role']);
+        && !request.resource.data.keys().hasAny(['role'])
+        && (!('memberGroups' in request.resource.data)
+          || (request.resource.data.memberGroups is list
+            && request.resource.data.memberGroups.size() == 0));
       allow update: if request.auth != null
         && (
           (request.auth.uid == uid
