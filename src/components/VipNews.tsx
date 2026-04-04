@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { getLocaleTag } from '../lib/formatTime'
+import { normalizeNewsImageUrls } from '../lib/newsImages'
 import AudioPlayer from './AudioPlayer'
 import i18n from '../i18n'
 
@@ -18,7 +19,7 @@ interface NewsItem {
   title: string
   content: string
   audioUrl: string
-  imageUrl: string
+  imageUrls: string[]
   createdAt: Date | null
   expiresAt: Date | null
 }
@@ -45,7 +46,7 @@ export default function VipNews() {
             title: d.data().title as string,
             content: d.data().content as string,
             audioUrl: (d.data().audioUrl as string) ?? '',
-            imageUrl: (d.data().imageUrl as string) ?? '',
+            imageUrls: normalizeNewsImageUrls(d.data()),
             createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
             expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
           }))
@@ -128,7 +129,9 @@ export default function VipNews() {
               )}
               <span className="flex-1 text-[#1d1d1f] text-[15px] font-semibold truncate">{item.title}</span>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {item.imageUrl && <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasImage')}>🖼️</span>}
+                {item.imageUrls.length > 0 && (
+                  <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasImage')}>🖼️</span>
+                )}
                 {item.audioUrl && <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasAudio')}>🎵</span>}
                 <span className="text-[#86868b] text-[13px]">{formatDate(item.createdAt)}</span>
                 <svg
@@ -142,15 +145,18 @@ export default function VipNews() {
 
             {isOpen && (
               <div className="px-4 pb-4 space-y-3 border-t border-[#e5e5ea]">
-                {item.imageUrl && (
-                  <div className="pt-3">
-                    <img
-                      src={item.imageUrl}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full rounded-xl border border-[#e5e5ea] object-contain max-h-[min(70vh,480px)] bg-[#f5f5f7]"
-                    />
+                {item.imageUrls.length > 0 && (
+                  <div className="pt-3 space-y-3">
+                    {item.imageUrls.map((url) => (
+                      <img
+                        key={url}
+                        src={url}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full rounded-xl border border-[#e5e5ea] object-contain max-h-[min(70vh,480px)] bg-[#f5f5f7]"
+                      />
+                    ))}
                   </div>
                 )}
                 {item.content && (

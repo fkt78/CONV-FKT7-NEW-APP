@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   collection,
   query,
@@ -10,9 +10,11 @@ import {
   deleteDoc,
   serverTimestamp,
   Timestamp,
+  deleteField,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { uploadAudio, uploadImage, deleteAudio, type UploadProgress } from '../lib/newsStorage'
+import { normalizeNewsImageUrls, MAX_NEWS_IMAGES } from '../lib/newsImages'
 import AudioPlayer from './AudioPlayer'
 
 interface NewsItem {
@@ -20,7 +22,7 @@ interface NewsItem {
   title: string
   content: string
   audioUrl: string
-  imageUrl: string
+  imageUrls: string[]
   createdAt: Date | null
   expiresAt: Date | null
 }
@@ -30,7 +32,10 @@ export default function NewsManager() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingAudioUrl, setEditingAudioUrl] = useState<string>('')
-  const [editingImageUrl, setEditingImageUrl] = useState<string>('')
+  /** 編集開始時点の画像URL（保存時に削除分を Storage から消す） */
+  const initialImageUrlsRef = useRef<string[]>([])
+  const [editingImageUrls, setEditingImageUrls] = useState<string[]>([])
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([])
 
   // フォームフィールド
   const [title, setTitle] = useState('')
@@ -38,12 +43,18 @@ export default function NewsManager() {
   const [expiresAt, setExpiresAt] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [removeAudio, setRemoveAudio] = useState(false)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [removeImage, setRemoveImage] = useState(false)
   const [upload, setUpload] = useState<UploadProgress | null>(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const newImagePreviewUrls = useMemo(
+    () => newImageFiles.map((f) => URL.createObjectURL(f)),
+    [newImageFiles],
+  )
+  useEffect(() => {
+    return () => newImagePreviewUrls.forEach((u) => URL.revokeObjectURL(u))
+  }, [newImagePreviewUrls])
 
   useEffect(() => {
     return onSnapshot(
@@ -55,7 +66,7 @@ export default function NewsManager() {
             title: d.data().title as string,
             content: d.data().content as string,
             audioUrl: (d.data().audioUrl as string) ?? '',
-            imageUrl: (d.data().imageUrl as string) ?? '',
+            imageUrls: normalizeNewsImageUrls(d.data()),
             createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
             expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
           })),
@@ -74,9 +85,9 @@ export default function NewsManager() {
     setUpload(null)
     setEditingId(null)
     setEditingAudioUrl('')
-    setEditingImageUrl('')
-    setImageFile(null)
-    setRemoveImage(false)
+    initialImageUrlsRef.current = []
+    setEditingImageUrls([])
+    setNewImageFiles([])
     setShowForm(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (imageInputRef.current) imageInputRef.current.value = ''
@@ -88,15 +99,40 @@ export default function NewsManager() {
     setExpiresAt(item.expiresAt ? item.expiresAt.toISOString().slice(0, 16) : '')
     setAudioFile(null)
     setRemoveAudio(false)
-    setImageFile(null)
-    setRemoveImage(false)
     setUpload(null)
     setEditingId(item.id)
     setEditingAudioUrl(item.audioUrl)
-    setEditingImageUrl(item.imageUrl)
+    const urls = [...item.imageUrls]
+    initialImageUrlsRef.current = urls
+    setEditingImageUrls(urls)
+    setNewImageFiles([])
     setShowForm(true)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (imageInputRef.current) imageInputRef.current.value = ''
+  }
+
+  function addImageFiles(files: FileList | null) {
+    if (!files?.length) return
+    const maxTotal = MAX_NEWS_IMAGES - editingImageUrls.length
+    if (maxTotal <= 0) {
+      alert(`画像は最大${MAX_NEWS_IMAGES}枚までです`)
+      return
+    }
+    setNewImageFiles((prev) => {
+      const next = [...prev, ...Array.from(files)]
+      if (next.length > maxTotal) {
+        alert(`追加できるのは最大${maxTotal}枚までです（合計${MAX_NEWS_IMAGES}枚まで）`)
+      }
+      return next.slice(0, maxTotal)
+    })
+  }
+
+  function removeEditingUrl(index: number) {
+    setEditingImageUrls((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function removeNewFile(index: number) {
+    setNewImageFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function handleSave() {
@@ -105,15 +141,10 @@ export default function NewsManager() {
     setUpload(null)
     try {
       let audioUrl = editingId ? editingAudioUrl : ''
-      let imageUrl = editingId ? editingImageUrl : ''
 
       if (editingId && removeAudio && editingAudioUrl) {
         await deleteAudio(editingAudioUrl)
         audioUrl = ''
-      }
-      if (editingId && removeImage && editingImageUrl) {
-        await deleteAudio(editingImageUrl)
-        imageUrl = ''
       }
 
       if (audioFile) {
@@ -123,21 +154,31 @@ export default function NewsManager() {
         audioUrl = await uploadAudio(audioFile, (p) => setUpload(p))
       }
 
-      if (imageFile) {
-        if (editingId && editingImageUrl && !removeImage) {
-          await deleteAudio(editingImageUrl)
-        }
-        imageUrl = await uploadImage(imageFile, (p) => setUpload(p))
+      let finalUrls = [...editingImageUrls]
+      for (const f of newImageFiles) {
+        if (finalUrls.length >= MAX_NEWS_IMAGES) break
+        finalUrls.push(await uploadImage(f, (p) => setUpload(p)))
+      }
+      finalUrls = finalUrls.slice(0, MAX_NEWS_IMAGES)
+
+      const toDelete = initialImageUrlsRef.current.filter((u) => !finalUrls.includes(u))
+      for (const u of toDelete) {
+        await deleteAudio(u)
       }
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         title: title.trim(),
         content: content.trim(),
         audioUrl,
-        imageUrl,
+        imageUrls: finalUrls,
         expiresAt: expiresAt.trim()
           ? Timestamp.fromDate(new Date(expiresAt.trim()))
           : null,
+      }
+      if (finalUrls.length > 0) {
+        payload.imageUrl = finalUrls[0]
+      } else if (editingId) {
+        payload.imageUrl = deleteField()
       }
 
       if (editingId) {
@@ -159,7 +200,9 @@ export default function NewsManager() {
   async function handleDelete(item: NewsItem) {
     if (!confirm(`「${item.title}」を削除しますか？`)) return
     if (item.audioUrl) await deleteAudio(item.audioUrl)
-    if (item.imageUrl) await deleteAudio(item.imageUrl)
+    for (const u of item.imageUrls) {
+      await deleteAudio(u)
+    }
     await deleteDoc(doc(db, 'news', item.id))
   }
 
@@ -172,14 +215,12 @@ export default function NewsManager() {
     ? URL.createObjectURL(audioFile)
     : (!removeAudio && editingAudioUrl) ? editingAudioUrl : ''
 
-  const currentImageToShow = imageFile
-    ? URL.createObjectURL(imageFile)
-    : (!removeImage && editingImageUrl) ? editingImageUrl : ''
-
   /** 公開期限を過ぎたものは一覧に出さない（ユーザー向け VipNews と同じ基準） */
   const visibleNewsList = newsList.filter(
     (item) => !item.expiresAt || item.expiresAt.getTime() > Date.now(),
   )
+
+  const imageSlotLeft = MAX_NEWS_IMAGES - editingImageUrls.length - newImageFiles.length
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -230,70 +271,70 @@ export default function NewsManager() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[#86868b] text-[10px] block">画像・ポスター（任意・JPEG / PNG / WebP / GIF）</label>
-              <p className="text-[#86868b] text-[10px] -mt-1 mb-1">音声と同時に添付できます。画像のみ・音声のみでも投稿できます。</p>
+              <label className="text-[#86868b] text-[10px] block">
+                画像・ポスター（任意・最大{MAX_NEWS_IMAGES}枚・JPEG / PNG / WebP / GIF）
+              </label>
+              <p className="text-[#86868b] text-[10px] -mt-1 mb-1">
+                複数枚を一度に選べます。音声と同時に添付できます。
+              </p>
 
-              {editingImageUrl && !removeImage && !imageFile && (
-                <div className="space-y-1">
-                  <img
-                    src={editingImageUrl}
-                    alt=""
-                    className="w-full max-h-48 object-contain rounded-lg border border-[#e5e5ea] bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setRemoveImage(true)}
-                    className="text-red-500/80 text-[10px] hover:text-red-500 transition"
-                  >
-                    ✕ この画像を削除する
-                  </button>
+              {(editingImageUrls.length > 0 || newImageFiles.length > 0) && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {editingImageUrls.map((url, i) => (
+                    <div key={`u-${url}-${i}`} className="relative rounded-lg border border-[#e5e5ea] bg-white overflow-hidden">
+                      <img src={url} alt="" className="w-full h-28 object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => removeEditingUrl(i)}
+                        className="absolute top-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded"
+                      >
+                        削除
+                      </button>
+                    </div>
+                  ))}
+                  {newImageFiles.map((_, i) => (
+                    <div key={`n-${i}`} className="relative rounded-lg border border-[#0095B6]/30 bg-white overflow-hidden">
+                      <img
+                        src={newImagePreviewUrls[i]}
+                        alt=""
+                        className="w-full h-28 object-contain"
+                      />
+                      <span className="absolute bottom-1 left-1 text-[9px] bg-[#0095B6]/90 text-white px-1 rounded">未保存</span>
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(i)}
+                        className="absolute top-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded"
+                      >
+                        削除
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              )}
-              {removeImage && (
-                <p className="text-red-500/80 text-[10px]">
-                  保存時に画像を削除します
-                  <button type="button" onClick={() => setRemoveImage(false)} className="ml-2 text-[#0095B6] hover:text-[#007A96]">
-                    取り消す
-                  </button>
-                </p>
               )}
 
               <div
-                onClick={() => imageInputRef.current?.click()}
-                className="flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 cursor-pointer hover:border-[#0095B6]/40 transition"
+                onClick={() => imageSlotLeft > 0 && imageInputRef.current?.click()}
+                className={`flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 transition ${
+                  imageSlotLeft > 0 ? 'cursor-pointer hover:border-[#0095B6]/40' : 'opacity-40 cursor-not-allowed'
+                }`}
               >
                 <span className="text-[#86868b] text-xs">
-                  {imageFile ? imageFile.name : '画像を選択'}
+                  {imageSlotLeft > 0
+                    ? `画像を追加（あと${imageSlotLeft}枚まで）`
+                    : `画像は最大${MAX_NEWS_IMAGES}枚です`}
                 </span>
-                {imageFile && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setImageFile(null)
-                      if (imageInputRef.current) imageInputRef.current.value = ''
-                    }}
-                    className="ml-auto text-[#86868b] hover:text-red-500 text-xs transition"
-                  >
-                    ✕
-                  </button>
-                )}
               </div>
               <input
                 ref={imageInputRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
                 className="hidden"
-                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  addImageFiles(e.target.files)
+                  e.target.value = ''
+                }}
               />
-
-              {imageFile && currentImageToShow && (
-                <img
-                  src={currentImageToShow}
-                  alt=""
-                  className="w-full max-h-48 object-contain rounded-lg border border-[#e5e5ea] bg-white"
-                />
-              )}
             </div>
 
             <div className="space-y-2">
@@ -384,8 +425,10 @@ export default function NewsManager() {
                   <p className="text-[#1d1d1f] text-sm font-bold truncate">{item.title}</p>
                   <p className="text-[#86868b] text-xs mt-0.5 line-clamp-2">{item.content}</p>
                   <div className="flex flex-wrap gap-1.5 mt-1">
-                    {item.imageUrl && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-[#0095B6]">🖼️ 画像あり</span>
+                    {item.imageUrls.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#0095B6]">
+                        🖼️ 画像 {item.imageUrls.length}枚
+                      </span>
                     )}
                     {item.audioUrl && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-[#0095B6]">🎵 音声あり</span>
@@ -407,12 +450,17 @@ export default function NewsManager() {
                   >✕</button>
                 </div>
               </div>
-              {item.imageUrl && (
-                <img
-                  src={item.imageUrl}
-                  alt=""
-                  className="w-full max-h-48 object-contain rounded-lg border border-[#e5e5ea] bg-white"
-                />
+              {item.imageUrls.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {item.imageUrls.map((url) => (
+                    <img
+                      key={url}
+                      src={url}
+                      alt=""
+                      className="w-full max-h-40 object-contain rounded-lg border border-[#e5e5ea] bg-white"
+                    />
+                  ))}
+                </div>
               )}
               {item.audioUrl && (
                 <AudioPlayer src={item.audioUrl} title={item.title} />
