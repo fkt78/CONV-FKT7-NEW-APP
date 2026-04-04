@@ -312,22 +312,24 @@ export default function NewsManager() {
                 </div>
               )}
 
-              <div
-                onClick={() => imageSlotLeft > 0 && imageInputRef.current?.click()}
+              <label
+                htmlFor="news-image-input"
                 className={`flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 transition ${
-                  imageSlotLeft > 0 ? 'cursor-pointer hover:border-[#0095B6]/40' : 'opacity-40 cursor-not-allowed'
+                  imageSlotLeft > 0 ? 'cursor-pointer hover:border-[#0095B6]/40' : 'opacity-40 cursor-not-allowed pointer-events-none'
                 }`}
               >
                 <span className="text-[#86868b] text-xs">
                   {imageSlotLeft > 0
-                    ? `画像を追加（あと${imageSlotLeft}枚まで）`
+                    ? `📷 画像を追加（あと${imageSlotLeft}枚まで選択可）`
                     : `画像は最大${MAX_NEWS_IMAGES}枚です`}
                 </span>
-              </div>
+              </label>
               <input
                 ref={imageInputRef}
+                id="news-image-input"
                 type="file"
                 multiple
+                disabled={imageSlotLeft <= 0}
                 accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
                 className="hidden"
                 onChange={(e) => {
