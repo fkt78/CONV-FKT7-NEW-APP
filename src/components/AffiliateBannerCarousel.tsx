@@ -141,6 +141,15 @@ const SLIDES: BannerSlide[] = [
     href: 'https://fkt-office.com/service-guide.html',
     labelJa: 'お名前.com',
   },
+  {
+    id: 'ka-nabell',
+    bgImage: '/banners/ka-nabell.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.kaNabell',
+    badgeColor: '#c9a227',
+    href: 'https://fkt-office.com/service-guide.html#ka-nabell',
+    labelJa: 'カーナベル（KA-NABELL）',
+  },
 ]
 
 const AUTO_PLAY_MS = 5000

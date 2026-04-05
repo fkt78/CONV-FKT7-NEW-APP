@@ -35,12 +35,13 @@ export default function InstallGuide() {
   const [browserTab, setBrowserTab] = useState<BrowserTab>('safari')
 
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] flex flex-col">
+    <div className="h-full min-h-0 bg-[#f5f5f7] flex flex-col">
       <div className="h-px bg-gradient-to-r from-transparent via-[#0095B6]/30 to-transparent flex-shrink-0" />
       <div className="h-px bg-gradient-to-r from-transparent via-[#5BC8D7]/20 to-transparent flex-shrink-0" />
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-lg mx-auto px-5 py-6 pb-10">
+      {/* #root が overflow:hidden のため flex-1 領域に min-h-0 が必須（さもなくば中身が伸びてスクロール不能になる） */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+        <div className="max-w-lg mx-auto px-5 py-6 pb-10 safe-area-bottom">
           <div className="flex items-center justify-between mb-6 gap-2">
             <button
               onClick={() => navigate(-1)}
