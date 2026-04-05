@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { logBannerClick } from '../lib/analytics'
 
 interface BannerSlide {
   id: string
@@ -9,6 +10,8 @@ interface BannerSlide {
   i18nKey: string
   badgeColor: string
   href: string
+  /** GA4 に送る日本語表示名 */
+  labelJa: string
 }
 
 const SLIDES: BannerSlide[] = [
@@ -19,6 +22,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.vpn',
     badgeColor: '#ff3b30',
     href: 'https://fkt-office.com/life-support.html',
+    labelJa: 'セカイVPN',
   },
   {
     id: 'abema',
@@ -27,6 +31,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.abema',
     badgeColor: '#ff2d55',
     href: 'https://fkt-office.com/life-support.html',
+    labelJa: 'ABEMAプレミアム',
   },
   {
     id: 'prepaid',
@@ -35,6 +40,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.prepaid',
     badgeColor: '#34c759',
     href: 'https://fkt-office.com/life-support.html',
+    labelJa: 'スマホプリペイド',
   },
   {
     id: 'furnished-share-house',
@@ -43,6 +49,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.furnishedShareHouse',
     badgeColor: '#ea580c',
     href: 'https://fkt-office.com/life-support.html#furnished-share-house',
+    labelJa: '家具家電付きシェアハウス',
   },
   {
     id: 'sim',
@@ -51,6 +58,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.sim',
     badgeColor: '#007aff',
     href: 'https://fkt-office.com/life-support.html',
+    labelJa: '格安SIM（エキサイト）',
   },
   {
     id: 'dtisim',
@@ -59,6 +67,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.dtisim',
     badgeColor: '#007aff',
     href: 'https://fkt-office.com/life-support.html#dtisim',
+    labelJa: 'DTI SIM',
   },
   {
     id: 'goen-mobile',
@@ -67,6 +76,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.goenMobile',
     badgeColor: '#2e7d32',
     href: 'https://fkt-office.com/life-support.html#goen-mobile',
+    labelJa: 'ごえんモバイル',
   },
   {
     id: 'biglobe-wimax',
@@ -75,6 +85,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.biglobeWimax',
     badgeColor: '#ff6600',
     href: 'https://fkt-office.com/service-guide.html#biglobe-wimax',
+    labelJa: 'BIGLOBE WiMAX +5G（日本向け）',
   },
   {
     id: 'biglobe-wimax-vn',
@@ -83,6 +94,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.biglobeWimaxVn',
     badgeColor: '#007aff',
     href: 'https://fkt-office.com/life-support.html#biglobe-wimax',
+    labelJa: 'BIGLOBE WiMAX（外国人向け）',
   },
   {
     id: 'daiwan-telecom',
@@ -91,6 +103,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.daiwanTelecom',
     badgeColor: '#e30613',
     href: 'https://fkt-office.com/life-support.html#daiwan-telecom',
+    labelJa: 'ダイワンテレコム',
   },
   {
     id: 'kojo-kyujin-navi',
@@ -99,6 +112,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.kojoKyujinNavi',
     badgeColor: '#1e3a5f',
     href: 'https://fkt-office.com/life-support.html#kojo-kyujin-navi',
+    labelJa: '工場求人ナビ',
   },
   {
     id: 'commufa',
@@ -107,6 +121,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.commufa',
     badgeColor: '#ff9500',
     href: 'https://fkt-office.com/service-guide.html',
+    labelJa: 'コミュファ光',
   },
   {
     id: 'rakuten',
@@ -115,6 +130,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.rakuten',
     badgeColor: '#bf0000',
     href: 'https://fkt-office.com/service-guide.html',
+    labelJa: '楽天市場',
   },
   {
     id: 'onamae',
@@ -123,6 +139,7 @@ const SLIDES: BannerSlide[] = [
     i18nKey: 'banner.onamae',
     badgeColor: '#007aff',
     href: 'https://fkt-office.com/service-guide.html',
+    labelJa: 'お名前.com',
   },
 ]
 
@@ -214,7 +231,10 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
     if (blockLinkClickRef.current) {
       e.preventDefault()
       blockLinkClickRef.current = false
+      return
     }
+    const s = SLIDES[currentRef.current]
+    if (s) logBannerClick(s.id, s.labelJa)
   }
 
   const slide = SLIDES[visible]
