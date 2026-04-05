@@ -65,6 +65,12 @@
     "validThrough": " – hiệu lực đến {{date}}"
   },
   "banner": {
+    "localAdRecruit": {
+      "badge": "Tuyển nhà quảng cáo · Local Sponsors Welcome",
+      "title": "Quảng cáo trên ứng dụng?",
+      "subtitle": "PR trực tiếp tới khách địa phương · Từ 1.000 yên/tháng",
+      "cta": "Xem chi tiết"
+    },
     "vpn": {
       "badge": "Miễn phí 2 tháng",
       "title": "Sekai VPN",

@@ -65,6 +65,12 @@
     "validThrough": " – valid through {{date}}"
   },
   "banner": {
+    "localAdRecruit": {
+      "badge": "Local Sponsors Welcome",
+      "title": "Advertise in our app?",
+      "subtitle": "Reach local customers directly · From ¥1,000/mo",
+      "cta": "Learn More"
+    },
     "vpn": {
       "badge": "2 Months Free",
       "title": "Sekai VPN",

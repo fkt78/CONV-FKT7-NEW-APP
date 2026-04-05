@@ -16,6 +16,15 @@ interface BannerSlide {
 
 const SLIDES: BannerSlide[] = [
   {
+    id: 'local-ad-recruit',
+    bgImage: '/banners/local-ad-recruit.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.localAdRecruit',
+    badgeColor: '#14532d',
+    href: 'https://fkt-office.com/advertise.html',
+    labelJa: '地元広告（募集）',
+  },
+  {
     id: 'ka-nabell',
     bgImage: '/banners/ka-nabell.jpg',
     bgPosition: 'right center',

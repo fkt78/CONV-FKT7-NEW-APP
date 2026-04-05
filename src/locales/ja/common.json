@@ -65,6 +65,12 @@
     "validThrough": " 〜 {{date}} まで有効"
   },
   "banner": {
+    "localAdRecruit": {
+      "badge": "広告主様 募集中 / Local Sponsors Welcome",
+      "title": "アプリに広告を出しませんか？",
+      "subtitle": "地元のお客様へダイレクトにPR・月額1,000円〜",
+      "cta": "詳細を見る"
+    },
     "vpn": {
       "badge": "2ヶ月無料",
       "title": "セカイVPN",
