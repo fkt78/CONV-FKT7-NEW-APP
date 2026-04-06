@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
@@ -14,9 +14,7 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(blockedFromRedirect ? t('login.error.blocked') : '')
-  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
-  const [resetLoading, setResetLoading] = useState(false)
 
   useEffect(() => {
     if (blockedFromRedirect) {
@@ -33,7 +31,6 @@ export default function Login() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
-    setInfo('')
     setLoading(true)
 
     const trimmedEmail = email.trim()
@@ -84,35 +81,6 @@ export default function Login() {
     }
   }
 
-  async function handlePasswordReset() {
-    if (!email.trim()) {
-      setError(t('login.error.resetEmailRequired'))
-      return
-    }
-    setResetLoading(true)
-    setError('')
-    setInfo('')
-
-    try {
-      await sendPasswordResetEmail(auth, email.trim())
-      setInfo(t('login.info.resetSent'))
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code
-      if (import.meta.env.DEV) {
-        console.error('[Login] パスワードリセット失敗', code, err)
-      }
-      if (code === 'auth/network-request-failed') {
-        setError(t('login.error.resetNetwork'))
-      } else if (code === 'auth/user-not-found') {
-        setError(t('login.error.resetUserNotFound'))
-      } else {
-        setError(t('login.error.resetEmailFailed'))
-      }
-    } finally {
-      setResetLoading(false)
-    }
-  }
-
   return (
     <div className="h-dvh bg-[#f5f5f7] flex flex-col overflow-y-auto p-5 safe-area-top safe-area-bottom">
       <div className="w-full max-w-md mx-auto flex-1 py-6">
@@ -133,12 +101,6 @@ export default function Login() {
               {error}
             </div>
           )}
-          {info && (
-            <div className="bg-[#34C759]/10 border border-[#34C759]/30 text-[#34C759] text-[15px] rounded-2xl p-4 text-center">
-              {info}
-            </div>
-          )}
-
           <div>
             <label htmlFor="login-email" className="block text-[#86868b] text-[15px] font-medium mb-2 tracking-wide">
               {t('login.email')}
@@ -180,15 +142,12 @@ export default function Login() {
           </button>
 
           <div className="text-center">
-            <button
-              type="button"
-              onClick={handlePasswordReset}
-              disabled={resetLoading}
-              aria-label={t('login.resetAria')}
-              className="min-h-[44px] flex items-center justify-center mx-auto text-[#0095B6] text-[15px] hover:text-[#007A96] transition px-4 py-2"
+            <Link
+              to="/forgot-password"
+              className="min-h-[44px] inline-flex items-center justify-center text-[#0095B6] text-[15px] hover:text-[#007A96] transition px-4 py-2 font-medium"
             >
-              {resetLoading ? t('login.resetSending') : t('login.resetPassword')}
-            </button>
+              {t('login.resetPassword')}
+            </Link>
           </div>
         </form>
 

@@ -10,7 +10,8 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, functions, httpsCallable } from '../lib/firebase'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
-type Attribute = 'male' | 'female' | 'student' | 'other'
+/** 会員の性別（クーポン配信の attribute フィールドと同一キー） */
+type RegisterGender = 'male' | 'female'
 
 export default function Register() {
   const { t } = useTranslation()
@@ -18,7 +19,7 @@ export default function Register() {
 
   const [fullName, setFullName] = useState('')
   const [birthMonth, setBirthMonth] = useState('')
-  const [attribute, setAttribute] = useState<Attribute>('male')
+  const [attribute, setAttribute] = useState<RegisterGender>('male')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [agreeTerms, setAgreeTerms] = useState(false)
@@ -169,10 +170,10 @@ export default function Register() {
             <select
               id="reg-attribute"
               value={attribute}
-              onChange={(e) => setAttribute(e.target.value as Attribute)}
+              onChange={(e) => setAttribute(e.target.value as RegisterGender)}
               className="w-full min-h-[44px] bg-white border border-[#e5e5ea] rounded-2xl px-4 py-3 text-[17px] text-[#1d1d1f] focus:outline-none focus:border-[#0095B6] focus:ring-2 focus:ring-[#0095B6]/20 transition shadow-sm"
             >
-              {(['male', 'female', 'student', 'other'] as const).map((key) => (
+              {(['male', 'female'] as const).map((key) => (
                 <option key={key} value={key}>
                   {t(`register.attributeLabels.${key}`)}
                 </option>

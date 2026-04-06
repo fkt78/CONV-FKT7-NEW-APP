@@ -7,12 +7,10 @@
     "submit": "Đăng nhập",
     "submitting": "Đang đăng nhập…",
     "resetPassword": "Quên mật khẩu?",
-    "resetSending": "Đang gửi…",
     "help": "Nếu không đăng nhập được: tắt chế độ duyệt ẩn danh, kiểm tra Wi‑Fi hoặc dữ liệu di động, khởi động lại ứng dụng rồi thử lại.",
     "noAccount": "Chưa có tài khoản?",
     "register": "Đăng ký",
     "installGuide": "📱 Thêm vào Màn hình chính",
-    "resetAria": "Quên mật khẩu",
     "error": {
       "blocked": "Tài khoản này đã bị tạm khóa.",
       "empty": "Vui lòng nhập email và mật khẩu.",
@@ -25,14 +23,30 @@
       "internalError": "Lỗi máy chủ. Vui lòng thử lại sau.",
       "unauthorizedDomain": "Ứng dụng này không cho phép đăng nhập. Vui lòng liên hệ quản trị viên.",
       "privateBrowsing": "Tắt chế độ duyệt ẩn danh hoặc dùng cửa sổ trình duyệt thường.",
-      "generic": "Đã xảy ra lỗi. Kiểm tra kết nối và thử lại.",
-      "resetEmailRequired": "Nhập email ở trên để đặt lại mật khẩu.",
-      "resetNetwork": "Không kết nối được mạng. Kiểm tra kết nối và thử lại.",
-      "resetUserNotFound": "Email này chưa được đăng ký.",
-      "resetEmailFailed": "Không gửi được email. Vui lòng kiểm tra địa chỉ."
-    },
-    "info": {
-      "resetSent": "Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư."
+      "generic": "Đã xảy ra lỗi. Kiểm tra kết nối và thử lại."
+    }
+  },
+  "forgotPassword": {
+    "title": "VIP Member",
+    "subtitle": "Đặt lại mật khẩu",
+    "intro": "Chúng tôi sẽ gửi liên kết đặt lại mật khẩu đến email đã đăng ký. Sau khi đặt mật khẩu mới theo hướng dẫn trong email, hãy quay lại màn hình đăng nhập.",
+    "stepsTitle": "Các bước",
+    "step1": "Nhập địa chỉ email bạn đã dùng khi đăng ký.",
+    "step2": "Nhấn “Gửi email đặt lại”.",
+    "step3": "Mở email và làm theo liên kết để đặt mật khẩu mới (kiểm tra cả thư mục spam/quảng cáo).",
+    "step4": "Quay lại màn hình đăng nhập và đăng nhập bằng mật khẩu mới.",
+    "spamHint": "Nếu không thấy email, hãy kiểm tra mục spam hoặc khuyến mãi.",
+    "email": "Email",
+    "submit": "Gửi email đặt lại",
+    "sending": "Đang gửi…",
+    "backToLogin": "Quay lại đăng nhập",
+    "success": "Đã gửi email đặt lại mật khẩu. Mở email và làm theo hướng dẫn.",
+    "error": {
+      "emptyEmail": "Vui lòng nhập địa chỉ email.",
+      "network": "Không kết nối được mạng. Kiểm tra kết nối và thử lại.",
+      "userNotFound": "Email này chưa được đăng ký.",
+      "invalidEmail": "Định dạng email không hợp lệ.",
+      "sendFailed": "Không gửi được email. Vui lòng kiểm tra địa chỉ."
     }
   },
   "register": {
@@ -41,7 +55,7 @@
     "fullName": "Họ và tên đầy đủ",
     "nameHint": "Dùng để đối chiếu giấy tờ tại cửa hàng. Vui lòng nhập tên thật.",
     "birthMonth": "Tháng sinh",
-    "attribute": "Thuộc tính",
+    "attribute": "Giới tính",
     "email": "Email",
     "password": "Mật khẩu",
     "passwordPlaceholder": "Từ 6 ký tự trở lên",
@@ -55,9 +69,7 @@
     "required": "*",
     "attributeLabels": {
       "male": "Nam",
-      "female": "Nữ",
-      "student": "Sinh viên",
-      "other": "Khác"
+      "female": "Nữ"
     },
     "error": {
       "fullName": "Vui lòng nhập họ và tên đầy đủ.",

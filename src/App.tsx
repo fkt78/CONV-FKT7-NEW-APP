@@ -12,6 +12,7 @@ import AppBadge from './components/AppBadge'
 import NotificationRegistration from './components/NotificationRegistration'
 import Register from './pages/Register'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
 import Home from './pages/Home'
 import AdminDashboard from './pages/AdminDashboard'
 import InstallGuide from './pages/InstallGuide'
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/licenses" element={<Licenses />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route
               path="/settings/notifications"
               element={

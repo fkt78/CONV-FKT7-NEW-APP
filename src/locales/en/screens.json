@@ -7,12 +7,10 @@
     "submit": "Sign in",
     "submitting": "Signing in…",
     "resetPassword": "Forgot your password?",
-    "resetSending": "Sending…",
     "help": "If you cannot sign in: turn off private browsing, check Wi‑Fi or mobile data, then restart the app and try again.",
     "noAccount": "Don’t have an account?",
     "register": "Create account",
     "installGuide": "📱 Add to Home Screen",
-    "resetAria": "Forgot password",
     "error": {
       "blocked": "This account has been suspended.",
       "empty": "Please enter your email and password.",
@@ -25,14 +23,30 @@
       "internalError": "A server error occurred. Please try again later.",
       "unauthorizedDomain": "Sign-in is not allowed on this app. Please contact the administrator.",
       "privateBrowsing": "Turn off private browsing or use a normal browser window.",
-      "generic": "Something went wrong. Check your connection and try again.",
-      "resetEmailRequired": "Enter your email in the field above to reset your password.",
-      "resetNetwork": "Cannot connect to the network. Check your connection and try again.",
-      "resetUserNotFound": "This email is not registered.",
-      "resetEmailFailed": "Could not send the email. Please check your address."
-    },
-    "info": {
-      "resetSent": "Password reset email sent. Please check your inbox."
+      "generic": "Something went wrong. Check your connection and try again."
+    }
+  },
+  "forgotPassword": {
+    "title": "VIP Member",
+    "subtitle": "Reset password",
+    "intro": "We’ll email you a link to set a new password. After you finish in your inbox, return to the sign-in screen and log in with your new password.",
+    "stepsTitle": "How it works",
+    "step1": "Enter the email address you used when you registered.",
+    "step2": "Tap “Send reset email”.",
+    "step3": "Open the email and follow the link to set a new password (check spam/promotions if needed).",
+    "step4": "Go back to the sign-in screen and log in with your new password.",
+    "spamHint": "If you don’t see the email, check your spam or promotions folder.",
+    "email": "Email",
+    "submit": "Send reset email",
+    "sending": "Sending…",
+    "backToLogin": "Back to sign in",
+    "success": "Reset email sent. Open it and follow the steps to set a new password.",
+    "error": {
+      "emptyEmail": "Please enter your email address.",
+      "network": "Cannot connect to the network. Check your connection and try again.",
+      "userNotFound": "This email is not registered.",
+      "invalidEmail": "Invalid email format.",
+      "sendFailed": "Could not send the email. Please check your address."
     }
   },
   "register": {
@@ -41,7 +55,7 @@
     "fullName": "Full name",
     "nameHint": "Used for ID verification at the store. Please enter your real name.",
     "birthMonth": "Birth month",
-    "attribute": "Profile",
+    "attribute": "Gender",
     "email": "Email",
     "password": "Password",
     "passwordPlaceholder": "6+ characters",
@@ -55,9 +69,7 @@
     "required": "*",
     "attributeLabels": {
       "male": "Male",
-      "female": "Female",
-      "student": "Student",
-      "other": "Other"
+      "female": "Female"
     },
     "error": {
       "fullName": "Please enter your full name.",
