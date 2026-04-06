@@ -14,13 +14,21 @@ import {
 import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { getLocaleTag } from '../lib/formatTime'
+import { resolveCouponTexts } from '../lib/coupon'
 
 type WalletTab = 'unused' | 'history'
 
 interface OwnedCoupon {
   id: string
-  title: string
-  description: string
+  /** 後方互換: 旧ドキュメントのみ */
+  title?: string
+  description?: string
+  titleJa?: string
+  titleEn?: string
+  titleVi?: string
+  descriptionJa?: string
+  descriptionEn?: string
+  descriptionVi?: string
   discountAmount: number
   status: 'unused' | 'used'
   distributedAt: Date | null
@@ -54,7 +62,7 @@ const ERR_COUPON_ALREADY_USED = 'COUPON_ALREADY_USED'
 const ERR_COUPON_EXPIRED = 'COUPON_EXPIRED'
 
 export default function CouponWallet() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { currentUser } = useAuth()
   const [tab, setTab] = useState<WalletTab>('unused')
   const [unusedCoupons, setUnusedCoupons] = useState<OwnedCoupon[]>([])
@@ -109,8 +117,14 @@ export default function CouponWallet() {
     const data = d.data()
     return {
       id: d.id,
-      title: (data.title as string) ?? '',
-      description: (data.description as string) ?? '',
+      title: data.title as string | undefined,
+      description: data.description as string | undefined,
+      titleJa: data.titleJa as string | undefined,
+      titleEn: data.titleEn as string | undefined,
+      titleVi: data.titleVi as string | undefined,
+      descriptionJa: data.descriptionJa as string | undefined,
+      descriptionEn: data.descriptionEn as string | undefined,
+      descriptionVi: data.descriptionVi as string | undefined,
       discountAmount: toSafeNumber(data.discountAmount),
       status: data.status as 'unused' | 'used',
       distributedAt: (data.distributedAt as TimestampType | null)?.toDate() ?? null,
@@ -220,6 +234,10 @@ export default function CouponWallet() {
 
   const displayCoupons = tab === 'unused' ? sortedUnused : usedCoupons
 
+  const presentingTexts = presenting
+    ? resolveCouponTexts(presenting, i18n.language)
+    : null
+
   return (
     <>
       <div className="flex mx-4 rounded-xl bg-[#e5e5ea]/60 p-1 flex-shrink-0 mb-2">
@@ -264,6 +282,7 @@ export default function CouponWallet() {
           </div>
         ) : (
           displayCoupons.map((c) => {
+            const { title: couponTitle, description: couponDesc } = resolveCouponTexts(c, i18n.language)
             const isUsed = c.status === 'used'
             const expired = !isUsed && isExpired(c)
             const canUse = !isUsed && !expired && !marking
@@ -292,7 +311,7 @@ export default function CouponWallet() {
                   <div className="flex-1 p-3 pl-4 border-l border-dashed border-[#e5e5ea]">
                     <div className="flex items-start justify-between gap-2">
                       <p className={`font-semibold text-sm ${isUsed ? 'text-[#86868b]' : 'text-[#1d1d1f]'}`}>
-                        {c.title}
+                        {couponTitle}
                       </p>
                       {c.discountAmount > 0 && (
                         <span className={`text-xs font-bold flex-shrink-0 ${isUsed ? 'text-[#86868b]' : 'text-[#0095B6]'}`}>
@@ -300,8 +319,8 @@ export default function CouponWallet() {
                         </span>
                       )}
                     </div>
-                    {c.description && (
-                      <p className="text-[#86868b] text-xs mt-0.5 line-clamp-1">{c.description}</p>
+                    {couponDesc && (
+                      <p className="text-[#86868b] text-xs mt-0.5 line-clamp-1">{couponDesc}</p>
                     )}
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-[#86868b] text-[10px]">
@@ -339,7 +358,7 @@ export default function CouponWallet() {
       </div>
 
       {/* 使用確認オーバーレイ */}
-      {presenting && (
+      {presenting && presentingTexts && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-sm my-auto">
             <div className="rounded-2xl overflow-hidden border border-[#e5e5ea] bg-white shadow-2xl flex flex-col max-h-[85dvh]">
@@ -349,10 +368,10 @@ export default function CouponWallet() {
               </div>
 
               <div className="flex-1 overflow-y-auto overscroll-contain p-6 text-center space-y-4">
-                <h2 className="text-[#1d1d1f] font-semibold text-xl">{presenting.title}</h2>
-                {presenting.description && (
+                <h2 className="text-[#1d1d1f] font-semibold text-xl">{presentingTexts.title}</h2>
+                {presentingTexts.description && (
                   <div className="text-[#86868b] text-sm text-left space-y-1.5">
-                    {presenting.description.split(/\r?\n|\r/).map((line, i) => {
+                    {presentingTexts.description.split(/\r?\n|\r/).map((line, i) => {
                       const trimmed = line.trim()
                       if (!trimmed) return <div key={i} className="h-2" />
                       const bulletMatch = trimmed.match(/^[-•*・]\s+(.+)$/)

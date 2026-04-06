@@ -28,6 +28,7 @@ import {
   type ExpiryType,
   type IndividualDistributionResult,
   type TargetMemberGroup,
+  couponSnapshotForDistribution,
   ATTRIBUTE_LABELS,
   AGE_RANGE_LABELS,
   AGE_RANGE_KEYS,
@@ -44,9 +45,13 @@ export default function CouponManager() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  // form
-  const [title, setTitle] = useState('')
-  const [desc, setDesc] = useState('')
+  // form（アプリ表示は ja / en / vi）
+  const [titleJa, setTitleJa] = useState('')
+  const [titleEn, setTitleEn] = useState('')
+  const [titleVi, setTitleVi] = useState('')
+  const [descJa, setDescJa] = useState('')
+  const [descEn, setDescEn] = useState('')
+  const [descVi, setDescVi] = useState('')
   const [discount, setDiscount] = useState(0)
   const [cond, setCond] = useState<WeatherCondition>('any')
   const [threshold, setThreshold] = useState(10)
@@ -168,8 +173,12 @@ export default function CouponManager() {
 
   /* ── フォームリセット ── */
   function resetForm() {
-    setTitle('')
-    setDesc('')
+    setTitleJa('')
+    setTitleEn('')
+    setTitleVi('')
+    setDescJa('')
+    setDescEn('')
+    setDescVi('')
     setDiscount(0)
     setCond('any')
     setThreshold(10)
@@ -189,8 +198,14 @@ export default function CouponManager() {
 
   /* ── 編集モード開始 ── */
   function handleEdit(c: CouponTemplate) {
-    setTitle(c.title)
-    setDesc(c.description)
+    const jaT = c.titleJa ?? c.title ?? ''
+    const jaD = c.descriptionJa ?? c.description ?? ''
+    setTitleJa(jaT)
+    setTitleEn(c.titleEn ?? '')
+    setTitleVi(c.titleVi ?? '')
+    setDescJa(jaD)
+    setDescEn(c.descriptionEn ?? '')
+    setDescVi(c.descriptionVi ?? '')
     setDiscount(c.discountAmount ?? 0)
     setCond(c.weatherCondition)
     setThreshold(c.temperatureThreshold ?? 10)
@@ -218,13 +233,22 @@ export default function CouponManager() {
 
   /* ── 保存（新規 / 更新を自動分岐） ── */
   async function handleSave() {
-    if (!title.trim()) return
+    if (!titleJa.trim()) return
     if (expiryType === 'date' && !expiryDate) return
     setSaving(true)
     try {
+      const text = couponSnapshotForDistribution({
+        title: titleJa.trim(),
+        description: descJa.trim(),
+        titleJa: titleJa.trim(),
+        titleEn: titleEn.trim(),
+        titleVi: titleVi.trim(),
+        descriptionJa: descJa.trim(),
+        descriptionEn: descEn.trim(),
+        descriptionVi: descVi.trim(),
+      })
       const payload = {
-        title: title.trim(),
-        description: desc.trim(),
+        ...text,
         discountAmount: discount,
         weatherCondition: cond,
         temperatureThreshold: cond === 'cold_below' || cond === 'hot_above' ? threshold : null,
@@ -518,20 +542,61 @@ export default function CouponManager() {
             {editingId && (
               <p className="text-[#0095B6] text-[10px] font-medium tracking-wide">✏️ テンプレートを編集中</p>
             )}
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="クーポンタイトル（例: 雨の日ドリンク無料）"
-              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6]"
-            />
-            <textarea
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              placeholder="内容（改行・箇条書き（- や 1. で始める）がそのまま反映されます）"
-              rows={5}
-              className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] resize-y"
-            />
+            <p className="text-[#86868b] text-[10px] leading-relaxed">
+              タイトル・内容は日本語・英語・ベトナム語を入力してください。未入力の言語は日本語で表示されます。
+            </p>
+            <div className="space-y-2">
+              <label className="text-[#86868b] text-[10px] font-medium block">タイトル — 日本語</label>
+              <input
+                type="text"
+                value={titleJa}
+                onChange={(e) => setTitleJa(e.target.value)}
+                placeholder="例: 雨の日ドリンク無料"
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6]"
+              />
+              <label className="text-[#86868b] text-[10px] font-medium block">タイトル — English</label>
+              <input
+                type="text"
+                value={titleEn}
+                onChange={(e) => setTitleEn(e.target.value)}
+                placeholder="English title"
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6]"
+              />
+              <label className="text-[#86868b] text-[10px] font-medium block">タイトル — Tiếng Việt</label>
+              <input
+                type="text"
+                value={titleVi}
+                onChange={(e) => setTitleVi(e.target.value)}
+                placeholder="Tiêu đề tiếng Việt"
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6]"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[#86868b] text-[10px] font-medium block">内容 — 日本語</label>
+              <textarea
+                value={descJa}
+                onChange={(e) => setDescJa(e.target.value)}
+                placeholder="内容（改行・箇条書き（- や 1. で始める）がそのまま反映されます）"
+                rows={4}
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] resize-y"
+              />
+              <label className="text-[#86868b] text-[10px] font-medium block">内容 — English</label>
+              <textarea
+                value={descEn}
+                onChange={(e) => setDescEn(e.target.value)}
+                placeholder="Description in English"
+                rows={4}
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] resize-y"
+              />
+              <label className="text-[#86868b] text-[10px] font-medium block">内容 — Tiếng Việt</label>
+              <textarea
+                value={descVi}
+                onChange={(e) => setDescVi(e.target.value)}
+                placeholder="Nội dung tiếng Việt"
+                rows={4}
+                className="w-full bg-white border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] text-sm placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] resize-y"
+              />
+            </div>
             <div className="flex items-center gap-2">
               <label className="text-[#86868b] text-xs whitespace-nowrap">割引額</label>
               <div className="flex items-center gap-1">
@@ -765,7 +830,7 @@ export default function CouponManager() {
             <button
               onClick={handleSave}
               disabled={
-                !title.trim() ||
+                !titleJa.trim() ||
                 saving ||
                 (expiryType === 'date' && !expiryDate) ||
                 (autoDistribute && scheduleType === 'specific_months' && scheduleMonths.length === 0)
@@ -803,9 +868,9 @@ export default function CouponManager() {
                     title="テスト配信の対象に含める"
                   />
                   <span className="flex-1 min-w-0">
-                  <p className="text-[#1d1d1f] text-sm font-medium truncate">{c.title}</p>
-                  {c.description && (
-                    <p className="text-[#86868b] text-xs mt-0.5 truncate">{c.description}</p>
+                  <p className="text-[#1d1d1f] text-sm font-medium truncate">{c.titleJa ?? c.title}</p>
+                  {(c.descriptionJa ?? c.description) && (
+                    <p className="text-[#86868b] text-xs mt-0.5 truncate">{c.descriptionJa ?? c.description}</p>
                   )}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     {(c.discountAmount ?? 0) > 0 && (
@@ -885,7 +950,7 @@ export default function CouponManager() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b border-[#e5e5ea] flex-shrink-0">
               <h3 className="text-[#1d1d1f] font-semibold text-base">個人に配信</h3>
-              <p className="text-[#0095B6] text-sm font-medium mt-1">{individualCoupon.title}</p>
+              <p className="text-[#0095B6] text-sm font-medium mt-1">{individualCoupon.titleJa ?? individualCoupon.title}</p>
               <p className="text-[#86868b] text-xs mt-1">
                 配信したい人を選択して「配信」を押してください
               </p>

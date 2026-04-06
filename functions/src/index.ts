@@ -380,8 +380,15 @@ interface WeatherData {
 
 interface CouponTemplate {
   id: string
-  title: string
-  description: string
+  /** 後方互換 */
+  title?: string
+  description?: string
+  titleJa?: string
+  titleEn?: string
+  titleVi?: string
+  descriptionJa?: string
+  descriptionEn?: string
+  descriptionVi?: string
   discountAmount: number
   weatherCondition: WeatherCondition
   temperatureThreshold: number | null
@@ -399,6 +406,22 @@ interface CouponTemplate {
     dayOfWeek?: number
     dayOfMonth?: number
     months?: number[]
+  }
+}
+
+/** ユーザー配布ドキュメント用の多言語テキスト（未入力言語は日本語にフォールバック） */
+function couponUserDocTexts(c: CouponTemplate) {
+  const jaT = (c.titleJa ?? c.title ?? '').trim()
+  const jaD = (c.descriptionJa ?? c.description ?? '').trim()
+  return {
+    title: jaT,
+    description: jaD,
+    titleJa: jaT,
+    titleEn: (c.titleEn ?? '').trim() || jaT,
+    titleVi: (c.titleVi ?? '').trim() || jaT,
+    descriptionJa: jaD,
+    descriptionEn: (c.descriptionEn ?? '').trim() || jaD,
+    descriptionVi: (c.descriptionVi ?? '').trim() || jaD,
   }
 }
 
@@ -824,8 +847,7 @@ async function runCouponDistribution(
           const couponRef = db.collection('users').doc(uid).collection('coupons').doc(couponDocId)
           writeBatch.set(couponRef, {
             couponId: coupon.id,
-            title: coupon.title,
-            description: coupon.description ?? '',
+            ...couponUserDocTexts(coupon),
             discountAmount: coupon.discountAmount ?? 0,
             status: 'unused',
             distributedAt: Timestamp.now(),
@@ -849,12 +871,12 @@ async function runCouponDistribution(
         if (!matchesWeather(coupon.weatherCondition, coupon.temperatureThreshold ?? null, weather)) {
           if (weather) {
             console.log(
-              `[couponDistribution] 天候不一致でスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition} thr=${coupon.temperatureThreshold} ` +
+              `[couponDistribution] 天候不一致でスキップ: id=${coupon.id} title=${coupon.titleJa ?? coupon.title ?? ''} cond=${coupon.weatherCondition} thr=${coupon.temperatureThreshold} ` +
                 `→ 予報: 最大降水確率=${weather.precipitationProbabilityMax}% 最低=${weather.temperatureMin}℃ 最高=${weather.temperatureMax}℃（雨は${RAIN_PRECIP_PROB_MIN}%以上、寒は最低が閾値未満、暑は最高が閾値超）`,
             )
           } else {
             console.log(
-              `[couponDistribution] 天気API未取得のためスキップ: id=${coupon.id} title=${coupon.title} cond=${coupon.weatherCondition}（any のみ配信可）`,
+              `[couponDistribution] 天気API未取得のためスキップ: id=${coupon.id} title=${coupon.titleJa ?? coupon.title ?? ''} cond=${coupon.weatherCondition}（any のみ配信可）`,
             )
           }
           continue
@@ -889,8 +911,7 @@ async function runCouponDistribution(
           const couponRef = db.collection('users').doc(uid).collection('coupons').doc(couponDocId)
           writeBatch.set(couponRef, {
             couponId: coupon.id,
-            title: coupon.title,
-            description: coupon.description ?? '',
+            ...couponUserDocTexts(coupon),
             discountAmount: coupon.discountAmount ?? 0,
             status: 'unused',
             distributedAt: Timestamp.now(),

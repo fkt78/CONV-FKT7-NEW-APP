@@ -44,10 +44,81 @@ export type TargetSegment =
 /** 有効期限の種類（週は月曜始まり） */
 export type ExpiryType = 'same_day' | 'end_of_week' | 'end_of_month' | 'date'
 
+/**
+ * ユーザー向けに表示するタイトル・説明を解決する。
+ * - 新フィールド（titleJa 等）があれば優先し、旧データは title / description を日本語として扱う。
+ * - 英語・ベトナム語が空のときは日本語にフォールバック。
+ */
+export function resolveCouponTexts(
+  data: {
+    title?: string
+    description?: string
+    titleJa?: string
+    titleEn?: string
+    titleVi?: string
+    descriptionJa?: string
+    descriptionEn?: string
+    descriptionVi?: string
+  },
+  lang: string,
+): { title: string; description: string } {
+  const jaTitle = (data.titleJa ?? data.title ?? '').trim()
+  const jaDesc = (data.descriptionJa ?? data.description ?? '').trim()
+  const enTitle = (data.titleEn ?? '').trim() || jaTitle
+  const viTitle = (data.titleVi ?? '').trim() || jaTitle
+  const enDesc = (data.descriptionEn ?? '').trim() || jaDesc
+  const viDesc = (data.descriptionVi ?? '').trim() || jaDesc
+
+  const norm = (lang.split('-')[0] ?? 'ja').toLowerCase()
+  if (norm === 'en') return { title: enTitle, description: enDesc }
+  if (norm === 'vi') return { title: viTitle, description: viDesc }
+  return { title: jaTitle, description: jaDesc }
+}
+
+/** 配信ドキュメント用: 6言語フィールド＋後方互換の title / description（日本語） */
+export function couponSnapshotForDistribution(
+  c: Pick<
+    CouponTemplate,
+    | 'title'
+    | 'description'
+    | 'titleJa'
+    | 'titleEn'
+    | 'titleVi'
+    | 'descriptionJa'
+    | 'descriptionEn'
+    | 'descriptionVi'
+  >,
+): Record<string, string> {
+  const jaT = (c.titleJa ?? c.title ?? '').trim()
+  const jaD = (c.descriptionJa ?? c.description ?? '').trim()
+  const enT = (c.titleEn ?? '').trim() || jaT
+  const viT = (c.titleVi ?? '').trim() || jaT
+  const enD = (c.descriptionEn ?? '').trim() || jaD
+  const viD = (c.descriptionVi ?? '').trim() || jaD
+  return {
+    title: jaT,
+    description: jaD,
+    titleJa: jaT,
+    titleEn: enT,
+    titleVi: viT,
+    descriptionJa: jaD,
+    descriptionEn: enD,
+    descriptionVi: viD,
+  }
+}
+
 export interface CouponTemplate {
   id: string
-  title: string
-  description: string
+  /** @deprecated 後方互換。新規は titleJa を使用。未設定時は titleJa と同一扱い */
+  title?: string
+  description?: string
+  /** 日本語（必須） */
+  titleJa?: string
+  titleEn?: string
+  titleVi?: string
+  descriptionJa?: string
+  descriptionEn?: string
+  descriptionVi?: string
   discountAmount: number
   weatherCondition: WeatherCondition
   temperatureThreshold: number | null
@@ -283,10 +354,10 @@ export async function distributeCouponToUsers(
       continue
     }
 
+    const textFields = couponSnapshotForDistribution(coupon)
     await setDoc(doc(db, 'users', uid, 'coupons', couponDocId), {
       couponId,
-      title: coupon.title,
-      description: coupon.description ?? '',
+      ...textFields,
       discountAmount: coupon.discountAmount ?? 0,
       status: 'unused',
       distributedAt: serverTimestamp(),
@@ -296,7 +367,8 @@ export async function distributeCouponToUsers(
     })
 
     distributedCount++
-    details.push(`${fullName}さんに「${coupon.title}」を配信`)
+    const jaTitle = textFields.titleJa ?? textFields.title ?? ''
+    details.push(`${fullName}さんに「${jaTitle}」を配信`)
   }
 
   return { distributedCount, skippedCount, details }

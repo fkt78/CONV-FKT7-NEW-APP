@@ -358,7 +358,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           const isExpired = expAt && now > expAt.getTime()
           return {
             id: d.id,
-            title: (data.title as string) ?? '',
+            title: ((data.titleJa as string) ?? (data.title as string)) ?? '',
             discountAmount: (data.discountAmount as number) ?? 0,
             status: data.status as 'unused' | 'used',
             distributedAt: (data.distributedAt as Timestamp | null)?.toDate?.() ?? null,
