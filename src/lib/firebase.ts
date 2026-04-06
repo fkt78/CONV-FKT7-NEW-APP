@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, inMemoryPersistence, setPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { getStorage } from 'firebase/storage'
@@ -32,6 +32,14 @@ const app = initializeApp(firebaseConfig)
 
 export { app }
 export const auth = getAuth(app)
+
+/**
+ * 認証をメモリのみに保持。ブラウザをリロードするとセッションは失われ、ログイン画面から入り直す。
+ * （デフォルトの local 永続化を上書きするため、初回ロード時に非同期で完了する）
+ */
+export const authPersistenceReady = setPersistence(auth, inMemoryPersistence).catch((err) => {
+  console.error('[firebase] setPersistence(inMemory) failed', err)
+})
 export const db = getFirestore(app)
 export const functions = getFunctions(app)
 export const storage = getStorage(app)

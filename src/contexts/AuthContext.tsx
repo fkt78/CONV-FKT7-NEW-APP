@@ -8,7 +8,7 @@ import {
 } from 'react'
 import { type User, onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { auth, authPersistenceReady, db } from '../lib/firebase'
 
 export type UserStatus = 'active' | 'blacklisted' | null
 export type UserRole = 'admin' | null
@@ -35,39 +35,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let latestUid: string | null = null
+    let unsubscribe: (() => void) | undefined
+    let cancelled = false
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const uid = user?.uid ?? null
-      latestUid = uid
-      setCurrentUser(user)
+    void authPersistenceReady.then(() => {
+      if (cancelled) return
+      unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const uid = user?.uid ?? null
+        latestUid = uid
+        setCurrentUser(user)
 
-      if (user) {
-        try {
-          const snap = await getDoc(doc(db, 'users', user.uid))
-          if (latestUid !== uid) return
-          if (snap.exists()) {
-            const data = snap.data()
-            setUserStatus(data.status as UserStatus)
-            setUserRole(data.role === 'admin' ? 'admin' : null)
-          } else {
+        if (user) {
+          try {
+            const snap = await getDoc(doc(db, 'users', user.uid))
+            if (latestUid !== uid) return
+            if (snap.exists()) {
+              const data = snap.data()
+              setUserStatus(data.status as UserStatus)
+              setUserRole(data.role === 'admin' ? 'admin' : null)
+            } else {
+              setUserStatus(null)
+              setUserRole(null)
+            }
+          } catch (err) {
+            if (latestUid !== uid) return
+            console.error('[AuthContext] ユーザー情報取得失敗', err)
             setUserStatus(null)
             setUserRole(null)
           }
-        } catch (err) {
-          if (latestUid !== uid) return
-          console.error('[AuthContext] ユーザー情報取得失敗', err)
+        } else {
           setUserStatus(null)
           setUserRole(null)
         }
-      } else {
-        setUserStatus(null)
-        setUserRole(null)
-      }
 
-      setLoading(false)
+        setLoading(false)
+      })
     })
 
-    return unsubscribe
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
   }, [])
 
   return (
