@@ -10,6 +10,12 @@ import {
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 
+interface BannerStat {
+  id: string
+  label: string
+  count: number
+}
+
 type Period = '7d' | '30d' | 'all'
 
 interface CouponDoc {
@@ -48,6 +54,7 @@ interface AnalyticsData {
   totalSavedAmount: number
   byTemplate: Array<{ title: string; distributed: number; used: number; rate: number }>
   byDay: Array<{ date: string; messages: number }>
+  bannerStats: BannerStat[]
 }
 
 function getPeriodDates(period: Period): { start: Date | null; end: Date } {
@@ -109,6 +116,13 @@ function buildAnalyticsCsv(data: AnalyticsData, period: Period): string {
   lines.push(['日付', '件数'].map(escapeCsvField).join(','))
   for (const row of data.byDay) {
     lines.push([row.date, row.messages].map(escapeCsvField).join(','))
+  }
+
+  lines.push('')
+  lines.push('バナークリック数（累計・参考値）')
+  lines.push(['バナーID', 'バナー名', 'クリック数'].map(escapeCsvField).join(','))
+  for (const row of data.bannerStats) {
+    lines.push([row.id, row.label, row.count].map(escapeCsvField).join(','))
   }
 
   return '\uFEFF' + lines.join('\r\n')
@@ -233,6 +247,16 @@ export default function AnalyticsManager() {
         totalSavedAmount += (d.data().totalSavedAmount as number) ?? 0
       }
 
+      // 5. バナークリック統計（累計・期間フィルタなし）
+      const bannerSnap = await getDocs(collection(db, 'bannerStats'))
+      const bannerStats: BannerStat[] = bannerSnap.docs
+        .map((d) => ({
+          id: d.id,
+          label: (d.data().label as string) ?? d.id,
+          count: (d.data().count as number) ?? 0,
+        }))
+        .sort((a, b) => b.count - a.count)
+
       setData({
         couponDistributed,
         couponUsed,
@@ -246,6 +270,7 @@ export default function AnalyticsManager() {
         totalSavedAmount,
         byTemplate,
         byDay,
+        bannerStats,
       })
     } catch (err) {
       console.error('Analytics fetch error:', err)
@@ -386,6 +411,44 @@ export default function AnalyticsManager() {
                         <td className="text-right py-2 px-3">{row.distributed}</td>
                         <td className="text-right py-2 px-3">{row.used}</td>
                         <td className="text-right py-2 px-3">{row.rate}%</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* バナークリック統計 */}
+          <div>
+            <div className="flex items-baseline gap-2 mb-2">
+              <h4 className="text-[#1d1d1f] text-sm font-semibold">バナークリック数</h4>
+              <span className="text-[#86868b] text-[10px]">累計・参考値（期間フィルタ対象外）</span>
+            </div>
+            <div className="rounded-xl border border-[#e5e5ea] overflow-hidden max-h-56 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-[#f5f5f7]">
+                  <tr>
+                    <th className="text-left py-2 px-3 font-medium">バナー名</th>
+                    <th className="text-right py-2 px-3 font-medium">クリック数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.bannerStats.length === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="py-4 px-3 text-[#86868b] text-center">
+                        まだデータがありません
+                      </td>
+                    </tr>
+                  ) : (
+                    data.bannerStats.map((row) => (
+                      <tr key={row.id} className="border-t border-[#e5e5ea]">
+                        <td className="py-2 px-3 truncate max-w-[180px]" title={row.label}>
+                          {row.label}
+                        </td>
+                        <td className="text-right py-2 px-3 font-mono font-semibold text-[#0095B6]">
+                          {row.count.toLocaleString()}
+                        </td>
                       </tr>
                     ))
                   )}

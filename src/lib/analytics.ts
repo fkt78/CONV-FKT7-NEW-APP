@@ -1,12 +1,14 @@
 /**
- * Firebase Analytics（GA4）ラッパー
+ * Firebase Analytics（GA4）ラッパー + Firestore バナークリック集計
  *
- * VITE_FIREBASE_MEASUREMENT_ID が設定されていない場合は何もしない（安全にスキップ）。
- * 設定済みの場合はバナークリックイベントを GA4 に送信する。
+ * - GA4: VITE_FIREBASE_MEASUREMENT_ID が設定されていない場合はスキップ
+ * - Firestore: bannerStats/{bannerId} に累計クリック数を保存（参考値）
  */
 import { getAnalytics, isSupported, logEvent } from 'firebase/analytics'
 import type { Analytics } from 'firebase/analytics'
+import { doc, setDoc, increment, serverTimestamp } from 'firebase/firestore'
 import { app } from './firebase'
+import { db } from './firebase'
 
 let _analytics: Analytics | null = null
 let _initialized = false
@@ -26,17 +28,33 @@ async function getAnalyticsInstance(): Promise<Analytics | null> {
 }
 
 /**
- * バナークリックイベントを GA4 に送信する。
+ * バナークリックを GA4 に送信し、Firestore の累計カウンタを +1 する。
  *
  * @param bannerId   バナーの一意キー（例: 'vpn', 'dtisim'）
  * @param bannerLabel 日本語表示名（例: 'セカイVPN'）
  */
 export async function logBannerClick(bannerId: string, bannerLabel: string): Promise<void> {
+  // GA4
   const analytics = await getAnalyticsInstance()
-  if (!analytics) return
+  if (analytics) {
+    logEvent(analytics, 'affiliate_banner_click', {
+      banner_id: bannerId,
+      banner_label: bannerLabel,
+    })
+  }
 
-  logEvent(analytics, 'affiliate_banner_click', {
-    banner_id: bannerId,
-    banner_label: bannerLabel,
-  })
+  // Firestore 累計カウント（merge: true で初回も自動作成）
+  try {
+    await setDoc(
+      doc(db, 'bannerStats', bannerId),
+      {
+        count: increment(1),
+        label: bannerLabel,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    )
+  } catch {
+    // 計測失敗はサイレントに無視
+  }
 }
