@@ -168,6 +168,15 @@ const SLIDES: BannerSlide[] = [
     href: 'https://fkt-office.com/service-guide.html',
     labelJa: 'お名前.com',
   },
+  {
+    id: 'nexus-card',
+    bgImage: '/banners/nexus-card.jpg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.nexusCard',
+    badgeColor: '#1e3a8a',
+    href: 'https://fkt-office.com/life-support.html#nexus-card',
+    labelJa: 'Nexus Card',
+  },
 ]
 
 const AUTO_PLAY_MS = 5000
