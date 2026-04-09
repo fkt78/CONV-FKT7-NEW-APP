@@ -86,23 +86,29 @@ export default function Home() {
       collection(db, 'chats', currentUser.uid, 'messages'),
       orderBy('createdAt', 'asc'),
     )
-    return onSnapshot(q, (snap) => {
-      setMessages(
-        snap.docs.map((d) => {
-          const data = d.data()
-          return {
-            id: d.id,
-            senderId: data.senderId as string,
-            text: (data.text as string) ?? '',
-            createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
-            readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
-            attachmentUrl: data.attachmentUrl as string | undefined,
-            attachmentType: data.attachmentType as AttachmentType | undefined,
-            attachmentName: data.attachmentName as string | undefined,
-          }
-        }),
-      )
-    })
+    return onSnapshot(
+      q,
+      (snap) => {
+        setMessages(
+          snap.docs.map((d) => {
+            const data = d.data()
+            return {
+              id: d.id,
+              senderId: data.senderId as string,
+              text: (data.text as string) ?? '',
+              createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+              readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+              attachmentUrl: data.attachmentUrl as string | undefined,
+              attachmentType: data.attachmentType as AttachmentType | undefined,
+              attachmentName: data.attachmentName as string | undefined,
+            }
+          }),
+        )
+      },
+      (err) => {
+        console.error('[messages onSnapshot]', err)
+      },
+    )
   }, [currentUser])
 
   // 未使用クーポン数（有効期限内のみ）をバッジ表示用にカウント
@@ -227,6 +233,8 @@ export default function Home() {
     const trimmed = text.trim()
     if ((!trimmed && !selectedFile) || !currentUser || sending) return
 
+    setFileError(null)
+    setOpenMenuId(null)
     setSending(true)
     let attachmentUrl: string | undefined
     let attachmentType: AttachmentType | undefined
@@ -242,27 +250,27 @@ export default function Home() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? t('home.displayImage') : t('home.displayFile'))
-      const ts = serverTimestamp()
+      await addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
+        senderId: currentUser.uid,
+        text: trimmed,
+        createdAt: serverTimestamp(),
+        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
+      })
       await setDoc(
         doc(db, 'chats', currentUser.uid),
         {
           customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
           customerUid: currentUser.uid,
           lastMessage: displayText,
-          lastMessageAt: ts,
+          lastMessageAt: serverTimestamp(),
           unreadFromCustomer: true,
         },
         { merge: true },
       )
-      await addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
-        senderId: currentUser.uid,
-        text: trimmed,
-        createdAt: ts,
-        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
-      })
       setText('')
-      inputRef.current?.focus()
+      setTimeout(() => inputRef.current?.focus(), 0)
     } catch (err) {
+      console.error('[handleSend]', err)
       setFileError(err instanceof Error ? err.message : t('home.uploadFailed'))
     } finally {
       setSending(false)
@@ -725,7 +733,8 @@ export default function Home() {
           </div>
 
           {/* ── メッセージ入力バー（Apple風：白背景・青アクセント） ── */}
-          <div className="px-4 py-3 bg-white border-t border-[#e5e5ea] flex-shrink-0 safe-area-bottom">
+          {/* relative z-20: ⋮メニューの fixed オーバーレイ(z-10)より上に置き、タップを塞がせない */}
+          <div className="px-4 py-3 bg-white border-t border-[#e5e5ea] flex-shrink-0 safe-area-bottom relative z-20">
             <input
               ref={fileInputRef}
               type="file"
@@ -765,6 +774,7 @@ export default function Home() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onFocus={() => setOpenMenuId(null)}
                 placeholder={t('home.messageInputPlaceholder')}
                 aria-label={t('home.messageInputAria')}
                 rows={1}

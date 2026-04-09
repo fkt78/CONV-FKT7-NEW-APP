@@ -171,24 +171,28 @@ export default function AdminDashboard() {
       collection(db, 'chats', selectedUid, 'messages'),
       orderBy('createdAt', 'asc'),
     )
-    return onSnapshot(q, (snap) => {
-      messagesForChatRef.current = selectedUid
-      setMessages(
-        snap.docs.map((d) => {
-          const data = d.data()
-          return {
-            id: d.id,
-            senderId: data.senderId as string,
-            text: (data.text as string) ?? '',
-            createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
-            readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
-            attachmentUrl: data.attachmentUrl as string | undefined,
-            attachmentType: data.attachmentType as AttachmentType | undefined,
-            attachmentName: data.attachmentName as string | undefined,
-          }
-        }),
-      )
-    })
+    return onSnapshot(
+      q,
+      (snap) => {
+        messagesForChatRef.current = selectedUid
+        setMessages(
+          snap.docs.map((d) => {
+            const data = d.data()
+            return {
+              id: d.id,
+              senderId: data.senderId as string,
+              text: (data.text as string) ?? '',
+              createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+              readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+              attachmentUrl: data.attachmentUrl as string | undefined,
+              attachmentType: data.attachmentType as AttachmentType | undefined,
+              attachmentName: data.attachmentName as string | undefined,
+            }
+          }),
+        )
+      },
+      (err) => console.error('[admin messages onSnapshot]', err),
+    )
   }, [selectedUid])
 
   useEffect(() => {
@@ -401,6 +405,8 @@ export default function AdminDashboard() {
     const trimmed = text.trim()
     if ((!trimmed && !selectedFile) || !selectedUid || !currentUser || sending) return
 
+    setFileError(null)
+    setOpenMenuId(null)
     setSending(true)
     let attachmentUrl: string | undefined
     let attachmentType: AttachmentType | undefined
@@ -416,21 +422,21 @@ export default function AdminDashboard() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? '画像' : 'ファイル')
-      const ts = serverTimestamp()
       await addDoc(collection(db, 'chats', selectedUid, 'messages'), {
         senderId: currentUser.uid,
         text: trimmed,
-        createdAt: ts,
+        createdAt: serverTimestamp(),
         ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
       })
       await setDoc(
         doc(db, 'chats', selectedUid),
-        { lastMessage: displayText, lastMessageAt: ts },
+        { lastMessage: displayText, lastMessageAt: serverTimestamp() },
         { merge: true },
       )
       setText('')
-      inputRef.current?.focus()
+      setTimeout(() => inputRef.current?.focus(), 0)
     } catch (err) {
+      console.error('[admin handleSend]', err)
       setFileError(err instanceof Error ? err.message : 'アップロードに失敗しました')
     } finally {
       setSending(false)
@@ -1111,7 +1117,8 @@ export default function AdminDashboard() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="px-4 py-3 bg-white border-t border-[#e5e5ea]">
+              {/* relative z-20: ⋮メニューの fixed オーバーレイ(z-10)より上に置き、タップを塞がせない */}
+              <div className="px-4 py-3 bg-white border-t border-[#e5e5ea] relative z-20">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1193,6 +1200,7 @@ export default function AdminDashboard() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onFocus={() => { setOpenMenuId(null); setShowTemplatePicker(false) }}
                     placeholder={`${selectedUser.fullName}さんに返信...（Enterで改行、Shift+Enterで送信）`}
                     rows={1}
                     className="flex-1 min-h-[40px] max-h-28 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] transition resize-none"
