@@ -73,10 +73,21 @@ export default function CouponWallet() {
   const [unusedError, setUnusedError] = useState(false)
   const [usedError, setUsedError] = useState(false)
   const processedIds = useRef(new Set<string>())
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     setToast(msg)
-    setTimeout(() => setToast(null), 3000)
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null)
+      toastTimerRef.current = null
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    }
   }, [])
 
   useEffect(() => {

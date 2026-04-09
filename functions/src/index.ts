@@ -198,7 +198,7 @@ export const onUserCreated = onDocumentCreated('users/{uid}', async (event) => {
 })
 
 /** checkBlacklist 用：同一クライアントあたりの呼び出し上限（窓内） */
-const CHECK_BLACKLIST_MAX_PER_WINDOW = 40
+const CHECK_BLACKLIST_MAX_PER_WINDOW = 10
 const CHECK_BLACKLIST_WINDOW_MS = 15 * 60 * 1000
 
 function getCallableClientIp(req: CallableRequest): string {

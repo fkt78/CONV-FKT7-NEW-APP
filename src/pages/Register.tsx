@@ -47,8 +47,21 @@ export default function Register() {
       setError(t('register.error.birthMonth'))
       return
     }
+    const [byear, bmonth] = birthMonth.split('-').map(Number)
+    const now = new Date()
+    if (byear > now.getFullYear() || (byear === now.getFullYear() && bmonth > now.getMonth() + 1)) {
+      setError(t('register.error.birthMonth'))
+      return
+    }
     if (!agreeTerms) {
       setError(t('register.error.agreeTerms'))
+      return
+    }
+
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password.trim()
+    if (!trimmedEmail || !trimmedPassword) {
+      setError(t('login.error.empty'))
       return
     }
 
@@ -56,9 +69,14 @@ export default function Register() {
 
     let isBlacklisted = false
     try {
-      isBlacklisted = await checkBlacklist(fullName.trim(), email.trim())
-    } catch {
-      setError(t('register.error.failed'))
+      isBlacklisted = await checkBlacklist(fullName.trim(), trimmedEmail)
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      if (code === 'functions/resource-exhausted') {
+        setError(t('register.error.tooManyRequests'))
+      } else {
+        setError(t('register.error.networkRetry'))
+      }
       setLoading(false)
       return
     }
@@ -70,7 +88,7 @@ export default function Register() {
     }
 
     try {
-      const credential = await createUserWithEmailAndPassword(auth, email, password)
+      const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
       const uid = credential.user.uid
 
       try {
@@ -81,7 +99,7 @@ export default function Register() {
           fullName: fullName.trim(),
           birthMonth,
           attribute,
-          email: email.trim(),
+          email: trimmedEmail,
           status: 'active',
           createdAt: serverTimestamp(),
         })

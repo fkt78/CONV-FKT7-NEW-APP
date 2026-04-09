@@ -197,6 +197,7 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
   const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）
   const [fading, setFading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** スワイプ直後の誤タップでリンクが開かないようにする */
   const blockLinkClickRef = useRef(false)
   const pointerStartRef = useRef<{ x: number; y: number; id: number } | null>(null)
@@ -211,15 +212,23 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
     (next: number) => {
       const idx = ((next % total) + total) % total
       if (idx === current) return
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
       setFading(true)
-      setTimeout(() => {
+      fadeTimerRef.current = setTimeout(() => {
         setVisible(idx)
         setCurrent(idx)
         setFading(false)
+        fadeTimerRef.current = null
       }, FADE_MS)
     },
     [current, total],
   )
+
+  useEffect(() => {
+    return () => {
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     timerRef.current = setTimeout(() => goTo(current + 1), AUTO_PLAY_MS)

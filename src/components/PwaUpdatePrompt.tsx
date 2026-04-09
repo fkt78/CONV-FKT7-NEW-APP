@@ -7,6 +7,7 @@ export default function PwaUpdatePrompt() {
   const { t } = useTranslation()
   const [showPrompt, setShowPrompt] = useState(false)
   const updateSWRef = useRef<(() => Promise<void>) | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     try {
@@ -18,17 +19,19 @@ export default function PwaUpdatePrompt() {
           // オフライン対応完了
         },
         onRegistered(registration: ServiceWorkerRegistration | undefined) {
-          const interval = setInterval(async () => {
+          intervalRef.current = setInterval(async () => {
             if (!registration?.installing && navigator.onLine) {
               await registration?.update()
             }
           }, 60 * 60 * 1000)
-          return () => clearInterval(interval)
         },
       })
       updateSWRef.current = updateSW
     } catch (err) {
       console.warn('[PwaUpdatePrompt] SW registration skipped', err)
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
     }
   }, [])
 

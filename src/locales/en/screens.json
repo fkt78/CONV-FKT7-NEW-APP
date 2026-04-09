@@ -78,6 +78,8 @@
       "failed": "Registration could not be completed.",
       "emailInUse": "This email is already in use.",
       "weakPassword": "Password must be at least 6 characters.",
+      "tooManyRequests": "Please try again after a moment.",
+      "networkRetry": "A network error occurred. Please try again.",
       "generic": "Something went wrong. Please try again."
     }
   },

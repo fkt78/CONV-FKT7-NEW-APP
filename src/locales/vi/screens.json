@@ -78,6 +78,8 @@
       "failed": "Không thể hoàn tất đăng ký.",
       "emailInUse": "Email này đã được sử dụng.",
       "weakPassword": "Mật khẩu phải có ít nhất 6 ký tự.",
+      "tooManyRequests": "Vui lòng thử lại sau một lúc.",
+      "networkRetry": "Đã xảy ra lỗi mạng. Vui lòng thử lại.",
       "generic": "Đã xảy ra lỗi. Vui lòng thử lại."
     }
   },
