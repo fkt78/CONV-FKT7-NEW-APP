@@ -61,7 +61,7 @@ export default function Register() {
     const trimmedEmail = email.trim()
     const trimmedPassword = password.trim()
     if (!trimmedEmail || !trimmedPassword) {
-      setError(t('login.error.empty'))
+      setError(t('register.error.empty'))
       return
     }
 

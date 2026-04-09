@@ -75,6 +75,7 @@
       "fullName": "Vui lòng nhập họ và tên đầy đủ.",
       "birthMonth": "Nhập tháng sinh theo định dạng YYYY-MM.",
       "agreeTerms": "Cần đồng ý Điều khoản sử dụng và Chính sách quyền riêng tư.",
+      "empty": "Vui lòng nhập email và mật khẩu.",
       "failed": "Không thể hoàn tất đăng ký.",
       "emailInUse": "Email này đã được sử dụng.",
       "weakPassword": "Mật khẩu phải có ít nhất 6 ký tự.",

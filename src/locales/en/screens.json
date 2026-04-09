@@ -75,6 +75,7 @@
       "fullName": "Please enter your full name.",
       "birthMonth": "Enter birth month in YYYY-MM format.",
       "agreeTerms": "You must agree to the Terms of Use and Privacy Policy.",
+      "empty": "Please enter your email and password.",
       "failed": "Registration could not be completed.",
       "emailInUse": "This email is already in use.",
       "weakPassword": "Password must be at least 6 characters.",
