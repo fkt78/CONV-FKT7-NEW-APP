@@ -785,6 +785,9 @@ export default function AdminDashboard() {
                 const meta = chatMeta[user.uid]
                 const isSelected = selectedUid === user.uid
                 const hasUnread = !!meta?.unreadFromCustomer
+                const yc = user.yellowCards ?? 0
+                // 枚数でアバター色を変化：0→通常青／1→黄／2以上→橙（警戒）
+                const avatarBg = yc >= 2 ? '#f97316' : yc === 1 ? '#eab308' : '#0095B6'
 
                 return (
                   <button
@@ -797,13 +800,25 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-[#0095B6] flex items-center justify-center">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                        style={{ backgroundColor: avatarBg }}
+                      >
                         <span className="text-white font-bold text-sm">
                           {user.fullName.charAt(0)}
                         </span>
                       </div>
                       {hasUnread && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" title="未読メッセージあり" />
+                      )}
+                      {/* イエローカード枚数バッジ（アバター右上） */}
+                      {yc > 0 && (
+                        <div
+                          className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber-400 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                          title={`イエローカード ${yc}枚`}
+                        >
+                          {yc}
+                        </div>
                       )}
                     </div>
 
@@ -828,11 +843,18 @@ export default function AdminDashboard() {
                           ? meta.lastMessage
                           : `${ATTRIBUTE_LABELS[user.attribute] ?? user.attribute} · ${user.birthMonth}`}
                       </p>
-                      {user.totalSavedAmount > 0 && (
-                        <span className="text-[9px] text-[#0095B6] mt-0.5 inline-block">
-                          👑 累計 ¥{user.totalSavedAmount.toLocaleString()}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {user.totalSavedAmount > 0 && (
+                          <span className="text-[9px] text-[#0095B6]">
+                            👑 累計 ¥{user.totalSavedAmount.toLocaleString()}
+                          </span>
+                        )}
+                        {yc > 0 && (
+                          <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-px">
+                            {'🟨'.repeat(Math.min(yc, 3))}&nbsp;×{yc}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 )
