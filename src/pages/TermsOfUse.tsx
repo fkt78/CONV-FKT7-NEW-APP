@@ -59,7 +59,7 @@ export default function TermsOfUse() {
 
       <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lt('s7_title')}</h2>
-        <p>{lt('s7_body')}</p>
+        <p className="whitespace-pre-line">{lt('s7_body')}</p>
       </section>
 
       <section>
@@ -85,6 +85,11 @@ export default function TermsOfUse() {
       <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lt('s12_title')}</h2>
         <p>{lt('s12_body')}</p>
+      </section>
+
+      <section>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lt('s13_title')}</h2>
+        <p>{lt('s13_body')}</p>
       </section>
 
       <div className="text-[#86868b] text-xs mt-8 space-y-1">

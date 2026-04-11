@@ -2,7 +2,13 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { onCall, HttpsError, type CallableRequest } from 'firebase-functions/v2/https'
 import { createHash } from 'node:crypto'
-import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import {
+  getFirestore,
+  Timestamp,
+  type DocumentReference,
+  type DocumentSnapshot,
+  type QueryDocumentSnapshot,
+} from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { initializeApp } from 'firebase-admin/app'
 
@@ -728,6 +734,253 @@ async function batchGetExistingUserCouponUids(
   return existing
 }
 
+/** おみくじセット（Firestore `omikujiSets`） */
+interface OmikujiSetDoc {
+  name?: string
+  active?: boolean
+  couponIdDai?: string
+  couponIdChu?: string
+  couponIdSho?: string
+  pctDai?: number
+  pctChu?: number
+  pctSho?: number
+}
+
+function shuffleInPlace<T>(arr: T[]): void {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const t = arr[i]!
+    arr[i] = arr[j]!
+    arr[j] = t
+  }
+}
+
+/**
+ * おみくじペナルティ（users.omikujiPenaltyLevel、0–3+）
+ * ※ users.yellowCards（イエローカード）はブラックリスト連動のため別フィールド
+ */
+function effectiveOmikujiPercents(
+  base: { pctDai: number; pctChu: number; pctSho: number },
+  penalty: number,
+): { pctDai: number; pctChu: number; pctSho: number } {
+  const d = Math.max(0, Math.min(100, Math.floor(base.pctDai)))
+  const c = Math.max(0, Math.min(100, Math.floor(base.pctChu)))
+  const s = Math.max(0, Math.min(100, Math.floor(base.pctSho)))
+  if (penalty >= 3) return { pctDai: 0, pctChu: 0, pctSho: 0 }
+  if (penalty === 2) return { pctDai: 0, pctChu: 0, pctSho: 10 }
+  if (penalty === 1) {
+    return { pctDai: 0, pctChu: Math.floor(c * 0.5), pctSho: Math.floor(s * 0.5) }
+  }
+  return { pctDai: d, pctChu: c, pctSho: s }
+}
+
+/** 当日・いずれかの等級テンプレが既に配布済みのユーザーを検出 */
+async function batchGetExistingOmikujiAnyTier(
+  uids: string[],
+  couponIds: [string, string, string],
+  today: string,
+): Promise<Set<string>> {
+  const existing = new Set<string>()
+  const [dId, cId, sId] = couponIds
+  const docIdD = `${dId}_${today}`
+  const docIdC = `${cId}_${today}`
+  const docIdS = `${sId}_${today}`
+  const CHUNK = 150
+  for (let i = 0; i < uids.length; i += CHUNK) {
+    const chunk = uids.slice(i, i + CHUNK)
+    const refs: DocumentReference[] = []
+    for (const uid of chunk) {
+      refs.push(db.collection('users').doc(uid).collection('coupons').doc(docIdD))
+      refs.push(db.collection('users').doc(uid).collection('coupons').doc(docIdC))
+      refs.push(db.collection('users').doc(uid).collection('coupons').doc(docIdS))
+    }
+    const snaps = await db.getAll(...refs)
+    snaps.forEach((snap, idx) => {
+      if (!snap.exists) return
+      const userIdx = Math.floor(idx / 3)
+      const uid = chunk[userIdx]
+      if (uid) existing.add(uid)
+    })
+  }
+  return existing
+}
+
+type RunOmikujiCtx = {
+  logCountByUid: Map<string, number>
+  today: string
+  dailyLimit: number
+  userDocs: QueryDocumentSnapshot[]
+}
+
+/**
+ * 朝のクーポン配信の後に呼ぶ。同一の couponLogs / 日次上限を共有する。
+ */
+async function runOmikujiDistribution(
+  ctx: RunOmikujiCtx,
+  options?: { omikujiSetId?: string } | null,
+): Promise<number> {
+  let setDocSnap: DocumentSnapshot | null = null
+  if (options?.omikujiSetId) {
+    const d = await db.collection('omikujiSets').doc(options.omikujiSetId).get()
+    if (!d.exists) {
+      console.warn('[omikujiDistribution] 指定IDのセットがありません:', options.omikujiSetId)
+      return 0
+    }
+    setDocSnap = d
+  } else {
+    const q = await db.collection('omikujiSets').where('active', '==', true).limit(1).get()
+    if (q.empty) {
+      console.log('[omikujiDistribution] アクティブなおみくじセットなし')
+      return 0
+    }
+    setDocSnap = q.docs[0] ?? null
+  }
+  if (!setDocSnap?.exists) return 0
+
+  const setData = setDocSnap.data() as OmikujiSetDoc
+  const daiId = setData.couponIdDai
+  const chuId = setData.couponIdChu
+  const shoId = setData.couponIdSho
+  if (!daiId || !chuId || !shoId) {
+    console.warn('[omikujiDistribution] couponId が不足、スキップ')
+    return 0
+  }
+
+  const basePct = {
+    pctDai: Math.floor(Number(setData.pctDai) ?? 0),
+    pctChu: Math.floor(Number(setData.pctChu) ?? 0),
+    pctSho: Math.floor(Number(setData.pctSho) ?? 0),
+  }
+
+  const [daiSnap, chuSnap, shoSnap] = await Promise.all([
+    db.collection('coupons').doc(daiId).get(),
+    db.collection('coupons').doc(chuId).get(),
+    db.collection('coupons').doc(shoId).get(),
+  ])
+  if (!daiSnap.exists || !chuSnap.exists || !shoSnap.exists) {
+    console.warn('[omikujiDistribution] テンプレの1つ以上が存在しません')
+    return 0
+  }
+  const daiCoupon = { id: daiSnap.id, ...daiSnap.data() } as CouponTemplate
+  const chuCoupon = { id: chuSnap.id, ...chuSnap.data() } as CouponTemplate
+  const shoCoupon = { id: shoSnap.id, ...shoSnap.data() } as CouponTemplate
+
+  const couponsByTier = {
+    dai: daiCoupon,
+    chu: chuCoupon,
+    sho: shoCoupon,
+  } as const
+
+  const buckets: [string[], string[], string[]] = [[], [], []]
+  for (const uDoc of ctx.userDocs) {
+    const uid = uDoc.id
+    const u = uDoc.data()
+    const penaltyRaw = (u.omikujiPenaltyLevel as number) ?? 0
+    const penalty = Math.min(3, Math.max(0, Math.floor(penaltyRaw)))
+    if (penalty >= 3) continue
+    if ((ctx.logCountByUid.get(uid) ?? 0) >= ctx.dailyLimit) continue
+
+    const t = getTargetFromCoupon(daiCoupon)
+    if (!matchesTarget(t.attr, t.ages, (u.attribute as string) ?? '', (u.birthMonth as string) ?? '')) continue
+    if (!matchesMemberGroup(daiCoupon, u.memberGroups)) continue
+
+    buckets[penalty]!.push(uid)
+  }
+
+  let distributed = 0
+  const MAX_WRITE_BATCH_OPS = 500
+  let writeBatch = db.batch()
+  let writeBatchOpCount = 0
+
+  async function flushWriteBatchIfNeeded(opsNeeded: number): Promise<void> {
+    if (writeBatchOpCount + opsNeeded > MAX_WRITE_BATCH_OPS) {
+      await writeBatch.commit()
+      writeBatch = db.batch()
+      writeBatchOpCount = 0
+    }
+  }
+
+  async function commitWriteBatchIfAny(): Promise<void> {
+    if (writeBatchOpCount > 0) {
+      await writeBatch.commit()
+      writeBatch = db.batch()
+      writeBatchOpCount = 0
+    }
+  }
+
+  const couponIdsTriple: [string, string, string] = [daiId, chuId, shoId]
+
+  for (let penalty = 0; penalty < 3; penalty++) {
+    let eligible = [...buckets[penalty]!]
+    if (eligible.length === 0) continue
+
+    const existing = await batchGetExistingOmikujiAnyTier(eligible, couponIdsTriple, ctx.today)
+    eligible = eligible.filter((uid) => !existing.has(uid))
+    if (eligible.length === 0) continue
+
+    const eff = effectiveOmikujiPercents(basePct, penalty)
+    const N = eligible.length
+    const daiCount = Math.floor((N * eff.pctDai) / 100)
+    const chuCount = Math.floor((N * eff.pctChu) / 100)
+    const shoCount = Math.floor((N * eff.pctSho) / 100)
+
+    shuffleInPlace(eligible)
+
+    let offset = 0
+    const tierQuotas: Array<{ tier: 'dai' | 'chu' | 'sho'; quota: number }> = [
+      { tier: 'dai', quota: daiCount },
+      { tier: 'chu', quota: chuCount },
+      { tier: 'sho', quota: shoCount },
+    ]
+
+    for (const { tier, quota } of tierQuotas) {
+      const slice = eligible.slice(offset, offset + quota)
+      offset += quota
+      const coupon = couponsByTier[tier]
+      const expiryType = coupon.expiryType ?? 'same_day'
+      const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, ctx.today)
+
+      for (const uid of slice) {
+        const exempt = isDailyLimitExempt(coupon)
+        if (!exempt) {
+          const cur = ctx.logCountByUid.get(uid) ?? 0
+          if (cur >= ctx.dailyLimit) continue
+        }
+
+        const couponDocId = `${coupon.id}_${ctx.today}`
+        await flushWriteBatchIfNeeded(exempt ? 1 : 2)
+        const couponRef = db.collection('users').doc(uid).collection('coupons').doc(couponDocId)
+        writeBatch.set(couponRef, {
+          couponId: coupon.id,
+          ...couponUserDocTexts(coupon),
+          discountAmount: coupon.discountAmount ?? 0,
+          status: 'unused',
+          distributedAt: Timestamp.now(),
+          distributedDate: ctx.today,
+          expiresAt: Timestamp.fromDate(expiresAtDate),
+          usedAt: null,
+          distributedVia: 'omikuji',
+          omikujiTier: tier,
+        })
+        writeBatchOpCount++
+        if (!exempt) {
+          const prev = ctx.logCountByUid.get(uid) ?? 0
+          const next = prev + 1
+          ctx.logCountByUid.set(uid, next)
+          const logRef = db.collection('couponLogs').doc(`${uid}_${ctx.today}`)
+          writeBatch.set(logRef, { uid, date: ctx.today, count: next }, { merge: true })
+          writeBatchOpCount++
+        }
+        distributed++
+      }
+    }
+  }
+
+  await commitWriteBatchIfAny()
+  console.log('[omikujiDistribution] 完了:', distributed, '件')
+  return distributed
+}
+
 type CouponDistributionOptions = {
   /** 指定時はそのIDのテンプレのみ処理（自動配信ON不要・Firestore上に存在すれば非アクティブも可） */
   onlyCouponIds?: string[]
@@ -736,7 +989,7 @@ type CouponDistributionOptions = {
 /** クーポン自動配信の本体ロジック（スケジュール / 手動テスト共通） */
 async function runCouponDistribution(
   options?: CouponDistributionOptions | null,
-): Promise<{ distributedCount: number; weather: WeatherData | null }> {
+): Promise<{ distributedCount: number; distributedOmikuji: number; weather: WeatherData | null }> {
     const onlyIds = options?.onlyCouponIds?.length ? [...new Set(options.onlyCouponIds)] : null
 
     const settingsSnap = await db.collection('settings').doc('coupon').get()
@@ -935,13 +1188,25 @@ async function runCouponDistribution(
 
     await commitWriteBatchIfAny()
 
+    let distributedOmikuji = 0
+    if (!onlyIds) {
+      distributedOmikuji = await runOmikujiDistribution({
+        logCountByUid,
+        today,
+        dailyLimit,
+        userDocs: uSnap.docs as QueryDocumentSnapshot[],
+      })
+    }
+
     console.log(
       '[couponDistribution] 完了:',
       distributedCount,
-      '件配信。weather=',
+      '件配信。おみくじ:',
+      distributedOmikuji,
+      '件。weather=',
       weather === null ? 'null(API失敗時は天気条件付きは未実施)' : JSON.stringify(weather),
     )
-    return { distributedCount, weather }
+    return { distributedCount, distributedOmikuji, weather }
 }
 
 /** 毎朝7時（日本時間）に天気判定＆クーポン自動配信 */
@@ -949,7 +1214,7 @@ export const scheduledCouponDistribution = onSchedule(
   {
     schedule: '0 7 * * *',
     timeZone: 'Asia/Tokyo',
-    timeoutSeconds: 120,
+    timeoutSeconds: 300,
   },
   async () => {
     await runCouponDistribution()
@@ -985,7 +1250,54 @@ export const testCouponDistribution = onCall(
     )
     return {
       distributedCount: result.distributedCount,
+      distributedOmikuji: result.distributedOmikuji,
       weather: result.weather,
     }
+  },
+)
+
+/** テスト用: おみくじ配信のみ実行（管理者のみ） */
+export const testOmikujiDistribution = onCall(
+  { timeoutSeconds: 120 },
+  async (req) => {
+    if (!req.auth) throw new HttpsError('unauthenticated', 'ログインが必要です')
+    const userSnap = await db.collection('users').doc(req.auth.uid).get()
+    const role = userSnap.data()?.role as string | undefined
+    if (role !== 'admin') throw new HttpsError('permission-denied', '管理者権限が必要です')
+
+    const raw = req.data as { omikujiSetId?: unknown } | undefined
+    const omikujiSetId =
+      typeof raw?.omikujiSetId === 'string' && raw.omikujiSetId.length > 0 ? raw.omikujiSetId : undefined
+
+    const settingsSnap = await db.collection('settings').doc('coupon').get()
+    const settings = settingsSnap.data() ?? {}
+    const dailyLimit = (settings.dailyLimit as number) ?? DEFAULT_DAILY_COUPON_LIMIT
+
+    const now = new Date()
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+    const today = `${jstNow.getUTCFullYear()}-${String(jstNow.getUTCMonth() + 1).padStart(2, '0')}-${String(jstNow.getUTCDate()).padStart(2, '0')}`
+
+    const logCountByUid = new Map<string, number>()
+    const logSnap = await db.collection('couponLogs').where('date', '==', today).get()
+    for (const d of logSnap.docs) {
+      const data = d.data()
+      const uid = data.uid as string
+      logCountByUid.set(uid, (data.count as number) ?? 0)
+    }
+
+    const uSnap = await db.collection('users').where('status', '==', 'active').get()
+
+    console.log('[testOmikujiDistribution] 管理者', req.auth.uid, 'が実行', omikujiSetId ?? '（アクティブ先頭）')
+
+    const distributedCount = await runOmikujiDistribution(
+      {
+        logCountByUid,
+        today,
+        dailyLimit,
+        userDocs: uSnap.docs as QueryDocumentSnapshot[],
+      },
+      omikujiSetId ? { omikujiSetId } : null,
+    )
+    return { distributedCount }
   },
 )

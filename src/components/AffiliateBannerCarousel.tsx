@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { logBannerClick } from '../lib/analytics'
 
@@ -14,7 +14,7 @@ interface BannerSlide {
   labelJa: string
 }
 
-const SLIDES: BannerSlide[] = [
+const BANNER_SLIDES: BannerSlide[] = [
   {
     id: 'local-ad-recruit',
     bgImage: '/banners/local-ad-recruit.jpg',
@@ -179,6 +179,16 @@ const SLIDES: BannerSlide[] = [
   },
 ]
 
+/** マウント時に 1 回だけシャッフル（元配列は変更しない） */
+function shuffleBannerSlides(slides: BannerSlide[]): BannerSlide[] {
+  const copy = [...slides]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
 const AUTO_PLAY_MS = 5000
 const FADE_MS = 600
 /** これ以上横に動かしたらスワイプとみなす（px） */
@@ -193,6 +203,7 @@ interface Props {
 
 export default function AffiliateBannerCarousel({ inCard = false }: Props) {
   const { t } = useTranslation()
+  const slides = useMemo(() => shuffleBannerSlides(BANNER_SLIDES), [])
   const [current, setCurrent] = useState(0)
   const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）
   const [fading, setFading] = useState(false)
@@ -202,7 +213,7 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
   const blockLinkClickRef = useRef(false)
   const pointerStartRef = useRef<{ x: number; y: number; id: number } | null>(null)
   const currentRef = useRef(current)
-  const total = SLIDES.length
+  const total = slides.length
 
   useEffect(() => {
     currentRef.current = current
@@ -278,11 +289,11 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
       blockLinkClickRef.current = false
       return
     }
-    const s = SLIDES[currentRef.current]
+    const s = slides[currentRef.current]
     if (s) logBannerClick(s.id, s.labelJa)
   }
 
-  const slide = SLIDES[visible]
+  const slide = slides[visible]
 
   const wrapperStyle: React.CSSProperties = inCard
     ? {
@@ -449,7 +460,7 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
         role="tablist"
         aria-label="スライドインジケーター"
       >
-        {SLIDES.map((s, idx) => (
+        {slides.map((s, idx) => (
           <button
             key={s.id}
             role="tab"

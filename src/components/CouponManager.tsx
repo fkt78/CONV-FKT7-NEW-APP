@@ -398,11 +398,12 @@ export default function CouponManager() {
     try {
       const fn = httpsCallable<
         { couponIds: string[] },
-        { distributedCount: number; weather: unknown }
+        { distributedCount: number; distributedOmikuji?: number; weather: unknown }
       >(functions, 'testCouponDistribution')
       const res = await fn({ couponIds: Array.from(testSelectedIds) })
       const d = res.data
-      alert(`テスト完了: ${d.distributedCount}件 配信\n\n天気データ:\n${JSON.stringify(d.weather, null, 2)}`)
+      const om = d.distributedOmikuji != null ? `\nおみくじ: ${d.distributedOmikuji}件` : ''
+      alert(`テスト完了: ${d.distributedCount}件 配信${om}\n\n天気データ:\n${JSON.stringify(d.weather, null, 2)}`)
     } catch (err) {
       console.error('[testCouponDistribution]', err)
       const code = (err as { code?: string })?.code

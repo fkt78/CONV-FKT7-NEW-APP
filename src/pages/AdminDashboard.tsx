@@ -27,13 +27,14 @@ import { messageMatches, highlightMatch, isSafeUrl } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponManager from '../components/CouponManager'
+import OmikujiSetManager from '../components/OmikujiSetManager'
 import NewsManager from '../components/NewsManager'
 import RoadmapManager from '../components/RoadmapManager'
 import UserManager from '../components/UserManager'
 import MessageTemplateManager, { type MessageTemplate } from '../components/MessageTemplateManager'
 import AnalyticsManager from '../components/AnalyticsManager'
 
-type AdminTab = 'chat' | 'coupon' | 'news' | 'users' | 'roadmap' | 'templates' | 'analytics'
+type AdminTab = 'chat' | 'coupon' | 'omikuji' | 'news' | 'users' | 'roadmap' | 'templates' | 'analytics'
 
 interface UserRecord {
   uid: string
@@ -612,6 +613,16 @@ export default function AdminDashboard() {
           🎫 クーポン管理
         </button>
         <button
+          onClick={() => setAdminTab('omikuji')}
+          className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
+            adminTab === 'omikuji'
+              ? 'text-[#0095B6] border-b-2 border-[#0095B6]'
+              : 'text-[#86868b] hover:text-[#1d1d1f]'
+          }`}
+        >
+          🎰 おみくじ
+        </button>
+        <button
           onClick={() => setAdminTab('news')}
           className={`flex-1 py-2.5 text-xs font-semibold tracking-wide transition ${
             adminTab === 'news'
@@ -672,6 +683,8 @@ export default function AdminDashboard() {
         <RoadmapManager />
       ) : adminTab === 'coupon' ? (
         <CouponManager />
+      ) : adminTab === 'omikuji' ? (
+        <OmikujiSetManager />
       ) : adminTab === 'news' ? (
         <NewsManager />
       ) : adminTab === 'users' ? (
