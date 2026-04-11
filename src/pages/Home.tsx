@@ -277,23 +277,23 @@ export default function Home() {
         FIRESTORE_MS,
         timeoutMsg,
       )
-      await withTimeout(
-        setDoc(
-          doc(db, 'chats', currentUser.uid),
-          {
-            customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
-            customerUid: currentUser.uid,
-            lastMessage: displayText,
-            lastMessageAt: serverTimestamp(),
-            unreadFromCustomer: true,
-          },
-          { merge: true },
-        ),
-        FIRESTORE_MS,
-        timeoutMsg,
-      )
       setText('')
       setTimeout(() => inputRef.current?.focus(), 0)
+
+      // チャット一覧のメタ更新は fire-and-forget（失敗してもメッセージ本体には影響しない）
+      setDoc(
+        doc(db, 'chats', currentUser.uid),
+        {
+          customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
+          customerUid: currentUser.uid,
+          lastMessage: displayText,
+          lastMessageAt: serverTimestamp(),
+          unreadFromCustomer: true,
+        },
+        { merge: true },
+      ).catch((err: unknown) => {
+        console.warn('[handleSend] setDoc failed (non-critical):', err)
+      })
     } catch (err) {
       console.error('[handleSend]', err)
       setFileError(err instanceof Error ? err.message : t('home.uploadFailed'))
