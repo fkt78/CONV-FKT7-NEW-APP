@@ -187,6 +187,7 @@
     "displayImage": "画像",
     "displayFile": "ファイル",
     "uploadFailed": "アップロードに失敗しました",
+    "chatNetworkTimedOut": "通信がタイムアウトしました。しばらくしてから再度お試しください。",
     "editFailed": "編集に失敗しました",
     "deleteFailed": "削除に失敗しました",
     "deleteConfirm": "このメッセージを削除しますか？",

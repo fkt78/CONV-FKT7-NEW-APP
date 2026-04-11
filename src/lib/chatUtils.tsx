@@ -34,3 +34,23 @@ export function isSafeUrl(url: string | undefined | null): boolean {
   if (!url) return false
   return /^https?:\/\//i.test(url)
 }
+
+/**
+ * Promise が完了しないまま固まると送信ボタンが disabled のままになるため、タイムアウトで打ち切る。
+ * timeoutErrorMessage は翻訳済みの全文を渡す。
+ */
+export function withTimeout<T>(p: Promise<T>, ms: number, timeoutErrorMessage: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error(timeoutErrorMessage)), ms)
+    p.then(
+      (v) => {
+        clearTimeout(id)
+        resolve(v)
+      },
+      (e: unknown) => {
+        clearTimeout(id)
+        reject(e)
+      },
+    )
+  })
+}

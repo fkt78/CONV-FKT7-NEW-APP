@@ -187,6 +187,7 @@
     "displayImage": "Image",
     "displayFile": "File",
     "uploadFailed": "Upload failed",
+    "chatNetworkTimedOut": "The request timed out. Check your connection and try again.",
     "editFailed": "Could not save edits",
     "deleteFailed": "Could not delete",
     "deleteConfirm": "Delete this message?",

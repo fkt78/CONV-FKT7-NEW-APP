@@ -187,6 +187,7 @@
     "displayImage": "Hình ảnh",
     "displayFile": "Tệp",
     "uploadFailed": "Tải lên thất bại",
+    "chatNetworkTimedOut": "Hết thời gian chờ. Vui lòng kiểm tra kết nối và thử lại.",
     "editFailed": "Không lưu được",
     "deleteFailed": "Không xóa được",
     "deleteConfirm": "Xóa tin nhắn này?",

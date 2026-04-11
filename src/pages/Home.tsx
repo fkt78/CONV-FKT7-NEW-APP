@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { formatTime, isSameDay, formatDateDivider } from '../lib/formatTime'
-import { messageMatches, highlightMatch, isSafeUrl } from '../lib/chatUtils'
+import { messageMatches, highlightMatch, isSafeUrl, withTimeout } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, FILE_ERROR_TOO_LARGE, FILE_ERROR_TYPE, type AttachmentType } from '../lib/chatAttachment'
 import CouponWallet from '../components/CouponWallet'
@@ -135,6 +135,11 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  /** チャット以外のタブへ移動したとき送信ロックを解除（通信ハングで sending が残る対策） */
+  useEffect(() => {
+    if (homeTab !== 'chat') setSending(false)
+  }, [homeTab])
+
   // 未読メッセージ数（店長からの受信で未読のもの）
   const unreadMessageCount = messages.filter(
     (m) => currentUser && m.senderId !== currentUser.uid && !m.readAt,
@@ -229,6 +234,10 @@ export default function Home() {
     e.target.value = ''
   }
 
+  function syncChatText(e: FormEvent<HTMLTextAreaElement>) {
+    setText(e.currentTarget.value)
+  }
+
   async function handleSend() {
     const trimmed = text.trim()
     if ((!trimmed && !selectedFile) || !currentUser || sending) return
@@ -240,9 +249,17 @@ export default function Home() {
     let attachmentType: AttachmentType | undefined
     let attachmentName: string | undefined
 
+    const UPLOAD_MS = 120_000
+    const FIRESTORE_MS = 90_000
+    const timeoutMsg = t('home.chatNetworkTimedOut')
+
     try {
       if (selectedFile) {
-        const result = await uploadChatAttachment(currentUser.uid, selectedFile)
+        const result = await withTimeout(
+          uploadChatAttachment(currentUser.uid, selectedFile),
+          UPLOAD_MS,
+          timeoutMsg,
+        )
         attachmentUrl = result.url
         attachmentType = result.type
         attachmentName = result.name
@@ -250,22 +267,30 @@ export default function Home() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? t('home.displayImage') : t('home.displayFile'))
-      await addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
-        senderId: currentUser.uid,
-        text: trimmed,
-        createdAt: serverTimestamp(),
-        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
-      })
-      await setDoc(
-        doc(db, 'chats', currentUser.uid),
-        {
-          customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
-          customerUid: currentUser.uid,
-          lastMessage: displayText,
-          lastMessageAt: serverTimestamp(),
-          unreadFromCustomer: true,
-        },
-        { merge: true },
+      await withTimeout(
+        addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
+          senderId: currentUser.uid,
+          text: trimmed,
+          createdAt: serverTimestamp(),
+          ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
+        }),
+        FIRESTORE_MS,
+        timeoutMsg,
+      )
+      await withTimeout(
+        setDoc(
+          doc(db, 'chats', currentUser.uid),
+          {
+            customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
+            customerUid: currentUser.uid,
+            lastMessage: displayText,
+            lastMessageAt: serverTimestamp(),
+            unreadFromCustomer: true,
+          },
+          { merge: true },
+        ),
+        FIRESTORE_MS,
+        timeoutMsg,
       )
       setText('')
       setTimeout(() => inputRef.current?.focus(), 0)
@@ -772,18 +797,23 @@ export default function Home() {
               <textarea
                 ref={inputRef}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={syncChatText}
+                onInput={syncChatText}
+                onCompositionEnd={(e) => setText(e.currentTarget.value)}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setOpenMenuId(null)}
                 placeholder={t('home.messageInputPlaceholder')}
                 aria-label={t('home.messageInputAria')}
                 rows={1}
-                className="flex-1 min-h-[44px] max-h-32 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-5 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] focus:ring-2 focus:ring-[#0095B6]/20 transition resize-none"
+                autoComplete="off"
+                className="flex-1 min-h-[44px] max-h-32 min-w-0 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-5 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] focus:ring-2 focus:ring-[#0095B6]/20 transition resize-none"
               />
               <button
+                type="button"
                 onClick={handleSend}
                 disabled={(!text.trim() && !selectedFile) || sending}
                 aria-label={t('home.sendAria')}
+                aria-busy={sending}
                 className="touch-target w-11 h-11 bg-[#0095B6] rounded-full flex items-center justify-center text-white disabled:opacity-30 transition hover:bg-[#007A96] active:scale-95 flex-shrink-0 shadow-sm"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

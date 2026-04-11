@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
@@ -23,7 +23,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { formatTime, formatTimeCompact, isSameDay, formatDateDivider } from '../lib/formatTime'
-import { messageMatches, highlightMatch, isSafeUrl } from '../lib/chatUtils'
+import { messageMatches, highlightMatch, isSafeUrl, withTimeout } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponManager from '../components/CouponManager'
@@ -199,6 +199,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (adminTab !== 'chat') setSending(false)
+  }, [adminTab])
+
+  useEffect(() => {
+    setSending(false)
+  }, [selectedUid])
 
   // 受信メッセージを既読にする（顧客からのメッセージ）
   useEffect(() => {
@@ -402,6 +410,13 @@ export default function AdminDashboard() {
     await updateDoc(doc(db, 'users', selectedUser.uid), { status: 'blacklisted', yellowCards: 3 })
   }
 
+  const CHAT_TIMEOUT_MSG =
+    '通信がタイムアウトしました。しばらくしてから再度お試しください。'
+
+  function syncChatText(e: FormEvent<HTMLTextAreaElement>) {
+    setText(e.currentTarget.value)
+  }
+
   async function handleSend() {
     const trimmed = text.trim()
     if ((!trimmed && !selectedFile) || !selectedUid || !currentUser || sending) return
@@ -413,9 +428,16 @@ export default function AdminDashboard() {
     let attachmentType: AttachmentType | undefined
     let attachmentName: string | undefined
 
+    const UPLOAD_MS = 120_000
+    const FIRESTORE_MS = 90_000
+
     try {
       if (selectedFile) {
-        const result = await uploadChatAttachment(selectedUid, selectedFile)
+        const result = await withTimeout(
+          uploadChatAttachment(selectedUid, selectedFile),
+          UPLOAD_MS,
+          CHAT_TIMEOUT_MSG,
+        )
         attachmentUrl = result.url
         attachmentType = result.type
         attachmentName = result.name
@@ -423,16 +445,24 @@ export default function AdminDashboard() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? '画像' : 'ファイル')
-      await addDoc(collection(db, 'chats', selectedUid, 'messages'), {
-        senderId: currentUser.uid,
-        text: trimmed,
-        createdAt: serverTimestamp(),
-        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
-      })
-      await setDoc(
-        doc(db, 'chats', selectedUid),
-        { lastMessage: displayText, lastMessageAt: serverTimestamp() },
-        { merge: true },
+      await withTimeout(
+        addDoc(collection(db, 'chats', selectedUid, 'messages'), {
+          senderId: currentUser.uid,
+          text: trimmed,
+          createdAt: serverTimestamp(),
+          ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
+        }),
+        FIRESTORE_MS,
+        CHAT_TIMEOUT_MSG,
+      )
+      await withTimeout(
+        setDoc(
+          doc(db, 'chats', selectedUid),
+          { lastMessage: displayText, lastMessageAt: serverTimestamp() },
+          { merge: true },
+        ),
+        FIRESTORE_MS,
+        CHAT_TIMEOUT_MSG,
       )
       setText('')
       setTimeout(() => inputRef.current?.focus(), 0)
@@ -1233,16 +1263,21 @@ export default function AdminDashboard() {
                   <textarea
                     ref={inputRef}
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={syncChatText}
+                    onInput={syncChatText}
+                    onCompositionEnd={(e) => setText(e.currentTarget.value)}
                     onKeyDown={handleKeyDown}
                     onFocus={() => { setOpenMenuId(null); setShowTemplatePicker(false) }}
                     placeholder={`${selectedUser.fullName}さんに返信...（Enterで改行、Shift+Enterで送信）`}
                     rows={1}
-                    className="flex-1 min-h-[40px] max-h-28 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] transition resize-none"
+                    autoComplete="off"
+                    className="flex-1 min-h-[40px] max-h-28 min-w-0 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] transition resize-none"
                   />
                   <button
+                    type="button"
                     onClick={handleSend}
                     disabled={(!text.trim() && !selectedFile) || sending}
+                    aria-busy={sending}
                     className="w-10 h-10 bg-[#0095B6] rounded-full flex items-center justify-center text-white disabled:opacity-30 transition hover:bg-[#007A96]"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
