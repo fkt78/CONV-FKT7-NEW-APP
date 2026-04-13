@@ -3,6 +3,8 @@ import { getAuth, inMemoryPersistence, setPersistence } from 'firebase/auth'
 import {
   initializeFirestore,
   memoryLocalCache,
+  persistentLocalCache,
+  persistentSingleTabManager,
 } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { getStorage } from 'firebase/storage'
@@ -43,13 +45,24 @@ export const auth = getAuth(app)
 export const authPersistenceReady = setPersistence(auth, inMemoryPersistence).catch((err) => {
   console.error('[firebase] setPersistence(inMemory) failed', err)
 })
+
 /**
- * Firestore はメモリキャッシュのみ使用。
- * Auth が inMemoryPersistence のためオフライン永続化は不要。
- * IndexedDB の QuotaExceededError を防ぐ。
+ * IndexedDB に書き込みを一時保存し、接続回復後に自動同期する（シングルタブ用）。
+ * 一時的なネット断で addDoc が長時間待機しにくくなる。
+ * IndexedDB が使えない環境は memoryLocalCache にフォールバック。
  */
+let firestoreCache
+try {
+  firestoreCache = persistentLocalCache({
+    tabManager: persistentSingleTabManager({}),
+  })
+} catch (e) {
+  console.warn('[firebase] persistentLocalCache unavailable, using memoryLocalCache', e)
+  firestoreCache = memoryLocalCache()
+}
+
 export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache(),
+  localCache: firestoreCache,
 })
 export const functions = getFunctions(app)
 export const storage = getStorage(app)
