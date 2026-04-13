@@ -252,7 +252,7 @@ export default function Home() {
     let attachmentName: string | undefined
 
     const UPLOAD_MS = 120_000
-    const FIRESTORE_MS = 30_000
+    const FIRESTORE_MS = 60_000
     const timeoutMsg = t('home.chatNetworkTimedOut')
 
     try {

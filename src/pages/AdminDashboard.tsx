@@ -433,7 +433,7 @@ export default function AdminDashboard() {
     let attachmentName: string | undefined
 
     const UPLOAD_MS = 120_000
-    const FIRESTORE_MS = 30_000
+    const FIRESTORE_MS = 60_000
 
     try {
       // トークンを事前に取得し、更新失敗時は addDoc が長時間待機しないようにする
