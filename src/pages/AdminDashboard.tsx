@@ -431,8 +431,7 @@ export default function AdminDashboard() {
     let attachmentName: string | undefined
 
     const UPLOAD_MS = 120_000
-    // オフラインキャッシュ有効時は addDoc が即座に完了するため短い値で十分
-    const FIRESTORE_MS = 15_000
+    const FIRESTORE_MS = 30_000
 
     try {
       if (selectedFile) {
