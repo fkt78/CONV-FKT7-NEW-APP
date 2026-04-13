@@ -189,6 +189,7 @@
     "displayFile": "ファイル",
     "uploadFailed": "アップロードに失敗しました",
     "chatNetworkTimedOut": "通信がタイムアウトしました。しばらくしてから再度お試しください。",
+    "chatSessionExpired": "ログインセッションが切れました。ページを再読み込みし、再度ログインしてください。",
     "editFailed": "編集に失敗しました",
     "deleteFailed": "削除に失敗しました",
     "deleteConfirm": "このメッセージを削除しますか？",

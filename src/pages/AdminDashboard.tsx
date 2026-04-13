@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import {
@@ -73,6 +74,7 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
 }
 
 export default function AdminDashboard() {
+  const { t } = useTranslation()
   const { currentUser } = useAuth()
   const navigate = useNavigate()
 
@@ -434,6 +436,9 @@ export default function AdminDashboard() {
     const FIRESTORE_MS = 30_000
 
     try {
+      // トークンを事前に取得し、更新失敗時は addDoc が長時間待機しないようにする
+      await currentUser.getIdToken()
+
       if (selectedFile) {
         const result = await withTimeout(
           uploadChatAttachment(selectedUid, selectedFile),
@@ -471,7 +476,15 @@ export default function AdminDashboard() {
       console.error('[admin handleSend]', err)
       // 送信失敗時はテキストを戻して再送できるようにする
       setText(trimmed)
-      setFileError(err instanceof Error ? err.message : 'アップロードに失敗しました')
+      const code = (err as { code?: string }).code ?? ''
+      const isAuthError = code.startsWith('auth/')
+      setFileError(
+        isAuthError
+          ? t('home.chatSessionExpired')
+          : err instanceof Error
+            ? err.message
+            : 'アップロードに失敗しました',
+      )
     } finally {
       setSending(false)
     }

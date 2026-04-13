@@ -256,6 +256,8 @@ export default function Home() {
     const timeoutMsg = t('home.chatNetworkTimedOut')
 
     try {
+      await currentUser.getIdToken()
+
       if (selectedFile) {
         const result = await withTimeout(
           uploadChatAttachment(currentUser.uid, selectedFile),
@@ -299,7 +301,15 @@ export default function Home() {
       console.error('[handleSend]', err)
       // 送信失敗時はテキストを戻して再送できるようにする
       setText(trimmed)
-      setFileError(err instanceof Error ? err.message : t('home.uploadFailed'))
+      const code = (err as { code?: string }).code ?? ''
+      const isAuthError = code.startsWith('auth/')
+      setFileError(
+        isAuthError
+          ? t('home.chatSessionExpired')
+          : err instanceof Error
+            ? err.message
+            : t('home.uploadFailed'),
+      )
     } finally {
       setSending(false)
     }

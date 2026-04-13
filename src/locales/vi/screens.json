@@ -189,6 +189,7 @@
     "displayFile": "Tệp",
     "uploadFailed": "Tải lên thất bại",
     "chatNetworkTimedOut": "Hết thời gian chờ. Vui lòng kiểm tra kết nối và thử lại.",
+    "chatSessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang và đăng nhập lại.",
     "editFailed": "Không lưu được",
     "deleteFailed": "Không xóa được",
     "deleteConfirm": "Xóa tin nhắn này?",

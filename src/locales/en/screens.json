@@ -189,6 +189,7 @@
     "displayFile": "File",
     "uploadFailed": "Upload failed",
     "chatNetworkTimedOut": "The request timed out. Check your connection and try again.",
+    "chatSessionExpired": "Your login session has expired. Reload the page and sign in again.",
     "editFailed": "Could not save edits",
     "deleteFailed": "Could not delete",
     "deleteConfirm": "Delete this message?",
