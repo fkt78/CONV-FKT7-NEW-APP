@@ -673,6 +673,9 @@ export default function Home() {
                                 placeholder={t('home.placeholderEdit')}
                                 autoFocus
                                 rows={2}
+                                name="vip-chat-edit-body"
+                                autoComplete="off"
+                                data-form-type="other"
                               />
                               <div className="flex gap-2 justify-end">
                                 <button
@@ -823,6 +826,7 @@ export default function Home() {
               </button>
               <textarea
                 ref={inputRef}
+                id="vip-store-chat-composer"
                 value={text}
                 onChange={syncChatText}
                 onCompositionEnd={(e) => setText(e.currentTarget.value)}
@@ -831,7 +835,11 @@ export default function Home() {
                 placeholder={t('home.messageInputPlaceholder')}
                 aria-label={t('home.messageInputAria')}
                 rows={1}
+                name="vip-chat-composer-body"
                 autoComplete="off"
+                enterKeyHint="enter"
+                inputMode="text"
+                data-form-type="other"
                 className="flex-1 min-h-[44px] max-h-32 min-w-0 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-5 py-3 text-[17px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:border-[#0095B6] focus:ring-2 focus:ring-[#0095B6]/20 transition resize-none"
               />
               <button

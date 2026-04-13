@@ -1081,6 +1081,9 @@ export default function AdminDashboard() {
                                     placeholder="メッセージを入力..."
                                     autoFocus
                                     rows={2}
+                                    name="vip-admin-chat-edit-body"
+                                    autoComplete="off"
+                                    data-form-type="other"
                                   />
                                   <div className="flex gap-2 justify-end">
                                     <button
@@ -1278,6 +1281,7 @@ export default function AdminDashboard() {
                   </button>
                   <textarea
                     ref={inputRef}
+                    id="vip-admin-chat-composer"
                     value={text}
                     onChange={syncChatText}
                     onCompositionEnd={(e) => setText(e.currentTarget.value)}
@@ -1285,7 +1289,11 @@ export default function AdminDashboard() {
                     onFocus={() => { setOpenMenuId(null); setShowTemplatePicker(false) }}
                     placeholder={`${selectedUser.fullName}さんに返信...（Enterで改行、Shift+Enterで送信）`}
                     rows={1}
+                    name="vip-admin-chat-composer-body"
                     autoComplete="off"
+                    enterKeyHint="enter"
+                    inputMode="text"
+                    data-form-type="other"
                     className="flex-1 min-h-[40px] max-h-28 min-w-0 bg-[#f5f5f7] border border-[#e5e5ea] rounded-2xl px-4 py-2.5 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] transition resize-none"
                   />
                   <button
@@ -1362,6 +1370,9 @@ export default function AdminDashboard() {
                 placeholder="送信するメッセージを入力..."
                 rows={5}
                 disabled={broadcastSending}
+                name="vip-admin-broadcast-body"
+                autoComplete="off"
+                data-form-type="other"
                 className="w-full bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl px-4 py-3 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] resize-none disabled:opacity-60"
               />
               {broadcastProgress && (
