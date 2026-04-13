@@ -398,9 +398,10 @@ export default function Home() {
           </button>
           {userRole === 'admin' && (
             <button
+              type="button"
               onClick={() => navigate('/admin')}
               aria-label={t('home.ariaAdmin')}
-              className="touch-target flex items-center justify-center text-[#0095B6] text-[15px] font-medium hover:text-[#007A96] transition px-3 py-2 rounded-xl"
+              className="touch-target flex-shrink-0 whitespace-nowrap flex items-center justify-center text-[#0095B6] text-[15px] font-medium hover:text-[#007A96] transition px-3 py-2 rounded-xl"
             >
               {t('home.adminSettings')}
             </button>
@@ -476,6 +477,19 @@ export default function Home() {
       {/* ── コンテンツ（タブごとにフルスクリーン表示） ── */}
       {homeTab === 'home' ? (
         <div className="flex-1 overflow-y-auto min-h-0 mt-2 pb-4">
+          {userRole === 'admin' && (
+            <div className="mx-4 mb-3 rounded-2xl border border-[#0095B6]/35 bg-gradient-to-r from-[#0095B6]/8 to-[#5BC8D7]/10 overflow-hidden flex-shrink-0 shadow-sm">
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                aria-label={t('home.ariaAdmin')}
+                className="w-full py-3.5 px-4 text-left text-[15px] font-semibold text-[#0095B6] flex items-center gap-2 hover:bg-[#0095B6]/10 transition active:scale-[0.99]"
+              >
+                <span aria-hidden>👑</span>
+                {t('home.adminDashboardEntry')}
+              </button>
+            </div>
+          )}
           <div className="mx-4 mt-4 rounded-2xl bg-white border border-[#e5e5ea] overflow-hidden flex-shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
           <div className="p-5 flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#0095B6] to-[#5BC8D7] flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -835,6 +849,19 @@ export default function Home() {
           className="flex items-center overflow-x-auto text-[11px] px-2 py-1"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
+          {userRole === 'admin' && (
+            <>
+              <Link
+                to="/admin"
+                className="flex-shrink-0 flex items-center h-9 px-2.5 text-[#0095B6] font-semibold hover:text-[#007A96] transition whitespace-nowrap rounded-lg active:bg-[#f5f5f7]"
+              >
+                {t('footer.adminDashboard')}
+              </Link>
+              <span className="flex-shrink-0 text-[#d1d1d6] mx-0.5" aria-hidden>
+                |
+              </span>
+            </>
+          )}
           <button
             onClick={() => setCreditsOpen(true)}
             aria-label={t('footer.credits')}

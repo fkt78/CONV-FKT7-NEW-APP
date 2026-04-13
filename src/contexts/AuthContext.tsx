@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { type User, onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, type DocumentSnapshot } from 'firebase/firestore'
 import { auth, authPersistenceReady, db } from '../lib/firebase'
 
 export type UserStatus = 'active' | 'blacklisted' | null
@@ -27,6 +27,24 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
 })
 
+/** Firestore の role が文字列・表記ゆれでも admin とみなす */
+function normalizeRole(role: unknown): UserRole {
+  if (role === 'admin') return 'admin'
+  if (typeof role === 'string' && role.trim().toLowerCase() === 'admin') return 'admin'
+  return null
+}
+
+function applyUserDoc(snap: DocumentSnapshot, setStatus: (s: UserStatus) => void, setRole: (r: UserRole) => void) {
+  if (snap.exists()) {
+    const data = snap.data()
+    setStatus((data.status as UserStatus) ?? null)
+    setRole(normalizeRole(data.role))
+  } else {
+    setStatus(null)
+    setRole(null)
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userStatus, setUserStatus] = useState<UserStatus>(null)
@@ -34,47 +52,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let latestUid: string | null = null
-    let unsubscribe: (() => void) | undefined
+    let unsubAuth: (() => void) | undefined
+    let unsubUser: (() => void) | undefined
     let cancelled = false
 
     void authPersistenceReady.then(() => {
       if (cancelled) return
-      unsubscribe = onAuthStateChanged(auth, async (user) => {
-        const uid = user?.uid ?? null
-        latestUid = uid
+      unsubAuth = onAuthStateChanged(auth, (user) => {
+        unsubUser?.()
+        unsubUser = undefined
         setCurrentUser(user)
 
-        if (user) {
-          try {
-            const snap = await getDoc(doc(db, 'users', user.uid))
-            if (latestUid !== uid) return
-            if (snap.exists()) {
-              const data = snap.data()
-              setUserStatus(data.status as UserStatus)
-              setUserRole(data.role === 'admin' ? 'admin' : null)
-            } else {
-              setUserStatus(null)
-              setUserRole(null)
-            }
-          } catch (err) {
-            if (latestUid !== uid) return
-            console.error('[AuthContext] ユーザー情報取得失敗', err)
-            setUserStatus(null)
-            setUserRole(null)
-          }
-        } else {
+        if (!user) {
           setUserStatus(null)
           setUserRole(null)
+          setLoading(false)
+          return
         }
 
-        setLoading(false)
+        setLoading(true)
+        const uid = user.uid
+
+        // 即時 getDoc（以前の挙動）。onSnapshot だけだと初回が遅い／失敗する環境があり、管理者メニューが出ないことがある
+        void getDoc(doc(db, 'users', uid))
+          .then((snap) => {
+            if (auth.currentUser?.uid !== uid) return
+            applyUserDoc(snap, setUserStatus, setUserRole)
+            setLoading(false)
+          })
+          .catch((err) => {
+            console.error('[AuthContext] users getDoc 失敗', err)
+            if (auth.currentUser?.uid !== uid) return
+            setUserStatus(null)
+            setUserRole(null)
+            setLoading(false)
+          })
+
+        unsubUser = onSnapshot(
+          doc(db, 'users', uid),
+          (snap) => {
+            if (auth.currentUser?.uid !== uid) return
+            applyUserDoc(snap, setUserStatus, setUserRole)
+            setLoading(false)
+          },
+          (err) => {
+            // 購読だけ失敗した場合、getDoc で既に admin が入っていることがある。ロールを消さない
+            console.error('[AuthContext] users 購読エラー（ロールは維持）', err)
+            setLoading(false)
+          },
+        )
       })
     })
 
     return () => {
       cancelled = true
-      unsubscribe?.()
+      unsubUser?.()
+      unsubAuth?.()
     }
   }, [])
 
