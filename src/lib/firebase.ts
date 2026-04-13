@@ -1,6 +1,10 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, inMemoryPersistence, setPersistence } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { getStorage } from 'firebase/storage'
 
@@ -40,7 +44,17 @@ export const auth = getAuth(app)
 export const authPersistenceReady = setPersistence(auth, inMemoryPersistence).catch((err) => {
   console.error('[firebase] setPersistence(inMemory) failed', err)
 })
-export const db = getFirestore(app)
+/**
+ * Firestore にオフライン永続化（IndexedDB）を有効化。
+ * addDoc / setDoc などが即座に LocalCache に書かれ Promise が解決するため、
+ * ネットワークが不安定でも入力欄がブロックされなくなる。
+ * サーバーへの同期はバックグラウンドで自動実行される。
+ */
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+})
 export const functions = getFunctions(app)
 export const storage = getStorage(app)
 export { httpsCallable }
