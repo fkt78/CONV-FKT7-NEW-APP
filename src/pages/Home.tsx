@@ -244,6 +244,8 @@ export default function Home() {
 
     setFileError(null)
     setOpenMenuId(null)
+    // 入力欄を即クリア（送信前に消すことで「消えない」問題を解消）
+    setText('')
     setSending(true)
     let attachmentUrl: string | undefined
     let attachmentType: AttachmentType | undefined
@@ -277,7 +279,6 @@ export default function Home() {
         FIRESTORE_MS,
         timeoutMsg,
       )
-      setText('')
       setTimeout(() => inputRef.current?.focus(), 0)
 
       // チャット一覧のメタ更新は fire-and-forget（失敗してもメッセージ本体には影響しない）
@@ -296,6 +297,8 @@ export default function Home() {
       })
     } catch (err) {
       console.error('[handleSend]', err)
+      // 送信失敗時はテキストを戻して再送できるようにする
+      setText(trimmed)
       setFileError(err instanceof Error ? err.message : t('home.uploadFailed'))
     } finally {
       setSending(false)
@@ -798,7 +801,6 @@ export default function Home() {
                 ref={inputRef}
                 value={text}
                 onChange={syncChatText}
-                onInput={syncChatText}
                 onCompositionEnd={(e) => setText(e.currentTarget.value)}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setOpenMenuId(null)}

@@ -423,6 +423,8 @@ export default function AdminDashboard() {
 
     setFileError(null)
     setOpenMenuId(null)
+    // 入力欄を即クリア（送信前に消すことで「消えない」問題を解消）
+    setText('')
     setSending(true)
     let attachmentUrl: string | undefined
     let attachmentType: AttachmentType | undefined
@@ -455,19 +457,20 @@ export default function AdminDashboard() {
         FIRESTORE_MS,
         CHAT_TIMEOUT_MSG,
       )
-      await withTimeout(
-        setDoc(
-          doc(db, 'chats', selectedUid),
-          { lastMessage: displayText, lastMessageAt: serverTimestamp() },
-          { merge: true },
-        ),
-        FIRESTORE_MS,
-        CHAT_TIMEOUT_MSG,
-      )
-      setText('')
       setTimeout(() => inputRef.current?.focus(), 0)
+
+      // チャット一覧のメタ更新は fire-and-forget
+      setDoc(
+        doc(db, 'chats', selectedUid),
+        { lastMessage: displayText, lastMessageAt: serverTimestamp() },
+        { merge: true },
+      ).catch((err: unknown) => {
+        console.warn('[admin handleSend] setDoc failed (non-critical):', err)
+      })
     } catch (err) {
       console.error('[admin handleSend]', err)
+      // 送信失敗時はテキストを戻して再送できるようにする
+      setText(trimmed)
       setFileError(err instanceof Error ? err.message : 'アップロードに失敗しました')
     } finally {
       setSending(false)
@@ -1264,7 +1267,6 @@ export default function AdminDashboard() {
                     ref={inputRef}
                     value={text}
                     onChange={syncChatText}
-                    onInput={syncChatText}
                     onCompositionEnd={(e) => setText(e.currentTarget.value)}
                     onKeyDown={handleKeyDown}
                     onFocus={() => { setOpenMenuId(null); setShowTemplatePicker(false) }}
