@@ -270,32 +270,44 @@ export default function Home() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? t('home.displayImage') : t('home.displayFile'))
-      // ローカル永続化時は IndexedDB 書き込み完了で解決し、UI は onSnapshot が即反映。長いサーバー待ちは不要。
-      await addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
+      addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
         senderId: currentUser.uid,
         text: trimmed,
         createdAt: serverTimestamp(),
         ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
       })
-      setTimeout(() => inputRef.current?.focus(), 0)
-
-      // チャット一覧のメタ更新は fire-and-forget（失敗してもメッセージ本体には影響しない）
-      setDoc(
-        doc(db, 'chats', currentUser.uid),
-        {
-          customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
-          customerUid: currentUser.uid,
-          lastMessage: displayText,
-          lastMessageAt: serverTimestamp(),
-          unreadFromCustomer: true,
-        },
-        { merge: true },
-      ).catch((err: unknown) => {
-        console.warn('[handleSend] setDoc failed (non-critical):', err)
-      })
+        .then(() => {
+          setTimeout(() => inputRef.current?.focus(), 0)
+          setDoc(
+            doc(db, 'chats', currentUser.uid),
+            {
+              customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
+              customerUid: currentUser.uid,
+              lastMessage: displayText,
+              lastMessageAt: serverTimestamp(),
+              unreadFromCustomer: true,
+            },
+            { merge: true },
+          ).catch((err: unknown) => {
+            console.warn('[handleSend] setDoc failed (non-critical):', err)
+          })
+        })
+        .catch((err: unknown) => {
+          console.error('[handleSend] addDoc failed:', err)
+          setText(trimmed)
+          const code = (err as { code?: string }).code ?? ''
+          const isAuthError = code.startsWith('auth/')
+          setFileError(
+            isAuthError
+              ? t('home.chatSessionExpired')
+              : err instanceof Error
+                ? err.message
+                : t('home.uploadFailed'),
+          )
+        })
+        .finally(() => setSending(false))
     } catch (err) {
       console.error('[handleSend]', err)
-      // 送信失敗時はテキストを戻して再送できるようにする
       setText(trimmed)
       const code = (err as { code?: string }).code ?? ''
       const isAuthError = code.startsWith('auth/')
@@ -306,7 +318,6 @@ export default function Home() {
             ? err.message
             : t('home.uploadFailed'),
       )
-    } finally {
       setSending(false)
     }
   }

@@ -450,25 +450,38 @@ export default function AdminDashboard() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? '画像' : 'ファイル')
-      await addDoc(collection(db, 'chats', selectedUid, 'messages'), {
+      addDoc(collection(db, 'chats', selectedUid, 'messages'), {
         senderId: currentUser.uid,
         text: trimmed,
         createdAt: serverTimestamp(),
         ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
       })
-      setTimeout(() => inputRef.current?.focus(), 0)
-
-      // チャット一覧のメタ更新は fire-and-forget
-      setDoc(
-        doc(db, 'chats', selectedUid),
-        { lastMessage: displayText, lastMessageAt: serverTimestamp() },
-        { merge: true },
-      ).catch((err: unknown) => {
-        console.warn('[admin handleSend] setDoc failed (non-critical):', err)
-      })
+        .then(() => {
+          setTimeout(() => inputRef.current?.focus(), 0)
+          setDoc(
+            doc(db, 'chats', selectedUid),
+            { lastMessage: displayText, lastMessageAt: serverTimestamp() },
+            { merge: true },
+          ).catch((err: unknown) => {
+            console.warn('[admin handleSend] setDoc failed (non-critical):', err)
+          })
+        })
+        .catch((err: unknown) => {
+          console.error('[admin handleSend] addDoc failed:', err)
+          setText(trimmed)
+          const code = (err as { code?: string }).code ?? ''
+          const isAuthError = code.startsWith('auth/')
+          setFileError(
+            isAuthError
+              ? t('home.chatSessionExpired')
+              : err instanceof Error
+                ? err.message
+                : 'メッセージの送信に失敗しました',
+          )
+        })
+        .finally(() => setSending(false))
     } catch (err) {
       console.error('[admin handleSend]', err)
-      // 送信失敗時はテキストを戻して再送できるようにする
       setText(trimmed)
       const code = (err as { code?: string }).code ?? ''
       const isAuthError = code.startsWith('auth/')
@@ -479,7 +492,6 @@ export default function AdminDashboard() {
             ? err.message
             : 'アップロードに失敗しました',
       )
-    } finally {
       setSending(false)
     }
   }
