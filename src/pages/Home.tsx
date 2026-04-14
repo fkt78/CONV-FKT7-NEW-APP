@@ -252,7 +252,6 @@ export default function Home() {
     let attachmentName: string | undefined
 
     const UPLOAD_MS = 120_000
-    const FIRESTORE_MS = 30_000
     const timeoutMsg = t('home.chatNetworkTimedOut')
 
     try {
@@ -271,16 +270,13 @@ export default function Home() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? t('home.displayImage') : t('home.displayFile'))
-      await withTimeout(
-        addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
-          senderId: currentUser.uid,
-          text: trimmed,
-          createdAt: serverTimestamp(),
-          ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
-        }),
-        FIRESTORE_MS,
-        timeoutMsg,
-      )
+      // ローカル永続化時は IndexedDB 書き込み完了で解決し、UI は onSnapshot が即反映。長いサーバー待ちは不要。
+      await addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
+        senderId: currentUser.uid,
+        text: trimmed,
+        createdAt: serverTimestamp(),
+        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
+      })
       setTimeout(() => inputRef.current?.focus(), 0)
 
       // チャット一覧のメタ更新は fire-and-forget（失敗してもメッセージ本体には影響しない）

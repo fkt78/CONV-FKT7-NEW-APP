@@ -433,10 +433,8 @@ export default function AdminDashboard() {
     let attachmentName: string | undefined
 
     const UPLOAD_MS = 120_000
-    const FIRESTORE_MS = 30_000
 
     try {
-      // トークンを事前に取得し、更新失敗時は addDoc が長時間待機しないようにする
       await currentUser.getIdToken()
 
       if (selectedFile) {
@@ -452,16 +450,12 @@ export default function AdminDashboard() {
       }
 
       const displayText = trimmed || (attachmentType === 'image' ? '画像' : 'ファイル')
-      await withTimeout(
-        addDoc(collection(db, 'chats', selectedUid, 'messages'), {
-          senderId: currentUser.uid,
-          text: trimmed,
-          createdAt: serverTimestamp(),
-          ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
-        }),
-        FIRESTORE_MS,
-        CHAT_TIMEOUT_MSG,
-      )
+      await addDoc(collection(db, 'chats', selectedUid, 'messages'), {
+        senderId: currentUser.uid,
+        text: trimmed,
+        createdAt: serverTimestamp(),
+        ...(attachmentUrl && { attachmentUrl, attachmentType, attachmentName }),
+      })
       setTimeout(() => inputRef.current?.focus(), 0)
 
       // チャット一覧のメタ更新は fire-and-forget
