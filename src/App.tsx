@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ChatBadgeProvider } from './contexts/ChatBadgeContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
@@ -41,44 +42,46 @@ export default function App() {
         <VersionBadge />
         <PwaUpdatePrompt />
         <AuthProvider>
-          <AppBadge />
-          <NotificationRegistration />
-          <Routes>
-            <Route path="/install-guide" element={<InstallGuide />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfUse />} />
-            <Route path="/tokushoho" element={<Tokushoho />} />
-            <Route path="/advertising" element={<AdvertisingNotice />} />
-            <Route path="/licenses" element={<Licenses />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route
-              path="/settings/notifications"
-              element={
-                <ProtectedRoute>
-                  <NotificationSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              }
-            />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          <ChatBadgeProvider>
+            <AppBadge />
+            <NotificationRegistration />
+            <Routes>
+              <Route path="/install-guide" element={<InstallGuide />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfUse />} />
+              <Route path="/tokushoho" element={<Tokushoho />} />
+              <Route path="/advertising" element={<AdvertisingNotice />} />
+              <Route path="/licenses" element={<Licenses />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route
+                path="/settings/notifications"
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ChatBadgeProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

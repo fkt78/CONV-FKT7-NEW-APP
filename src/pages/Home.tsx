@@ -7,12 +7,14 @@ import {
   query,
   orderBy,
   where,
+  limit,
   onSnapshot,
   addDoc,
   doc,
   setDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore'
@@ -20,6 +22,7 @@ import { auth, db } from '../lib/firebase'
 import { formatTime, isSameDay, formatDateDivider } from '../lib/formatTime'
 import { messageMatches, highlightMatch, isSafeUrl, withTimeout } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
+import { useChatBadge } from '../contexts/ChatBadgeContext'
 import { uploadChatAttachment, validateFile, FILE_ERROR_TOO_LARGE, FILE_ERROR_TYPE, type AttachmentType } from '../lib/chatAttachment'
 import CouponWallet from '../components/CouponWallet'
 import VipNews from '../components/VipNews'
@@ -52,6 +55,7 @@ interface UserData {
 export default function Home() {
   const { t } = useTranslation()
   const { currentUser, userRole } = useAuth()
+  const { setChatBadge } = useChatBadge()
   const navigate = useNavigate()
 
   const [homeTab, setHomeTab] = useState<HomeTab>('chat')
@@ -82,28 +86,29 @@ export default function Home() {
 
   useEffect(() => {
     if (!currentUser) return
+    // 直近50件のみ購読（読み取り削減）。asc+limit は最古50件になるため desc+limit 後に昇順表示へ並べ替え
     const q = query(
       collection(db, 'chats', currentUser.uid, 'messages'),
-      orderBy('createdAt', 'asc'),
+      orderBy('createdAt', 'desc'),
+      limit(50),
     )
     return onSnapshot(
       q,
       (snap) => {
-        setMessages(
-          snap.docs.map((d) => {
-            const data = d.data()
-            return {
-              id: d.id,
-              senderId: data.senderId as string,
-              text: (data.text as string) ?? '',
-              createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
-              readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
-              attachmentUrl: data.attachmentUrl as string | undefined,
-              attachmentType: data.attachmentType as AttachmentType | undefined,
-              attachmentName: data.attachmentName as string | undefined,
-            }
-          }),
-        )
+        const mapped = snap.docs.map((d) => {
+          const data = d.data()
+          return {
+            id: d.id,
+            senderId: data.senderId as string,
+            text: (data.text as string) ?? '',
+            createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+            readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+            attachmentUrl: data.attachmentUrl as string | undefined,
+            attachmentType: data.attachmentType as AttachmentType | undefined,
+            attachmentName: data.attachmentName as string | undefined,
+          }
+        })
+        setMessages([...mapped].reverse())
       },
       (err) => {
         console.error('[messages onSnapshot]', err)
@@ -145,6 +150,10 @@ export default function Home() {
     (m) => currentUser && m.senderId !== currentUser.uid && !m.readAt,
   ).length
 
+  useEffect(() => {
+    setChatBadge(unreadMessageCount, couponCount)
+  }, [unreadMessageCount, couponCount, setChatBadge])
+
   // 受信メッセージを既読にする（チャットタブを表示しているときのみ）
   useEffect(() => {
     if (!currentUser || messages.length === 0 || homeTab !== 'chat') return
@@ -152,14 +161,14 @@ export default function Home() {
       (m) => m.senderId !== currentUser.uid && !m.readAt,
     )
     if (toMark.length === 0) return
-    Promise.all(
-      toMark.map((m) =>
-        updateDoc(doc(db, 'chats', currentUser.uid, 'messages', m.id), {
-          readAt: serverTimestamp(),
-          readBy: currentUser.uid,
-        }),
-      ),
-    ).catch((err) => {
+    const batch = writeBatch(db)
+    toMark.forEach((m) => {
+      batch.update(doc(db, 'chats', currentUser.uid, 'messages', m.id), {
+        readAt: serverTimestamp(),
+        readBy: currentUser.uid,
+      })
+    })
+    batch.commit().catch((err) => {
       if ((err as { code?: string })?.code !== 'not-found') {
         console.error('既読更新エラー:', err)
       }
