@@ -21,6 +21,7 @@ import {
   type Timestamp,
   type DocumentSnapshot,
   type Query,
+  type QueryConstraint,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { formatTime, formatTimeCompact, isSameDay, formatDateDivider } from '../lib/formatTime'
@@ -95,6 +96,7 @@ export default function AdminDashboard() {
     Array<{ chatId: string; fullName: string; memberNumber: number | null; messages: Array<Message & { chatId: string }> }>
   >([])
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false)
+  const [globalSearchDays, setGlobalSearchDays] = useState<number>(90)
   const [showGlobalSearchResults, setShowGlobalSearchResults] = useState(false)
   const [showBroadcastModal, setShowBroadcastModal] = useState(false)
   const [broadcastText, setBroadcastText] = useState('')
@@ -133,7 +135,15 @@ export default function AdminDashboard() {
   }, [])
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'chats'), (snap) => {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const q = query(
+      collection(db, 'chats'),
+      where('lastMessageAt', '>=', thirtyDaysAgo),
+      orderBy('lastMessageAt', 'desc'),
+      limit(100),
+    )
+    return onSnapshot(q, (snap) => {
       const meta: Record<string, ChatMeta> = {}
       snap.docs.forEach((d) => {
         meta[d.id] = {
@@ -306,26 +316,29 @@ export default function AdminDashboard() {
     setGlobalSearchLoading(true)
     setShowGlobalSearchResults(true)
     try {
-      const BATCH_SIZE = 500
-      const MAX_MESSAGES = 2500
+      const BATCH_SIZE = 300
+      const MAX_MESSAGES = 300
       const userMap = Object.fromEntries(users.map((u) => [u.uid, { fullName: u.fullName, memberNumber: u.memberNumber }]))
       const matches: Array<Message & { chatId: string }> = []
       let lastDoc: DocumentSnapshot | null = null
       let totalFetched = 0
 
+      const filterDate =
+        globalSearchDays > 0 ? new Date(Date.now() - globalSearchDays * 24 * 60 * 60 * 1000) : null
+
       while (totalFetched < MAX_MESSAGES) {
+        const baseConstraints: QueryConstraint[] = filterDate
+          ? [
+              where('createdAt', '>=', filterDate),
+              orderBy('createdAt', 'desc'),
+              limit(BATCH_SIZE),
+            ]
+          : [orderBy('createdAt', 'desc'), limit(BATCH_SIZE)]
+
         const qRef: Query = lastDoc
-          ? query(
-              collectionGroup(db, 'messages'),
-              orderBy('createdAt', 'desc'),
-              limit(BATCH_SIZE),
-              startAfter(lastDoc),
-            )
-          : query(
-              collectionGroup(db, 'messages'),
-              orderBy('createdAt', 'desc'),
-              limit(BATCH_SIZE),
-            )
+          ? query(collectionGroup(db, 'messages'), ...baseConstraints, startAfter(lastDoc))
+          : query(collectionGroup(db, 'messages'), ...baseConstraints)
+
         const snap = await getDocs(qRef)
         if (snap.empty) break
 
@@ -761,14 +774,24 @@ export default function AdminDashboard() {
             >
               📢 全員に一斉送信
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={globalSearchDays}
+                onChange={(e) => setGlobalSearchDays(Number(e.target.value))}
+                className="text-xs border border-[#e5e5ea] rounded px-2 py-1 bg-white text-[#1d1d1f]"
+              >
+                <option value={30}>30日以内</option>
+                <option value={90}>90日以内</option>
+                <option value={180}>180日以内</option>
+                <option value={0}>全期間</option>
+              </select>
               <input
                 type="search"
                 value={globalSearchQuery}
                 onChange={(e) => setGlobalSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && runGlobalSearch()}
                 placeholder="商品名で全チャット検索（例: クリスマスケーキ）"
-                className="flex-1 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-xs focus:outline-none focus:border-[#0095B6] transition"
+                className="flex-1 min-w-[120px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2 text-[#1d1d1f] placeholder-[#86868b] text-xs focus:outline-none focus:border-[#0095B6] transition"
                 aria-label="全チャット検索"
               />
               <button
