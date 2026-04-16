@@ -90,6 +90,8 @@ export default function HouseRulesAgreement() {
               <ul className="list-disc list-inside space-y-1.5 text-[#86868b]">
                 <BulletItem label={hr('s3_b1_label')} text={hr('s3_b1_text')} />
                 <BulletItem label={hr('s3_b2_label')} text={hr('s3_b2_text')} />
+                <BulletItem label={hr('s3_b3_label')} text={hr('s3_b3_text')} />
+                <BulletItem label={hr('s3_b4_label')} text={hr('s3_b4_text')} />
               </ul>
             </div>
 

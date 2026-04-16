@@ -208,6 +208,19 @@ export default function NewsManager() {
         payload.imageUrl = deleteField()
       }
 
+      if (expiresAt.trim()) {
+        const expDate = new Date(expiresAt.trim())
+        if (expDate.getTime() <= Date.now()) {
+          const proceed = window.confirm(
+            '設定した公開期限がすでに過去の日時です。このまま投稿するとすぐに非表示になります。\n続けて投稿しますか？',
+          )
+          if (!proceed) {
+            setSaving(false)
+            return
+          }
+        }
+      }
+
       if (editingId) {
         await updateDoc(doc(db, 'news', editingId), payload)
       } else {
@@ -243,6 +256,9 @@ export default function NewsManager() {
   const visibleNewsList = newsList.filter(
     (item) => !item.expiresAt || item.expiresAt.getTime() > Date.now(),
   )
+
+  const isExpired = (item: NewsItem) =>
+    !!item.expiresAt && item.expiresAt.getTime() <= Date.now()
 
   const totalImageCount = editingImageUrls.length + pendingImages.length
   const imageSlotLeft = MAX_NEWS_IMAGES - totalImageCount
@@ -464,16 +480,21 @@ export default function NewsManager() {
           {newsList.length === 0 && !showForm && (
             <p className="text-[#86868b] text-sm text-center py-10">お知らせはまだありません</p>
           )}
-          {newsList.length > 0 && visibleNewsList.length === 0 && !showForm && (
-            <p className="text-[#86868b] text-sm text-center py-10">
-              表示できるお知らせはありません（公開期限を過ぎた投稿のみが登録されています）
-            </p>
-          )}
-          {visibleNewsList.map((item) => (
-            <div key={item.id} className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] p-3 space-y-2">
+          {newsList.map((item) => (
+            <div
+              key={item.id}
+              className={`rounded-xl border p-3 space-y-2 ${isExpired(item) ? 'bg-[#f5f5f7]/50 border-[#e5e5ea] opacity-60' : 'bg-[#f5f5f7] border-[#e5e5ea]'}`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#1d1d1f] text-sm font-bold truncate">{item.title}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[#1d1d1f] text-sm font-bold truncate">{item.title}</p>
+                    {isExpired(item) && (
+                      <span className="text-[10px] bg-[#86868b]/20 text-[#86868b] px-1.5 py-0.5 rounded flex-shrink-0">
+                        期限切れ
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[#86868b] text-xs mt-0.5 line-clamp-2">{item.content}</p>
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {item.imageUrls.length > 0 && (
@@ -491,7 +512,9 @@ export default function NewsManager() {
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-[#86868b] text-[10px]">{formatDate(item.createdAt)}</span>
                   {item.expiresAt && (
-                    <span className="text-[#FF9500] text-[10px]">〜{formatDate(item.expiresAt)}</span>
+                    <span className={`text-[10px] ${isExpired(item) ? 'text-red-400' : 'text-[#FF9500]'}`}>
+                      〜{formatDate(item.expiresAt)}
+                    </span>
                   )}
                   <button
                     onClick={() => handleEdit(item)}
