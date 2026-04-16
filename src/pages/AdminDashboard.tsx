@@ -22,6 +22,8 @@ import {
   type DocumentSnapshot,
   type Query,
   type QueryConstraint,
+  type QuerySnapshot,
+  type DocumentData,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { formatTime, formatTimeCompact, isSameDay, formatDateDivider } from '../lib/formatTime'
@@ -74,6 +76,29 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   other: 'その他',
 }
 
+function buildChatMetaQuery() {
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  return query(
+    collection(db, 'chats'),
+    where('lastMessageAt', '>=', thirtyDaysAgo),
+    orderBy('lastMessageAt', 'desc'),
+    limit(100),
+  )
+}
+
+function parseChatMetaSnap(snap: QuerySnapshot<DocumentData>): Record<string, ChatMeta> {
+  const meta: Record<string, ChatMeta> = {}
+  snap.docs.forEach((d) => {
+    meta[d.id] = {
+      lastMessage: (d.data().lastMessage as string) ?? '',
+      lastMessageAt: (d.data().lastMessageAt as Timestamp | null)?.toDate() ?? null,
+      unreadFromCustomer: (d.data().unreadFromCustomer as boolean) ?? false,
+    }
+  })
+  return meta
+}
+
 export default function AdminDashboard() {
   const { t } = useTranslation()
   const { currentUser } = useAuth()
@@ -114,6 +139,7 @@ export default function AdminDashboard() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const messagesForChatRef = useRef<string | null>(null)
+  const chatMetaUnsubRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('status', '==', 'active'))
@@ -135,25 +161,14 @@ export default function AdminDashboard() {
   }, [])
 
   useEffect(() => {
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const q = query(
-      collection(db, 'chats'),
-      where('lastMessageAt', '>=', thirtyDaysAgo),
-      orderBy('lastMessageAt', 'desc'),
-      limit(100),
-    )
-    return onSnapshot(q, (snap) => {
-      const meta: Record<string, ChatMeta> = {}
-      snap.docs.forEach((d) => {
-        meta[d.id] = {
-          lastMessage: (d.data().lastMessage as string) ?? '',
-          lastMessageAt: (d.data().lastMessageAt as Timestamp | null)?.toDate() ?? null,
-          unreadFromCustomer: (d.data().unreadFromCustomer as boolean) ?? false,
-        }
-      })
-      setChatMeta(meta)
+    const unsub = onSnapshot(buildChatMetaQuery(), (snap) => {
+      setChatMeta(parseChatMetaSnap(snap))
     })
+    chatMetaUnsubRef.current = unsub
+    return () => {
+      unsub()
+      chatMetaUnsubRef.current = null
+    }
   }, [])
 
   useEffect(() => {
@@ -578,6 +593,9 @@ export default function AdminDashboard() {
       return
     }
 
+    chatMetaUnsubRef.current?.()
+    chatMetaUnsubRef.current = null
+
     setBroadcastSending(true)
     setBroadcastProgress({ current: 0, total: targets.length })
 
@@ -613,6 +631,10 @@ export default function AdminDashboard() {
       setBroadcastSending(false)
       setBroadcastProgress(null)
       setSendTargetUids(null)
+      const unsub = onSnapshot(buildChatMetaQuery(), (snap) => {
+        setChatMeta(parseChatMetaSnap(snap))
+      })
+      chatMetaUnsubRef.current = unsub
     }
   }
 

@@ -992,6 +992,25 @@ async function runCouponDistribution(
 ): Promise<{ distributedCount: number; distributedOmikuji: number; weather: WeatherData | null }> {
     const onlyIds = options?.onlyCouponIds?.length ? [...new Set(options.onlyCouponIds)] : null
 
+    const now = new Date()
+    /* Cloud Functions は UTC で動作するため、JST (UTC+9) に変換して日付を求める。
+     * 例: 朝7時JST = 前日22:00 UTC → now.getDate() だと前日になってしまう */
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+    const today = `${jstNow.getUTCFullYear()}-${String(jstNow.getUTCMonth() + 1).padStart(2, '0')}-${String(jstNow.getUTCDate()).padStart(2, '0')}`
+    console.log(`[couponDistribution] today(JST)=${today} (UTC=${now.toISOString()})`)
+
+    const distributionStatusRef = db.collection('settings').doc('distributionStatus')
+    if (!onlyIds) {
+      const statusSnap = await distributionStatusRef.get()
+      const lastRunDate = statusSnap.data()?.lastScheduledRunDate as string | undefined
+      if (lastRunDate === today) {
+        console.log(
+          `[couponDistribution] 本日(${today})の配信はすでに完了済み。2重実行を防止してスキップします。`,
+        )
+        return { distributedCount: 0, distributedOmikuji: 0, weather: null }
+      }
+    }
+
     const settingsSnap = await db.collection('settings').doc('coupon').get()
     const settings = settingsSnap.data() ?? {}
     const dailyLimit = (settings.dailyLimit as number) ?? DEFAULT_DAILY_COUPON_LIMIT
@@ -1020,12 +1039,6 @@ async function runCouponDistribution(
       const cSnap = await db.collection('coupons').where('active', '==', true).get()
       allTemplates = cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as CouponTemplate))
     }
-    const now = new Date()
-    /* Cloud Functions は UTC で動作するため、JST (UTC+9) に変換して日付を求める。
-     * 例: 朝7時JST = 前日22:00 UTC → now.getDate() だと前日になってしまう */
-    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-    const today = `${jstNow.getUTCFullYear()}-${String(jstNow.getUTCMonth() + 1).padStart(2, '0')}-${String(jstNow.getUTCDate()).padStart(2, '0')}`
-    console.log(`[couponDistribution] today(JST)=${today} (UTC=${now.toISOString()})`)
 
     const uSnap = await db.collection('users').where('status', '==', 'active').get()
 
@@ -1082,7 +1095,11 @@ async function runCouponDistribution(
         }
 
         const couponDocId = `${coupon.id}_${today}`
-        const existingUids = await batchGetExistingUserCouponUids(couponDocId, eligibleUids)
+        const exemptBirth = isDailyLimitExempt(coupon)
+        const uidsToCheckBirth = exemptBirth
+          ? eligibleUids
+          : eligibleUids.filter((uid) => (logCountByUid.get(uid) ?? 0) < dailyLimit)
+        const existingUids = await batchGetExistingUserCouponUids(couponDocId, uidsToCheckBirth)
 
         const expiryType = coupon.expiryType ?? 'same_day'
         const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
@@ -1090,13 +1107,12 @@ async function runCouponDistribution(
         for (const uid of eligibleUids) {
           if (existingUids.has(uid)) continue
 
-          const exempt = isDailyLimitExempt(coupon)
-          if (!exempt) {
+          if (!exemptBirth) {
             const count = logCountByUid.get(uid) ?? 0
             if (count >= dailyLimit) continue
           }
 
-          await flushWriteBatchIfNeeded(exempt ? 1 : 2)
+          await flushWriteBatchIfNeeded(exemptBirth ? 1 : 2)
           const couponRef = db.collection('users').doc(uid).collection('coupons').doc(couponDocId)
           writeBatch.set(couponRef, {
             couponId: coupon.id,
@@ -1109,7 +1125,7 @@ async function runCouponDistribution(
             usedAt: null,
           })
           writeBatchOpCount++
-          if (!exempt) {
+          if (!exemptBirth) {
             const count = logCountByUid.get(uid) ?? 0
             const next = count + 1
             logCountByUid.set(uid, next)
@@ -1149,18 +1165,21 @@ async function runCouponDistribution(
         }
 
         const couponDocId = `${coupon.id}_${today}`
-        const existingUids = await batchGetExistingUserCouponUids(couponDocId, eligibleUids)
+        const exemptRegular = isDailyLimitExempt(coupon)
+        const uidsToCheckRegular = exemptRegular
+          ? eligibleUids
+          : eligibleUids.filter((uid) => (logCountByUid.get(uid) ?? 0) < dailyLimit)
+        const existingUids = await batchGetExistingUserCouponUids(couponDocId, uidsToCheckRegular)
 
         for (const uid of eligibleUids) {
           if (existingUids.has(uid)) continue
 
-          const exempt = isDailyLimitExempt(coupon)
-          if (!exempt) {
+          if (!exemptRegular) {
             const count = logCountByUid.get(uid) ?? 0
             if (count >= dailyLimit) continue
           }
 
-          await flushWriteBatchIfNeeded(exempt ? 1 : 2)
+          await flushWriteBatchIfNeeded(exemptRegular ? 1 : 2)
           const couponRef = db.collection('users').doc(uid).collection('coupons').doc(couponDocId)
           writeBatch.set(couponRef, {
             couponId: coupon.id,
@@ -1173,7 +1192,7 @@ async function runCouponDistribution(
             usedAt: null,
           })
           writeBatchOpCount++
-          if (!exempt) {
+          if (!exemptRegular) {
             const count = logCountByUid.get(uid) ?? 0
             const next = count + 1
             logCountByUid.set(uid, next)
@@ -1196,6 +1215,17 @@ async function runCouponDistribution(
         dailyLimit,
         userDocs: uSnap.docs as QueryDocumentSnapshot[],
       })
+    }
+
+    if (!onlyIds) {
+      await distributionStatusRef.set(
+        {
+          lastScheduledRunDate: today,
+          completedAt: Timestamp.now(),
+        },
+        { merge: true },
+      )
+      console.log(`[couponDistribution] 完了ステータスを記録: lastScheduledRunDate=${today}`)
     }
 
     console.log(

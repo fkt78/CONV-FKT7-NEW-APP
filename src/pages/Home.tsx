@@ -7,7 +7,7 @@ import {
   query,
   orderBy,
   where,
-  limit,
+  limitToLast,
   onSnapshot,
   addDoc,
   doc,
@@ -86,29 +86,31 @@ export default function Home() {
 
   useEffect(() => {
     if (!currentUser) return
-    // 直近50件のみ購読（読み取り削減）。asc+limit は最古50件になるため desc+limit 後に昇順表示へ並べ替え
+    // limitToLast(50) で最新50件を昇順取得。desc+reverse より送信直後も正しく表示される。
+    // serverTimestamps: 'estimate' で送信直後の pending timestamp を推定値として扱う。
     const q = query(
       collection(db, 'chats', currentUser.uid, 'messages'),
-      orderBy('createdAt', 'desc'),
-      limit(50),
+      orderBy('createdAt', 'asc'),
+      limitToLast(50),
     )
     return onSnapshot(
       q,
       (snap) => {
-        const mapped = snap.docs.map((d) => {
-          const data = d.data()
-          return {
-            id: d.id,
-            senderId: data.senderId as string,
-            text: (data.text as string) ?? '',
-            createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
-            readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
-            attachmentUrl: data.attachmentUrl as string | undefined,
-            attachmentType: data.attachmentType as AttachmentType | undefined,
-            attachmentName: data.attachmentName as string | undefined,
-          }
-        })
-        setMessages([...mapped].reverse())
+        setMessages(
+          snap.docs.map((d) => {
+            const data = d.data({ serverTimestamps: 'estimate' })
+            return {
+              id: d.id,
+              senderId: data.senderId as string,
+              text: (data.text as string) ?? '',
+              createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+              readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+              attachmentUrl: data.attachmentUrl as string | undefined,
+              attachmentType: data.attachmentType as AttachmentType | undefined,
+              attachmentName: data.attachmentName as string | undefined,
+            }
+          }),
+        )
       },
       (err) => {
         console.error('[messages onSnapshot]', err)
