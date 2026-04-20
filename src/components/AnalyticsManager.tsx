@@ -161,8 +161,12 @@ export default function AnalyticsManager() {
         ? totalUsers
         : users.filter((u) => inRange(u.createdAt)).length
 
-      // 2. 全クーポン（collectionGroup）- ユーザー保有分のみ（users/*/coupons）
-      const couponsSnap = await getDocs(collectionGroup(db, 'coupons'))
+      // 2. 全クーポン（collectionGroup）- 期間内のみ取得して読み取り数を削減
+      const couponsSnap = await getDocs(
+        start
+          ? query(collectionGroup(db, 'coupons'), where('distributedAt', '>=', start))
+          : query(collectionGroup(db, 'coupons')),
+      )
       const allCoupons: CouponDoc[] = couponsSnap.docs
         .filter((d) => d.ref.path.startsWith('users/'))
         .map((d) => {
@@ -202,12 +206,18 @@ export default function AnalyticsManager() {
         rate: v.distributed > 0 ? Math.round((v.used / v.distributed) * 100) : 0,
       })).sort((a, b) => b.distributed - a.distributed)
 
-      // 3. 全メッセージ（collectionGroup）
+      // 3. 全メッセージ（collectionGroup）- 期間内のみ取得して読み取り数を削減
       const messagesSnap = await getDocs(
-        query(
-          collectionGroup(db, 'messages'),
-          orderBy('createdAt', 'desc'),
-        ),
+        start
+          ? query(
+              collectionGroup(db, 'messages'),
+              where('createdAt', '>=', start),
+              orderBy('createdAt', 'desc'),
+            )
+          : query(
+              collectionGroup(db, 'messages'),
+              orderBy('createdAt', 'desc'),
+            ),
       )
       const allMessages: MessageDoc[] = messagesSnap.docs.map((d) => {
         const x = d.data()

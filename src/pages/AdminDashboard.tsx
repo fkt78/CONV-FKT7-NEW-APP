@@ -8,6 +8,7 @@ import {
   query,
   orderBy,
   limit,
+  limitToLast,
   startAfter,
   onSnapshot,
   getDocs,
@@ -195,9 +196,11 @@ export default function AdminDashboard() {
     setMessages([])
     setSearchQuery('')
     messagesForChatRef.current = null
+    // limitToLast(100) で最新100件を昇順取得。全件取得より初回表示が大幅に速くなる。
     const q = query(
       collection(db, 'chats', selectedUid, 'messages'),
       orderBy('createdAt', 'asc'),
+      limitToLast(100),
     )
     return onSnapshot(
       q,
