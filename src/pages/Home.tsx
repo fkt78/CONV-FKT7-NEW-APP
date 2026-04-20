@@ -30,6 +30,7 @@ import VoiceCreditsPopup from '../components/VoiceCreditsPopup'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import AffiliateBannerCarousel from '../components/AffiliateBannerCarousel'
 import HomeSkeleton from '../components/HomeSkeleton'
+import LazyMount from '../components/LazyMount'
 
 type HomeTab = 'home' | 'chat' | 'coupon'
 
@@ -572,7 +573,12 @@ export default function Home() {
       ) : homeTab === 'coupon' ? (
         <div className="flex-1 flex flex-col min-h-0 mt-2 overflow-hidden">
           <div className="flex-shrink-0">
-            <AffiliateBannerCarousel />
+            <LazyMount
+              rootMargin="300px"
+              fallback={<div className="mx-4 mt-0 h-[118px] rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea]" />}
+            >
+              <AffiliateBannerCarousel />
+            </LazyMount>
           </div>
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden mt-2">
             <CouponWallet />
@@ -582,7 +588,12 @@ export default function Home() {
         <>
           {/* ── チャットタブ上部バナー ── */}
           <div className="flex-shrink-0">
-            <AffiliateBannerCarousel />
+            <LazyMount
+              rootMargin="300px"
+              fallback={<div className="mx-4 mt-4 h-[118px] rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea]" />}
+            >
+              <AffiliateBannerCarousel />
+            </LazyMount>
           </div>
           {/* ── メッセージ検索 ── */}
           {displayMessages.length > 0 && (
