@@ -4,7 +4,7 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
+  getDocs,
   addDoc,
   doc,
   getDoc,
@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore'
 import { db, functions } from '../lib/firebase'
 import { httpsCallable } from 'firebase/functions'
+import RefreshButton from './RefreshButton'
 import { fetchWeather, type WeatherData } from '../lib/weather'
 import {
   distributeCouponToUsers,
@@ -66,6 +67,8 @@ export default function CouponManager() {
   const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState(1)
   const [scheduleMonths, setScheduleMonths] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
+  const [couponsLoading, setCouponsLoading] = useState(false)
+  const [couponsRefreshKey, setCouponsRefreshKey] = useState(0)
 
   // weather（自動配信の参考用）
   const [weather, setWeather] = useState<WeatherData | null>(null)
@@ -83,11 +86,13 @@ export default function CouponManager() {
   const [individualDistributing, setIndividualDistributing] = useState(false)
   const [individualResult, setIndividualResult] = useState<IndividualDistributionResult | null>(null)
 
-  /* ── リアルタイム購読 ── */
+  /* ── クーポン一覧取得 ── */
   useEffect(() => {
-    return onSnapshot(
-      query(collection(db, 'coupons'), orderBy('createdAt', 'desc')),
-      (snap) => {
+    let cancelled = false
+    setCouponsLoading(true)
+    getDocs(query(collection(db, 'coupons'), orderBy('createdAt', 'desc')))
+      .then((snap) => {
+        if (cancelled) return
         setCoupons(
           snap.docs.map((d) => ({
             id: d.id,
@@ -95,9 +100,17 @@ export default function CouponManager() {
             createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
           })),
         )
-      },
-    )
-  }, [])
+        setCouponsLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('[CouponManager] クーポン取得失敗', err)
+        setCouponsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [couponsRefreshKey])
 
   useEffect(() => {
     let cancelled = false
@@ -135,15 +148,23 @@ export default function CouponManager() {
   /* ── 個人配信用: モーダル表示時にユーザー一覧を取得 ── */
   useEffect(() => {
     if (!showIndividualModal) return
-    const q = query(collection(db, 'users'), where('status', '==', 'active'))
-    return onSnapshot(q, (snap) => {
-      setUsers(
-        snap.docs.map((d) => ({
-          uid: d.id,
-          fullName: (d.data().fullName as string) ?? '',
-        })),
-      )
-    })
+    let cancelled = false
+    getDocs(query(collection(db, 'users'), where('status', '==', 'active')))
+      .then((snap) => {
+        if (cancelled) return
+        setUsers(
+          snap.docs.map((d) => ({
+            uid: d.id,
+            fullName: (d.data().fullName as string) ?? '',
+          })),
+        )
+      })
+      .catch((err) => {
+        if (!cancelled) console.error('[CouponManager] ユーザー取得失敗', err)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [showIndividualModal])
 
   /* ── 天気取得 ── */
@@ -277,6 +298,7 @@ export default function CouponManager() {
           createdAt: serverTimestamp(),
         })
       }
+      setCouponsRefreshKey((k) => k + 1)
       resetForm()
     } catch (err) {
       console.error('クーポン保存エラー:', err)
@@ -290,6 +312,7 @@ export default function CouponManager() {
   async function handleToggle(id: string, current: boolean) {
     try {
       await updateDoc(doc(db, 'coupons', id), { active: !current })
+      setCouponsRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('[CouponManager] 切り替え失敗', err)
       alert('切り替えに失敗しました。')
@@ -300,6 +323,7 @@ export default function CouponManager() {
   async function handleToggleAutoDistribute(id: string, current: boolean) {
     try {
       await updateDoc(doc(db, 'coupons', id), { autoDistribute: !current })
+      setCouponsRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('[CouponManager] 自動配信切り替え失敗', err)
       alert('自動配信の切り替えに失敗しました。')
@@ -311,6 +335,7 @@ export default function CouponManager() {
     if (!confirm('このクーポンテンプレートを削除しますか？')) return
     try {
       await deleteDoc(doc(db, 'coupons', id))
+      setCouponsRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('[CouponManager] 削除失敗', err)
       alert('削除に失敗しました。')
@@ -511,6 +536,10 @@ export default function CouponManager() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <RefreshButton
+              onRefresh={async () => setCouponsRefreshKey((k) => k + 1)}
+              loading={couponsLoading}
+            />
             <button
               type="button"
               onClick={selectAllTestCoupons}

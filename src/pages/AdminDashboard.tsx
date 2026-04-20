@@ -134,6 +134,9 @@ export default function AdminDashboard() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [messageTemplates, setMessageTemplates] = useState<MessageTemplate[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersRefreshKey, setUsersRefreshKey] = useState(0)
+  const [templatesLoaded, setTemplatesLoaded] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -141,25 +144,39 @@ export default function AdminDashboard() {
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const messagesForChatRef = useRef<string | null>(null)
   const chatMetaUnsubRef = useRef<(() => void) | null>(null)
+  const prevAdminTabRef = useRef<AdminTab>('chat')
 
   useEffect(() => {
+    let cancelled = false
+    setUsersLoading(true)
     const q = query(collection(db, 'users'), where('status', '==', 'active'))
-    return onSnapshot(q, (snap) => {
-      setUsers(
-        snap.docs.map((d) => ({
-          uid: d.id,
-          fullName: d.data().fullName as string,
-          email: d.data().email as string,
-          attribute: d.data().attribute as string,
-          birthMonth: d.data().birthMonth as string,
-          yellowCards: (d.data().yellowCards as number) ?? 0,
-          totalSavedAmount: (d.data().totalSavedAmount as number) ?? 0,
-          memberNumber: (d.data().memberNumber as number) ?? null,
-          role: d.data().role as string | undefined,
-        })),
-      )
-    })
-  }, [])
+    getDocs(q)
+      .then((snap) => {
+        if (cancelled) return
+        setUsers(
+          snap.docs.map((d) => ({
+            uid: d.id,
+            fullName: d.data().fullName as string,
+            email: d.data().email as string,
+            attribute: d.data().attribute as string,
+            birthMonth: d.data().birthMonth as string,
+            yellowCards: (d.data().yellowCards as number) ?? 0,
+            totalSavedAmount: (d.data().totalSavedAmount as number) ?? 0,
+            memberNumber: (d.data().memberNumber as number) ?? null,
+            role: d.data().role as string | undefined,
+          })),
+        )
+        setUsersLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('users フェッチエラー:', err)
+        setUsersLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [usersRefreshKey])
 
   useEffect(() => {
     const unsub = onSnapshot(buildChatMetaQuery(), (snap) => {
@@ -173,9 +190,11 @@ export default function AdminDashboard() {
   }, [])
 
   useEffect(() => {
-    return onSnapshot(
-      query(collection(db, 'messageTemplates'), orderBy('createdAt', 'desc')),
-      (snap) => {
+    if (!showTemplatePicker || templatesLoaded) return
+    let cancelled = false
+    getDocs(query(collection(db, 'messageTemplates'), orderBy('createdAt', 'desc')))
+      .then((snap) => {
+        if (cancelled) return
         setMessageTemplates(
           snap.docs.map((d) => {
             const data = d.data()
@@ -186,10 +205,23 @@ export default function AdminDashboard() {
             }
           }),
         )
-      },
-      (err) => console.error('messageTemplates購読エラー:', err),
-    )
-  }, [])
+        setTemplatesLoaded(true)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('messageTemplates フェッチエラー:', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showTemplatePicker, templatesLoaded])
+
+  useEffect(() => {
+    if (prevAdminTabRef.current === 'templates' && adminTab !== 'templates') {
+      setTemplatesLoaded(false)
+    }
+    prevAdminTabRef.current = adminTab
+  }, [adminTab])
 
   useEffect(() => {
     if (!selectedUid) return
@@ -634,6 +666,7 @@ export default function AdminDashboard() {
       setBroadcastSending(false)
       setBroadcastProgress(null)
       setSendTargetUids(null)
+      setUsersRefreshKey((k) => k + 1)
       const unsub = onSnapshot(buildChatMetaQuery(), (snap) => {
         setChatMeta(parseChatMetaSnap(snap))
       })
@@ -800,6 +833,23 @@ export default function AdminDashboard() {
               📢 全員に一斉送信
             </button>
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setUsersRefreshKey((k) => k + 1)}
+                disabled={usersLoading}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#e5e5ea] bg-white text-[#86868b] text-[11px] hover:bg-[#f5f5f7] disabled:opacity-50 transition"
+                aria-label="顧客リスト更新"
+              >
+                {usersLoading ? (
+                  <span className="w-3 h-3 border border-[#e5e5ea] border-t-[#0095B6] rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16" />
+                    <polyline points="21 8 21 3 16 3" /><polyline points="3 16 3 21 8 21" />
+                  </svg>
+                )}
+                <span>更新</span>
+              </button>
               <select
                 value={globalSearchDays}
                 onChange={(e) => setGlobalSearchDays(Number(e.target.value))}

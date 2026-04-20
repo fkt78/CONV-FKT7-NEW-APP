@@ -5,13 +5,13 @@ import {
   where,
   orderBy,
   getDocs,
-  onSnapshot,
   doc,
   updateDoc,
   type Timestamp,
 } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
+import RefreshButton from './RefreshButton'
 
 interface UserRecord {
   uid: string
@@ -130,30 +130,44 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
   const [loadingCoupons, setLoadingCoupons] = useState(false)
   const [sortKey, setSortKey] = useState<UserSortKey>('memberNumber')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersRefreshKey, setUsersRefreshKey] = useState(0)
 
   useEffect(() => {
-    const q = query(collection(db, 'users'))
-    return onSnapshot(q, (snap) => {
-      setUsers(
-        snap.docs.map((d) => {
-          const data = d.data()
-          return {
-            uid: d.id,
-            fullName: (data.fullName as string) ?? '',
-            email: (data.email as string) ?? '',
-            attribute: (data.attribute as string) ?? '',
-            birthMonth: (data.birthMonth as string) ?? '',
-            status: (data.status as string) ?? 'active',
-            yellowCards: (data.yellowCards as number) ?? 0,
-            totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
-            usedCouponCount: 0,
-            memberNumber: (data.memberNumber as number) ?? null,
-            memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
-          }
-        }),
-      )
-    })
-  }, [])
+    let cancelled = false
+    setUsersLoading(true)
+    getDocs(query(collection(db, 'users')))
+      .then((snap) => {
+        if (cancelled) return
+        setUsers(
+          snap.docs.map((d) => {
+            const data = d.data()
+            return {
+              uid: d.id,
+              fullName: (data.fullName as string) ?? '',
+              email: (data.email as string) ?? '',
+              attribute: (data.attribute as string) ?? '',
+              birthMonth: (data.birthMonth as string) ?? '',
+              status: (data.status as string) ?? 'active',
+              yellowCards: (data.yellowCards as number) ?? 0,
+              totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
+              usedCouponCount: 0,
+              memberNumber: (data.memberNumber as number) ?? null,
+              memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
+            }
+          }),
+        )
+        setUsersLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('[UserManager] users フェッチエラー:', err)
+        setUsersLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [usersRefreshKey])
 
   async function handleExportCsv() {
     setExporting(true)
@@ -262,6 +276,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     setUpdatingUid(user.uid)
     try {
       await updateDoc(doc(db, 'users', user.uid), { status: nextStatus })
+      setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('ステータス変更エラー:', err)
       alert('ステータスの変更に失敗しました')
@@ -281,6 +296,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
       if (next >= 3 && user.status === 'active') update.status = 'blacklisted'
       if (next < 3 && user.status === 'blacklisted') update.status = 'active'
       await updateDoc(doc(db, 'users', user.uid), update)
+      setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('イエローカード更新エラー:', err)
       alert('更新に失敗しました')
@@ -295,6 +311,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     setUpdatingUid(user.uid)
     try {
       await updateDoc(doc(db, 'users', user.uid), { status: 'blacklisted', yellowCards: 3 })
+      setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('レッドカード更新エラー:', err)
       alert('更新に失敗しました')
@@ -312,6 +329,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     setUpdatingUid(user.uid)
     try {
       await updateDoc(doc(db, 'users', user.uid), { memberGroups: next })
+      setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('食料支援フラグ更新エラー:', err)
       alert('更新に失敗しました')
@@ -453,6 +471,10 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e5ea]">
         <h2 className="text-[#1d1d1f] text-sm font-semibold">ユーザー管理</h2>
         <div className="flex items-center gap-2">
+          <RefreshButton
+            onRefresh={async () => setUsersRefreshKey((k) => k + 1)}
+            loading={usersLoading}
+          />
           {onSendToSelected && selectableUsers.length > 0 && (
             <button
               onClick={handleSendToSelected}

@@ -3,7 +3,7 @@ import {
   collection,
   query,
   orderBy,
-  onSnapshot,
+  getDocs,
   addDoc,
   doc,
   updateDoc,
@@ -15,6 +15,7 @@ import { db, functions } from '../lib/firebase'
 import { httpsCallable } from 'firebase/functions'
 import type { CouponTemplate } from '../lib/coupon'
 import { type OmikujiSet, validateOmikujiCouponIds, validateOmikujiPercents } from '../lib/omikuji'
+import RefreshButton from './RefreshButton'
 
 export default function OmikujiSetManager() {
   const [sets, setSets] = useState<OmikujiSet[]>([])
@@ -23,6 +24,8 @@ export default function OmikujiSetManager() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [testRunning, setTestRunning] = useState(false)
+  const [dataLoading, setDataLoading] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const [name, setName] = useState('')
   const [active, setActive] = useState(false)
@@ -34,11 +37,16 @@ export default function OmikujiSetManager() {
   const [pctSho, setPctSho] = useState(60)
 
   useEffect(() => {
-    return onSnapshot(
-      query(collection(db, 'omikujiSets'), orderBy('createdAt', 'desc')),
-      (snap) => {
+    let cancelled = false
+    setDataLoading(true)
+    Promise.all([
+      getDocs(query(collection(db, 'omikujiSets'), orderBy('createdAt', 'desc'))),
+      getDocs(query(collection(db, 'coupons'), orderBy('createdAt', 'desc'))),
+    ])
+      .then(([setsSnap, couponsSnap]) => {
+        if (cancelled) return
         setSets(
-          snap.docs.map((d) => {
+          setsSnap.docs.map((d) => {
             const x = d.data()
             return {
               id: d.id,
@@ -54,26 +62,24 @@ export default function OmikujiSetManager() {
             }
           }),
         )
-      },
-      (err) => console.error('omikujiSets 購読エラー:', err),
-    )
-  }, [])
-
-  useEffect(() => {
-    return onSnapshot(
-      query(collection(db, 'coupons'), orderBy('createdAt', 'desc')),
-      (snap) => {
         setCoupons(
-          snap.docs.map((d) => ({
+          couponsSnap.docs.map((d) => ({
             id: d.id,
             ...(d.data() as Omit<CouponTemplate, 'id' | 'createdAt'>),
             createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
           })),
         )
-      },
-      (err) => console.error('coupons 購読エラー:', err),
-    )
-  }, [])
+        setDataLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('OmikujiSetManager フェッチエラー:', err)
+        setDataLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [refreshKey])
 
   const activeCount = sets.filter((s) => s.active).length
 
@@ -146,6 +152,7 @@ export default function OmikujiSetManager() {
           createdAt: serverTimestamp(),
         })
       }
+      setRefreshKey((k) => k + 1)
       resetForm()
     } catch (err) {
       console.error('おみくじセット保存エラー:', err)
@@ -159,6 +166,7 @@ export default function OmikujiSetManager() {
     if (!confirm(`「${s.name || s.id}」を削除しますか？`)) return
     try {
       await deleteDoc(doc(db, 'omikujiSets', s.id))
+      setRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('削除エラー:', err)
       alert(`削除に失敗しました: ${err instanceof Error ? err.message : String(err)}`)
@@ -212,6 +220,10 @@ export default function OmikujiSetManager() {
           </p>
         )}
         <div className="flex flex-wrap gap-2">
+          <RefreshButton
+            onRefresh={async () => setRefreshKey((k) => k + 1)}
+            loading={dataLoading}
+          />
           <button
             type="button"
             onClick={() => {

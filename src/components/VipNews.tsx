@@ -5,7 +5,7 @@ import {
   query,
   orderBy,
   limit,
-  onSnapshot,
+  getDocs,
   type Timestamp,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -25,6 +25,57 @@ interface NewsItem {
 }
 
 const INITIAL_SHOW = 2
+const CACHE_KEY = 'vip-news-cache'
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+interface CacheShape {
+  items: Array<{
+    id: string
+    title: string
+    content: string
+    audioUrl: string
+    imageUrls: string[]
+    createdAt: string | null
+    expiresAt: string | null
+  }>
+  fetchedAt: number
+}
+
+function readCache(): NewsItem[] | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const cache = JSON.parse(raw) as CacheShape
+    if (Date.now() - cache.fetchedAt > CACHE_TTL_MS) return null
+    return cache.items.map((item) => ({
+      ...item,
+      createdAt: item.createdAt ? new Date(item.createdAt) : null,
+      expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+    }))
+  } catch {
+    return null
+  }
+}
+
+function writeCache(items: NewsItem[]) {
+  try {
+    const cache: CacheShape = {
+      fetchedAt: Date.now(),
+      items: items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        audioUrl: item.audioUrl,
+        imageUrls: item.imageUrls,
+        createdAt: item.createdAt?.toISOString() ?? null,
+        expiresAt: item.expiresAt?.toISOString() ?? null,
+      })),
+    }
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // sessionStorage が満杯でも無視
+  }
+}
 
 export default function VipNews() {
   const { t } = useTranslation()
@@ -35,27 +86,41 @@ export default function VipNews() {
   const [now] = useState(() => Date.now())
 
   useEffect(() => {
+    const cached = readCache()
+    if (cached) {
+      const nowMs = Date.now()
+      setNewsList(cached.filter((item) => !item.expiresAt || item.expiresAt.getTime() > nowMs))
+      setLoading(false)
+    }
+
+    let cancelled = false
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(10))
-    return onSnapshot(q, (snap) => {
-      setLoading(false)
-      const now = Date.now()
-      setNewsList(
-        snap.docs
-          .map((d) => ({
-            id: d.id,
-            title: d.data().title as string,
-            content: d.data().content as string,
-            audioUrl: (d.data().audioUrl as string) ?? '',
-            imageUrls: normalizeNewsImageUrls(d.data()),
-            createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
-            expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
-          }))
-          .filter((item) => !item.expiresAt || item.expiresAt.getTime() > now),
-      )
-    }, (err) => {
-      console.error('VipNews購読エラー:', err)
-      setLoading(false)
-    })
+    getDocs(q)
+      .then((snap) => {
+        if (cancelled) return
+        const nowMs = Date.now()
+        const items: NewsItem[] = snap.docs.map((d) => ({
+          id: d.id,
+          title: d.data().title as string,
+          content: d.data().content as string,
+          audioUrl: (d.data().audioUrl as string) ?? '',
+          imageUrls: normalizeNewsImageUrls(d.data()),
+          createdAt: (d.data().createdAt as Timestamp | null)?.toDate() ?? null,
+          expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
+        }))
+        writeCache(items)
+        setNewsList(items.filter((item) => !item.expiresAt || item.expiresAt.getTime() > nowMs))
+        setLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('VipNewsフェッチエラー:', err)
+        setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   function formatDate(d: Date | null) {

@@ -3,7 +3,7 @@ import {
   collection,
   query,
   orderBy,
-  onSnapshot,
+  getDocs,
   addDoc,
   doc,
   updateDoc,
@@ -13,6 +13,7 @@ import {
   deleteField,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import RefreshButton from './RefreshButton'
 import { uploadAudio, uploadImage, deleteAudio, type UploadProgress } from '../lib/newsStorage'
 import { normalizeNewsImageUrls, MAX_NEWS_IMAGES } from '../lib/newsImages'
 import AudioPlayer from './AudioPlayer'
@@ -57,6 +58,8 @@ export default function NewsManager() {
   const [removeAudio, setRemoveAudio] = useState(false)
   const [upload, setUpload] = useState<UploadProgress | null>(null)
   const [saving, setSaving] = useState(false)
+  const [newsLoading, setNewsLoading] = useState(false)
+  const [newsRefreshKey, setNewsRefreshKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -68,9 +71,11 @@ export default function NewsManager() {
   }, [])
 
   useEffect(() => {
-    return onSnapshot(
-      query(collection(db, 'news'), orderBy('createdAt', 'desc')),
-      (snap) => {
+    let cancelled = false
+    setNewsLoading(true)
+    getDocs(query(collection(db, 'news'), orderBy('createdAt', 'desc')))
+      .then((snap) => {
+        if (cancelled) return
         setNewsList(
           snap.docs.map((d) => ({
             id: d.id,
@@ -82,10 +87,17 @@ export default function NewsManager() {
             expiresAt: (d.data().expiresAt as Timestamp | null)?.toDate() ?? null,
           })),
         )
-      },
-      (err) => console.error('news購読エラー:', err),
-    )
-  }, [])
+        setNewsLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error('news フェッチエラー:', err)
+        setNewsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [newsRefreshKey])
 
   /** プレビューURL を安全に作成して pendingImages に追加する */
   function addImageFiles(files: FileList | null) {
@@ -226,6 +238,7 @@ export default function NewsManager() {
       } else {
         await addDoc(collection(db, 'news'), { ...payload, createdAt: serverTimestamp() })
       }
+      setNewsRefreshKey((k) => k + 1)
       resetForm()
     } catch (err) {
       console.error('ニュース保存エラー:', err)
@@ -242,6 +255,7 @@ export default function NewsManager() {
     if (item.audioUrl) await deleteAudio(item.audioUrl)
     for (const u of item.imageUrls) await deleteAudio(u)
     await deleteDoc(doc(db, 'news', item.id))
+    setNewsRefreshKey((k) => k + 1)
   }
 
   function formatDate(d: Date | null) {
@@ -269,12 +283,18 @@ export default function NewsManager() {
         <h3 className="text-[#86868b] text-xs font-medium tracking-wide">
           VIP NEWS ({visibleNewsList.length}件)
         </h3>
-        <button
-          onClick={() => (showForm ? resetForm() : setShowForm(true))}
-          className="text-[#0095B6] text-xs font-semibold hover:text-[#007A96] transition"
-        >
-          {showForm ? '✕ 閉じる' : '＋ 新規投稿'}
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshButton
+            onRefresh={async () => setNewsRefreshKey((k) => k + 1)}
+            loading={newsLoading}
+          />
+          <button
+            onClick={() => (showForm ? resetForm() : setShowForm(true))}
+            className="text-[#0095B6] text-xs font-semibold hover:text-[#007A96] transition"
+          >
+            {showForm ? '✕ 閉じる' : '＋ 新規投稿'}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
