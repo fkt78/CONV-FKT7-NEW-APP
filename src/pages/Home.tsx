@@ -79,9 +79,14 @@ export default function Home() {
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
+  const editingTextRef = useRef('')
   const initialLoadCheckedRef = useRef(false)
 
   const MSG_LIMIT = 30
+
+  useEffect(() => {
+    editingTextRef.current = editingText
+  }, [editingText])
 
   useEffect(() => {
     if (!currentUser) return
@@ -387,7 +392,7 @@ export default function Home() {
 
   const handleSaveEdit = useCallback(async () => {
     if (!editingMessageId || !chatId) return
-    const trimmed = editingText.trim()
+    const trimmed = editingTextRef.current.trim()
     try {
       await updateDoc(doc(db, 'chats', chatId, 'messages', editingMessageId), {
         text: trimmed,
@@ -398,7 +403,7 @@ export default function Home() {
     } catch (err) {
       setFileError(err instanceof Error ? err.message : t('home.editFailed'))
     }
-  }, [editingMessageId, chatId, editingText, t])
+  }, [editingMessageId, chatId, t])
 
   const handleCancelEdit = useCallback(() => {
     setEditingMessageId(null)
