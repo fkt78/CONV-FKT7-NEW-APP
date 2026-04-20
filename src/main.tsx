@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import i18n from './i18n'
+import { initWebVitals } from './lib/webVitals'
 
 // 未捕捉エラーで白画面になるのを防ぐ
 window.addEventListener('error', (e) => {
@@ -49,3 +50,4 @@ async function mount() {
 }
 
 mount()
+initWebVitals()
