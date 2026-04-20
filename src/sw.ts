@@ -1,10 +1,69 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { registerRoute } from 'workbox-routing'
+import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
+import { ExpirationPlugin } from 'workbox-expiration'
+import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
 declare let self: ServiceWorkerGlobalScope
 
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
+
+// ── ランタイムキャッシュ ──────────────────────────────────────────────────────
+
+// Firebase Storage の画像（アバター・添付ファイル等）: 30日間 CacheFirst
+registerRoute(
+  ({ url }) => url.origin === 'https://firebasestorage.googleapis.com',
+  new CacheFirst({
+    cacheName: 'firebase-storage-images',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+      }),
+    ],
+  }),
+)
+
+// Google Fonts スタイルシート: StaleWhileRevalidate
+registerRoute(
+  ({ url }) => url.origin === 'https://fonts.googleapis.com',
+  new StaleWhileRevalidate({
+    cacheName: 'google-fonts-stylesheets',
+  }),
+)
+
+// Google Fonts フォントファイル: 1年間 CacheFirst
+registerRoute(
+  ({ url }) => url.origin === 'https://fonts.gstatic.com',
+  new CacheFirst({
+    cacheName: 'google-fonts-webfonts',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 30,
+        maxAgeSeconds: 365 * 24 * 60 * 60,
+      }),
+    ],
+  }),
+)
+
+// バナー画像（/banners/）: 14日間 StaleWhileRevalidate
+registerRoute(
+  ({ url }) => url.pathname.startsWith('/banners/'),
+  new StaleWhileRevalidate({
+    cacheName: 'app-banners',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 30,
+        maxAgeSeconds: 14 * 24 * 60 * 60,
+      }),
+    ],
+  }),
+)
+// ─────────────────────────────────────────────────────────────────────────────
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim())

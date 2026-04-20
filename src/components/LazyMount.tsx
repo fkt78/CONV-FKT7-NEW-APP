@@ -24,8 +24,9 @@ export default function LazyMount({
     if (!el) return
 
     if (typeof IntersectionObserver === 'undefined') {
-      setVisible(true)
-      return
+      // IntersectionObserver 未対応環境では即マウント（setTimeout で非同期化）
+      const id = setTimeout(() => setVisible(true), 0)
+      return () => clearTimeout(id)
     }
 
     const observer = new IntersectionObserver(
