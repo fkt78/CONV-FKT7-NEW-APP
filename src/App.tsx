@@ -11,6 +11,7 @@ import VersionBadge from './components/VersionBadge'
 import PwaUpdatePrompt from './components/PwaUpdatePrompt'
 import AppBadge from './components/AppBadge'
 import NotificationRegistration from './components/NotificationRegistration'
+import { useAdminIdleTimeout } from './hooks/useAdminIdleTimeout'
 
 const Register = lazy(() => import('./pages/Register'))
 const Login = lazy(() => import('./pages/Login'))
@@ -36,6 +37,12 @@ function PageLoader() {
   )
 }
 
+/** 管理者のみ有効な 24 時間アイドルタイムアウト監視。null を返す副作用コンポーネント。 */
+function AdminIdleTimeoutGuard() {
+  useAdminIdleTimeout()
+  return null
+}
+
 function DocumentLangSync() {
   const { i18n } = useTranslation()
   useEffect(() => {
@@ -55,6 +62,7 @@ export default function App() {
         <PwaUpdatePrompt />
         <AuthProvider>
           <ChatBadgeProvider>
+            <AdminIdleTimeoutGuard />
             <AppBadge />
             <NotificationRegistration />
             <Suspense fallback={<PageLoader />}>

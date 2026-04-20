@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, inMemoryPersistence, setPersistence } from 'firebase/auth'
+import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth'
 import {
   initializeFirestore,
   memoryLocalCache,
@@ -39,11 +39,11 @@ export { app }
 export const auth = getAuth(app)
 
 /**
- * 認証をメモリのみに保持。ブラウザをリロードするとセッションは失われ、ログイン画面から入り直す。
- * （デフォルトの local 永続化を上書きするため、初回ロード時に非同期で完了する）
+ * 認証を localStorage で永続化。リロード後もログイン状態を保持する。
+ * 管理者向けのアイドルタイムアウトは useAdminIdleTimeout フックが別途担当する。
  */
-export const authPersistenceReady = setPersistence(auth, inMemoryPersistence).catch((err) => {
-  console.error('[firebase] setPersistence(inMemory) failed', err)
+export const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((err) => {
+  console.error('[firebase] setPersistence(browserLocal) failed', err)
 })
 
 /**
