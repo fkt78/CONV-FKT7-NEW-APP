@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 /** version.json からアプリバージョンを取得 */
 function getAppVersion(): string {
@@ -99,6 +100,13 @@ export default defineConfig({
         enabled: true,
         type: 'module',
       },
+    }),
+    visualizer({
+      filename: 'dist/stats.html',
+      gzipSize: true,
+      brotliSize: true,
+      template: 'treemap',
+      open: false,
     }),
   ],
 })
