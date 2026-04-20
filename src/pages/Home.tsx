@@ -6,7 +6,6 @@ import {
   collection,
   query,
   orderBy,
-  where,
   limitToLast,
   onSnapshot,
   addDoc,
@@ -55,7 +54,7 @@ interface UserData {
 export default function Home() {
   const { t } = useTranslation()
   const { currentUser, userRole } = useAuth()
-  const { setChatBadge } = useChatBadge()
+  const { couponCount, setUnreadCount } = useChatBadge()
   const navigate = useNavigate()
 
   const [homeTab, setHomeTab] = useState<HomeTab>('chat')
@@ -65,7 +64,6 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
-  const [couponCount, setCouponCount] = useState(0)
   const [creditsOpen, setCreditsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResultIndex, setSearchResultIndex] = useState(0)
@@ -118,26 +116,6 @@ export default function Home() {
     )
   }, [currentUser])
 
-  // 未使用クーポン数（有効期限内のみ）をバッジ表示用にカウント
-  useEffect(() => {
-    if (!currentUser) return
-    const q = query(
-      collection(db, 'users', currentUser.uid, 'coupons'),
-      where('status', '==', 'unused'),
-    )
-    return onSnapshot(q, (snap) => {
-      const now = Date.now()
-      const validCount = snap.docs.filter((d) => {
-        const exp = d.data().expiresAt
-        if (!exp) return true
-        const expMs = exp.toDate?.()?.getTime?.()
-        if (typeof expMs !== 'number' || Number.isNaN(expMs)) return true
-        return now <= expMs
-      }).length
-      setCouponCount(validCount)
-    })
-  }, [currentUser])
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -153,8 +131,8 @@ export default function Home() {
   ).length
 
   useEffect(() => {
-    setChatBadge(unreadMessageCount, couponCount)
-  }, [unreadMessageCount, couponCount, setChatBadge])
+    setUnreadCount(unreadMessageCount)
+  }, [unreadMessageCount, setUnreadCount])
 
   // 受信メッセージを既読にする（チャットタブを表示しているときのみ）
   useEffect(() => {

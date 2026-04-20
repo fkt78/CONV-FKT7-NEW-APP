@@ -72,6 +72,7 @@ export default function CouponWallet() {
   const [toast, setToast] = useState<string | null>(null)
   const [unusedError, setUnusedError] = useState(false)
   const [usedError, setUsedError] = useState(false)
+  const [showUsedTab, setShowUsedTab] = useState(false)
   const processedIds = useRef(new Set<string>())
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -108,7 +109,7 @@ export default function CouponWallet() {
   }, [currentUser])
 
   useEffect(() => {
-    if (!currentUser) return
+    if (!currentUser || !showUsedTab) return
     setUsedError(false)
     const q = query(
       collection(db, 'users', currentUser.uid, 'coupons'),
@@ -122,7 +123,7 @@ export default function CouponWallet() {
       console.error('使用済みクーポン購読エラー:', err)
       setUsedError(true)
     })
-  }, [currentUser])
+  }, [currentUser, showUsedTab])
 
   function mapCoupon(d: import('firebase/firestore').QueryDocumentSnapshot): OwnedCoupon {
     const data = d.data()
@@ -253,7 +254,10 @@ export default function CouponWallet() {
     <>
       <div className="flex mx-4 rounded-xl bg-[#e5e5ea]/60 p-1 flex-shrink-0 mb-2">
         <button
-          onClick={() => setTab('unused')}
+          onClick={() => {
+            setTab('unused')
+            setShowUsedTab(false)
+          }}
           className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition ${
             tab === 'unused' ? 'bg-white text-[#0095B6] shadow-sm' : 'text-[#86868b]'
           }`}
@@ -261,7 +265,10 @@ export default function CouponWallet() {
           {t('coupon.tabUnused', { count: validUnusedCount })}
         </button>
         <button
-          onClick={() => setTab('history')}
+          onClick={() => {
+            setTab('history')
+            setShowUsedTab(true)
+          }}
           className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition ${
             tab === 'history' ? 'bg-white text-[#0095B6] shadow-sm' : 'text-[#86868b]'
           }`}
