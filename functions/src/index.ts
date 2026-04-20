@@ -4,6 +4,7 @@ import { onCall, HttpsError, type CallableRequest } from 'firebase-functions/v2/
 import { createHash } from 'node:crypto'
 import {
   getFirestore,
+  FieldValue,
   Timestamp,
   type DocumentReference,
   type DocumentSnapshot,
@@ -134,37 +135,70 @@ export const onChatMessageCreated = onDocumentCreated(
       return
     }
 
+    const pushBody = text
+      ? text.slice(0, 80)
+      : attachmentType === 'image'
+        ? '画像が届きました'
+        : 'ファイルが届きました'
+
+    const lastMessageText = text
+      ? text.slice(0, 50)
+      : attachmentType === 'image'
+        ? '画像'
+        : 'ファイル'
+
     if (senderId === chatId) {
       /* 会員本人の送信: senderId === chatId。管理者が自分の会員チャットに送る場合も同じ形になるため role で分岐 */
       const senderDoc = await db.collection('users').doc(senderId).get()
       const role = senderDoc.data()?.role as string | undefined
       if (role === 'admin') {
-        const body = text
-          ? text.slice(0, 80)
-          : attachmentType === 'image'
-            ? '画像が届きました'
-            : 'ファイルが届きました'
-        console.log('[onChatMessageCreated] admin self-chat → push', { chatId, messageId })
-        await sendToUser(chatId, '新しいメッセージ', body, 'messages', { messageId })
+        console.log('[onChatMessageCreated] admin self-chat → push + meta update', { chatId, messageId })
+        await Promise.all([
+          sendToUser(chatId, '新しいメッセージ', pushBody, 'messages', { messageId }),
+          db
+            .collection('chats')
+            .doc(chatId)
+            .set(
+              { lastMessage: lastMessageText, lastMessageAt: FieldValue.serverTimestamp() },
+              { merge: true },
+            ),
+        ])
         return
       }
-      await db.collection('chats').doc(chatId).set({ unreadFromCustomer: true }, { merge: true })
-      console.log('[onChatMessageCreated] customer message, no push', { chatId, messageId })
+      const customerName = (senderDoc.data()?.fullName as string | undefined) ?? ''
+      await db
+        .collection('chats')
+        .doc(chatId)
+        .set(
+          {
+            unreadFromCustomer: true,
+            lastMessage: lastMessageText,
+            lastMessageAt: FieldValue.serverTimestamp(),
+            customerUid: chatId,
+            ...(customerName && { customerName }),
+          },
+          { merge: true },
+        )
+      console.log('[onChatMessageCreated] customer message → meta updated', { chatId, messageId })
       return
     }
 
-    const body = text
-      ? text.slice(0, 80)
-      : attachmentType === 'image'
-        ? '画像が届きました'
-        : 'ファイルが届きました'
-    console.log('[onChatMessageCreated] store → member push', {
+    console.log('[onChatMessageCreated] store → member push + meta update', {
       chatId,
       senderId,
       messageId,
-      bodyLen: body.length,
+      bodyLen: pushBody.length,
     })
-    await sendToUser(chatId, '新しいメッセージ', body, 'messages', { messageId })
+    await Promise.all([
+      sendToUser(chatId, '新しいメッセージ', pushBody, 'messages', { messageId }),
+      db
+        .collection('chats')
+        .doc(chatId)
+        .set(
+          { lastMessage: lastMessageText, lastMessageAt: FieldValue.serverTimestamp() },
+          { merge: true },
+        ),
+    ])
   },
 )
 

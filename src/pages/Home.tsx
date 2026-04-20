@@ -12,7 +12,6 @@ import {
   onSnapshot,
   addDoc,
   doc,
-  setDoc,
   updateDoc,
   deleteDoc,
   writeBatch,
@@ -313,7 +312,6 @@ export default function Home() {
         setSelectedFile(null)
       }
 
-      const displayText = trimmed || (attachmentType === 'image' ? t('home.displayImage') : t('home.displayFile'))
       addDoc(collection(db, 'chats', currentUser.uid, 'messages'), {
         senderId: currentUser.uid,
         text: trimmed,
@@ -322,19 +320,6 @@ export default function Home() {
       })
         .then(() => {
           setTimeout(() => inputRef.current?.focus(), 0)
-          setDoc(
-            doc(db, 'chats', currentUser.uid),
-            {
-              customerName: userData?.fullName ?? currentUser.displayName ?? t('home.unknownCustomer'),
-              customerUid: currentUser.uid,
-              lastMessage: displayText,
-              lastMessageAt: serverTimestamp(),
-              unreadFromCustomer: true,
-            },
-            { merge: true },
-          ).catch((err: unknown) => {
-            console.warn('[handleSend] setDoc failed (non-critical):', err)
-          })
         })
         .catch((err: unknown) => {
           console.error('[handleSend] addDoc failed:', err)

@@ -512,7 +512,6 @@ export default function AdminDashboard() {
         setSelectedFile(null)
       }
 
-      const displayText = trimmed || (attachmentType === 'image' ? '画像' : 'ファイル')
       addDoc(collection(db, 'chats', selectedUid, 'messages'), {
         senderId: currentUser.uid,
         text: trimmed,
@@ -521,13 +520,6 @@ export default function AdminDashboard() {
       })
         .then(() => {
           setTimeout(() => inputRef.current?.focus(), 0)
-          setDoc(
-            doc(db, 'chats', selectedUid),
-            { lastMessage: displayText, lastMessageAt: serverTimestamp() },
-            { merge: true },
-          ).catch((err: unknown) => {
-            console.warn('[admin handleSend] setDoc failed (non-critical):', err)
-          })
         })
         .catch((err: unknown) => {
           console.error('[admin handleSend] addDoc failed:', err)
@@ -640,19 +632,13 @@ export default function AdminDashboard() {
       for (let i = 0; i < targets.length; i += BATCH_SIZE) {
         const chunk = targets.slice(i, i + BATCH_SIZE)
         await Promise.all(
-          chunk.map(async (t) => {
-            const uid = t.uid
-            await addDoc(collection(db, 'chats', uid, 'messages'), {
+          chunk.map((t) =>
+            addDoc(collection(db, 'chats', t.uid, 'messages'), {
               senderId: currentUser.uid,
               text: trimmed,
               createdAt: ts,
-            })
-            await setDoc(
-              doc(db, 'chats', uid),
-              { lastMessage: trimmed.slice(0, 50), lastMessageAt: ts },
-              { merge: true },
-            )
-          }),
+            }),
+          ),
         )
         setBroadcastProgress({ current: Math.min(i + BATCH_SIZE, targets.length), total: targets.length })
       }
