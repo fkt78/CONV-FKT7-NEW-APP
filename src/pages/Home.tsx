@@ -29,6 +29,7 @@ import VipNews from '../components/VipNews'
 import VoiceCreditsPopup from '../components/VoiceCreditsPopup'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import AffiliateBannerCarousel from '../components/AffiliateBannerCarousel'
+import HomeSkeleton from '../components/HomeSkeleton'
 
 type HomeTab = 'home' | 'chat' | 'coupon'
 
@@ -45,7 +46,7 @@ interface Message {
 
 export default function Home() {
   const { t } = useTranslation()
-  const { currentUser, userRole, userData } = useAuth()
+  const { currentUser, userRole, userData, loading: authLoading } = useAuth()
   const { couponCount, setUnreadCount } = useChatBadge()
   const navigate = useNavigate()
 
@@ -397,6 +398,8 @@ export default function Home() {
     }
     return attr
   }
+
+  if (authLoading) return <HomeSkeleton />
 
   return (
     <div className="h-dvh bg-[#f5f5f7] flex flex-col max-w-lg mx-auto">
