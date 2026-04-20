@@ -17,7 +17,7 @@ interface BannerSlide {
 const BANNER_SLIDES: BannerSlide[] = [
   {
     id: 'local-ad-recruit',
-    bgImage: '/banners/local-ad-recruit.jpg',
+    bgImage: '/banners/local-ad-recruit.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.localAdRecruit',
     badgeColor: '#14532d',
@@ -26,7 +26,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'ka-nabell',
-    bgImage: '/banners/ka-nabell.jpg',
+    bgImage: '/banners/ka-nabell.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.kaNabell',
     badgeColor: '#c9a227',
@@ -35,7 +35,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'biglobe-wimax',
-    bgImage: '/banners/biglobe-wimax-jp.jpg',
+    bgImage: '/banners/biglobe-wimax-jp.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.biglobeWimax',
     badgeColor: '#ff6600',
@@ -44,7 +44,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'biglobe-wimax-vn',
-    bgImage: '/banners/biglobe-wimax-vn.jpg',
+    bgImage: '/banners/biglobe-wimax-vn.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.biglobeWimaxVn',
     badgeColor: '#007aff',
@@ -53,7 +53,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'goen-mobile',
-    bgImage: '/banners/goen-mobile.jpg',
+    bgImage: '/banners/goen-mobile.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.goenMobile',
     badgeColor: '#2e7d32',
@@ -62,7 +62,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'vpn',
-    bgImage: '/banners/vpn-bg.png',
+    bgImage: '/banners/vpn-bg.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.vpn',
     badgeColor: '#ff3b30',
@@ -71,7 +71,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'abema',
-    bgImage: '/banners/abema-bg.png',
+    bgImage: '/banners/abema-bg.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.abema',
     badgeColor: '#ff2d55',
@@ -80,7 +80,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'prepaid',
-    bgImage: '/banners/prepaid-bg.png',
+    bgImage: '/banners/prepaid-bg.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.prepaid',
     badgeColor: '#34c759',
@@ -89,7 +89,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'furnished-share-house',
-    bgImage: '/banners/furnished-share-house.jpg',
+    bgImage: '/banners/furnished-share-house.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.furnishedShareHouse',
     badgeColor: '#ea580c',
@@ -98,7 +98,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'sim',
-    bgImage: '/banners/sim-bg.png',
+    bgImage: '/banners/sim-bg.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.sim',
     badgeColor: '#007aff',
@@ -107,7 +107,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'dtisim',
-    bgImage: '/banners/dtisim.jpg',
+    bgImage: '/banners/dtisim.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.dtisim',
     badgeColor: '#007aff',
@@ -116,7 +116,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'daiwan-telecom',
-    bgImage: '/banners/daiwan-telecom.jpg',
+    bgImage: '/banners/daiwan-telecom.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.daiwanTelecom',
     badgeColor: '#e30613',
@@ -125,7 +125,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'kojo-kyujin-navi',
-    bgImage: '/banners/kojo-kyujin-navi.jpg',
+    bgImage: '/banners/kojo-kyujin-navi.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.kojoKyujinNavi',
     badgeColor: '#1e3a5f',
@@ -134,7 +134,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'agoda',
-    bgImage: '/banners/agoda.jpg',
+    bgImage: '/banners/agoda.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.agoda',
     badgeColor: '#006ce4',
@@ -143,7 +143,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'commufa',
-    bgImage: '/banners/commufa-bg.png',
+    bgImage: '/banners/commufa-bg.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.commufa',
     badgeColor: '#ff9500',
@@ -152,7 +152,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'rakuten',
-    bgImage: '/banners/rakuten-bg.png',
+    bgImage: '/banners/rakuten-bg.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.rakuten',
     badgeColor: '#bf0000',
@@ -161,7 +161,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'onamae',
-    bgImage: '/banners/onamae-bg.png',
+    bgImage: '/banners/onamae-bg.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.onamae',
     badgeColor: '#007aff',
@@ -170,7 +170,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 'nexus-card',
-    bgImage: '/banners/nexus-card.jpg',
+    bgImage: '/banners/nexus-card.webp',
     bgPosition: 'right center',
     i18nKey: 'banner.nexusCard',
     badgeColor: '#1e3a8a',
@@ -247,6 +247,18 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [current, goTo])
+
+  // 次・前スライドの画像をフェード前にプリロードし、遷移時のチラつきを防ぐ
+  useEffect(() => {
+    const preloadIdxs = [
+      (current + 1) % total,
+      (current - 1 + total) % total,
+    ]
+    preloadIdxs.forEach((idx) => {
+      const img = new window.Image()
+      img.src = slides[idx].bgImage
+    })
+  }, [current, slides, total])
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return

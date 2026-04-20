@@ -43,23 +43,13 @@ interface Message {
   attachmentName?: string
 }
 
-interface UserData {
-  fullName: string
-  email: string
-  attribute: string
-  birthMonth: string
-  totalSavedAmount?: number
-  memberNumber?: number | null
-}
-
 export default function Home() {
   const { t } = useTranslation()
-  const { currentUser, userRole } = useAuth()
+  const { currentUser, userRole, userData } = useAuth()
   const { couponCount, setUnreadCount } = useChatBadge()
   const navigate = useNavigate()
 
   const [homeTab, setHomeTab] = useState<HomeTab>('chat')
-  const [userData, setUserData] = useState<UserData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [olderMessages, setOlderMessages] = useState<Message[]>([])
   const [loadingOlder, setLoadingOlder] = useState(false)
@@ -79,13 +69,6 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const initialLoadCheckedRef = useRef(false)
-
-  useEffect(() => {
-    if (!currentUser) return
-    return onSnapshot(doc(db, 'users', currentUser.uid), (snap) => {
-      if (snap.exists()) setUserData(snap.data() as UserData)
-    })
-  }, [currentUser])
 
   const MSG_LIMIT = 30
 

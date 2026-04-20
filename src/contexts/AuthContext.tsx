@@ -13,10 +13,20 @@ import { auth, authPersistenceReady, db } from '../lib/firebase'
 export type UserStatus = 'active' | 'blacklisted' | null
 export type UserRole = 'admin' | null
 
+export interface UserData {
+  fullName: string
+  email: string
+  attribute: string
+  birthMonth: string
+  totalSavedAmount?: number
+  memberNumber?: number | null
+}
+
 interface AuthContextValue {
   currentUser: User | null
   userStatus: UserStatus
   userRole: UserRole
+  userData: UserData | null
   loading: boolean
 }
 
@@ -24,6 +34,7 @@ const AuthContext = createContext<AuthContextValue>({
   currentUser: null,
   userStatus: null,
   userRole: null,
+  userData: null,
   loading: true,
 })
 
@@ -34,14 +45,28 @@ function normalizeRole(role: unknown): UserRole {
   return null
 }
 
-function applyUserDoc(snap: DocumentSnapshot, setStatus: (s: UserStatus) => void, setRole: (r: UserRole) => void) {
+function applyUserDoc(
+  snap: DocumentSnapshot,
+  setStatus: (s: UserStatus) => void,
+  setRole: (r: UserRole) => void,
+  setData: (d: UserData | null) => void,
+) {
   if (snap.exists()) {
     const data = snap.data()
     setStatus((data.status as UserStatus) ?? null)
     setRole(normalizeRole(data.role))
+    setData({
+      fullName: (data.fullName as string) ?? '',
+      email: (data.email as string) ?? '',
+      attribute: (data.attribute as string) ?? '',
+      birthMonth: (data.birthMonth as string) ?? '',
+      totalSavedAmount: data.totalSavedAmount as number | undefined,
+      memberNumber: (data.memberNumber as number | null) ?? null,
+    })
   } else {
     setStatus(null)
     setRole(null)
+    setData(null)
   }
 }
 
@@ -49,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userStatus, setUserStatus] = useState<UserStatus>(null)
   const [userRole, setUserRole] = useState<UserRole>(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -66,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!user) {
           setUserStatus(null)
           setUserRole(null)
+          setUserData(null)
           setLoading(false)
           return
         }
@@ -77,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void getDoc(doc(db, 'users', uid))
           .then((snap) => {
             if (auth.currentUser?.uid !== uid) return
-            applyUserDoc(snap, setUserStatus, setUserRole)
+            applyUserDoc(snap, setUserStatus, setUserRole, setUserData)
             setLoading(false)
           })
           .catch((err) => {
@@ -85,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (auth.currentUser?.uid !== uid) return
             setUserStatus(null)
             setUserRole(null)
+            setUserData(null)
             setLoading(false)
           })
 
@@ -92,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           doc(db, 'users', uid),
           (snap) => {
             if (auth.currentUser?.uid !== uid) return
-            applyUserDoc(snap, setUserStatus, setUserRole)
+            applyUserDoc(snap, setUserStatus, setUserRole, setUserData)
             setLoading(false)
           },
           (err) => {
@@ -112,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ currentUser, userStatus, userRole, loading }}>
+    <AuthContext.Provider value={{ currentUser, userStatus, userRole, userData, loading }}>
       {children}
     </AuthContext.Provider>
   )
