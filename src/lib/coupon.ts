@@ -3,7 +3,10 @@ import {
   getDocs,
   doc,
   getDoc,
-  setDoc,
+  writeBatch,
+  query,
+  where,
+  documentId,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
@@ -335,40 +338,72 @@ export async function distributeCouponToUsers(
   const expiryType = coupon.expiryType ?? 'same_day'
   const expiresAtDate = computeExpiryDate(expiryType, coupon.expiryDate, today)
 
+  const CHUNK = 10
+
+  // ユーザー名を in クエリで並列一括取得
+  const chunks = Array.from({ length: Math.ceil(userIds.length / CHUNK) }, (_, i) =>
+    userIds.slice(i * CHUNK, i * CHUNK + CHUNK),
+  )
+  const userMapEntries = await Promise.all(
+    chunks.map((chunk) =>
+      getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))).then((snap) =>
+        snap.docs.map((d) => [d.id, d.data()] as [string, ReturnType<typeof d.data>]),
+      ),
+    ),
+  )
+  const userMap = Object.fromEntries(userMapEntries.flat())
+
+  // 配信済みチェックを全 uid で並列実行
+  const couponDocId = `${couponId}_${today}`
+  const existingChecks = await Promise.all(
+    userIds.map((uid) =>
+      getDoc(doc(db, 'users', uid, 'coupons', couponDocId)).then((snap) => ({
+        uid,
+        exists: snap.exists(),
+      })),
+    ),
+  )
+
+  const textFields = couponSnapshotForDistribution(coupon)
+  const expiresAt = Timestamp.fromDate(expiresAtDate)
+  const jaTitle = textFields.titleJa ?? textFields.title ?? ''
+
   let distributedCount = 0
   let skippedCount = 0
   const details: string[] = []
 
-  const userSnap = await getDocs(collection(db, 'users'))
-  const userMap = Object.fromEntries(userSnap.docs.map((d) => [d.id, d.data()]))
+  // writeBatch で一括書き込み（500件/バッチ上限に合わせてチャンク）
+  const toWrite = existingChecks.filter((r) => !r.exists)
+  const toSkip  = existingChecks.filter((r) => r.exists)
 
-  for (const uid of userIds) {
-    const u = userMap[uid]
-    const fullName = (u?.fullName as string) ?? '不明'
+  for (const { uid } of toSkip) {
+    const fullName = (userMap[uid]?.fullName as string) ?? '不明'
+    skippedCount++
+    details.push(`${fullName}さん: 本日すでに配信済み`)
+  }
 
-    const couponDocId = `${couponId}_${today}`
-    const existing = await getDoc(doc(db, 'users', uid, 'coupons', couponDocId))
-    if (existing.exists()) {
-      skippedCount++
-      details.push(`${fullName}さん: 本日すでに配信済み`)
-      continue
+  const BATCH_SIZE = 499
+  for (let i = 0; i < toWrite.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db)
+    const slice = toWrite.slice(i, i + BATCH_SIZE)
+    for (const { uid } of slice) {
+      batch.set(doc(db, 'users', uid, 'coupons', couponDocId), {
+        couponId,
+        ...textFields,
+        discountAmount: coupon.discountAmount ?? 0,
+        status: 'unused',
+        distributedAt: serverTimestamp(),
+        distributedDate: today,
+        expiresAt,
+        usedAt: null,
+      })
     }
-
-    const textFields = couponSnapshotForDistribution(coupon)
-    await setDoc(doc(db, 'users', uid, 'coupons', couponDocId), {
-      couponId,
-      ...textFields,
-      discountAmount: coupon.discountAmount ?? 0,
-      status: 'unused',
-      distributedAt: serverTimestamp(),
-      distributedDate: today,
-      expiresAt: Timestamp.fromDate(expiresAtDate),
-      usedAt: null,
-    })
-
-    distributedCount++
-    const jaTitle = textFields.titleJa ?? textFields.title ?? ''
-    details.push(`${fullName}さんに「${jaTitle}」を配信`)
+    await batch.commit()
+    for (const { uid } of slice) {
+      const fullName = (userMap[uid]?.fullName as string) ?? '不明'
+      distributedCount++
+      details.push(`${fullName}さんに「${jaTitle}」を配信`)
+    }
   }
 
   return { distributedCount, skippedCount, details }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   collection,
+  collectionGroup,
   query,
   where,
   orderBy,
@@ -172,21 +173,24 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
   async function handleExportCsv() {
     setExporting(true)
     try {
-      const usersSnap = await getDocs(collection(db, 'users'))
-      const rows: UserRecord[] = []
+      // users と使用済みクーポンを並列一括取得（N+1 解消）
+      const [usersSnap, usedCouponsSnap] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(query(collectionGroup(db, 'coupons'), where('status', '==', 'used'))),
+      ])
 
-      for (const d of usersSnap.docs) {
+      // uid → 使用済みクーポン数のマップをクライアント集計
+      const usedCountMap = new Map<string, number>()
+      for (const d of usedCouponsSnap.docs) {
+        // path: users/{uid}/coupons/{couponId}
+        const uid = d.ref.path.split('/')[1]
+        if (uid) usedCountMap.set(uid, (usedCountMap.get(uid) ?? 0) + 1)
+      }
+
+      const rows: UserRecord[] = usersSnap.docs.map((d) => {
         const data = d.data()
         const uid = d.id
-
-        const usedSnap = await getDocs(
-          query(
-            collection(db, 'users', uid, 'coupons'),
-            where('status', '==', 'used'),
-          ),
-        )
-
-        rows.push({
+        return {
           uid,
           fullName: (data.fullName as string) ?? '',
           email: (data.email as string) ?? '',
@@ -195,11 +199,11 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           status: (data.status as string) ?? 'active',
           yellowCards: (data.yellowCards as number) ?? 0,
           totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
-          usedCouponCount: usedSnap.size,
+          usedCouponCount: usedCountMap.get(uid) ?? 0,
           memberNumber: (data.memberNumber as number) ?? null,
           memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
-        })
-      }
+        }
+      })
 
       const header = [
         '会員番号',

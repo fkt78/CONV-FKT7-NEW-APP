@@ -258,6 +258,7 @@ export default function AnalyticsManager() {
       }
 
       // 5. バナークリック統計（累計・期間フィルタなし）
+      // TODO: ドキュメント数が増えた場合は where('lastClickedAt', '>=', start) で期間絞りを追加
       const bannerSnap = await getDocs(collection(db, 'bannerStats'))
       const bannerStats: BannerStat[] = bannerSnap.docs
         .map((d) => ({
@@ -332,7 +333,12 @@ export default function AnalyticsManager() {
             {(['7d', '30d', 'all'] as const).map((p) => (
               <button
                 key={p}
-                onClick={() => setPeriod(p)}
+                onClick={() => {
+                  if (p === 'all' && period !== 'all') {
+                    if (!window.confirm('全期間の集計はデータ量が多く読み込みに時間がかかる場合があります。続行しますか？')) return
+                  }
+                  setPeriod(p)
+                }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
                   period === p
                     ? 'bg-[#0095B6] text-white'
