@@ -19,8 +19,8 @@ import {
   type Timestamp,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
-import { formatTime, isSameDay, formatDateDivider } from '../lib/formatTime'
-import { messageMatches, highlightMatch, isSafeUrl, withTimeout } from '../lib/chatUtils'
+import { isSameDay } from '../lib/formatTime'
+import { messageMatches, withTimeout } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { useChatBadge } from '../contexts/ChatBadgeContext'
 import { uploadChatAttachment, validateFile, FILE_ERROR_TOO_LARGE, FILE_ERROR_TYPE, type AttachmentType } from '../lib/chatAttachment'
@@ -31,18 +31,27 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import AffiliateBannerCarousel from '../components/AffiliateBannerCarousel'
 import HomeSkeleton from '../components/HomeSkeleton'
 import LazyMount from '../components/LazyMount'
+import ChatMessageRow, { type ChatMessage } from '../components/ChatMessageRow'
 
 type HomeTab = 'home' | 'chat' | 'coupon'
 
-interface Message {
-  id: string
-  senderId: string
-  text: string
-  createdAt: Date | null
-  readAt: Date | null
-  attachmentUrl?: string
-  attachmentType?: AttachmentType
-  attachmentName?: string
+/** 自分送信メッセージの後に相手メッセージが存在する ID（O(N) で算出。旧 some ネストは O(N²)） */
+function computeHasReplyAfterIds(messages: ChatMessage[], ownUid: string | undefined): Set<string> {
+  const result = new Set<string>()
+  if (!ownUid || messages.length === 0) return result
+  let bestOtherTime: number | null = null
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    const isOwn = msg.senderId === ownUid
+    if (isOwn && msg.createdAt && bestOtherTime !== null && bestOtherTime > msg.createdAt.getTime()) {
+      result.add(msg.id)
+    }
+    if (!isOwn && msg.createdAt) {
+      const ts = msg.createdAt.getTime()
+      bestOtherTime = bestOtherTime === null ? ts : Math.max(bestOtherTime, ts)
+    }
+  }
+  return result
 }
 
 export default function Home() {
@@ -52,8 +61,8 @@ export default function Home() {
   const navigate = useNavigate()
 
   const [homeTab, setHomeTab] = useState<HomeTab>('chat')
-  const [messages, setMessages] = useState<Message[]>([])
-  const [olderMessages, setOlderMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [olderMessages, setOlderMessages] = useState<ChatMessage[]>([])
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [canLoadMore, setCanLoadMore] = useState(false)
   const [text, setText] = useState('')
@@ -120,6 +129,24 @@ export default function Home() {
     [olderMessages, messages],
   )
 
+  const hasReplyAfterIds = useMemo(
+    () => computeHasReplyAfterIds(displayMessages, currentUser?.uid),
+    [displayMessages, currentUser?.uid],
+  )
+
+  const setMessageNodeRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) messageRefsMap.current.set(id, el)
+    else messageRefsMap.current.delete(id)
+  }, [])
+
+  const onMenuButtonClick = useCallback((id: string) => {
+    setOpenMenuId((curr) => (curr === id ? null : id))
+  }, [])
+
+  const onCloseMenuOverlay = useCallback(() => setOpenMenuId(null), [])
+
+  const onEditingTextChange = useCallback((v: string) => setEditingText(v), [])
+
   const loadOlderMessages = useCallback(async () => {
     if (!currentUser || loadingOlder) return
     const oldest = displayMessages[0]
@@ -133,7 +160,7 @@ export default function Home() {
         limitToLast(MSG_LIMIT),
       )
       const snap = await getDocs(q)
-      const fetched: Message[] = snap.docs.map((d) => {
+      const fetched: ChatMessage[] = snap.docs.map((d) => {
         const data = d.data()
         return {
           id: d.id,
@@ -347,15 +374,18 @@ export default function Home() {
   }
 
   const chatId = currentUser?.uid ?? ''
-  const canEditMessage = (msg: Message) => msg.senderId === currentUser?.uid
+  const canEditMessage = useCallback(
+    (msg: ChatMessage) => msg.senderId === currentUser?.uid,
+    [currentUser?.uid],
+  )
 
-  async function handleEditMessage(msg: Message) {
+  const handleEditMessage = useCallback((msg: ChatMessage) => {
     setEditingMessageId(msg.id)
     setEditingText(msg.text ?? '')
     setOpenMenuId(null)
-  }
+  }, [])
 
-  async function handleSaveEdit() {
+  const handleSaveEdit = useCallback(async () => {
     if (!editingMessageId || !chatId) return
     const trimmed = editingText.trim()
     try {
@@ -368,22 +398,25 @@ export default function Home() {
     } catch (err) {
       setFileError(err instanceof Error ? err.message : t('home.editFailed'))
     }
-  }
+  }, [editingMessageId, chatId, editingText, t])
 
-  function handleCancelEdit() {
+  const handleCancelEdit = useCallback(() => {
     setEditingMessageId(null)
     setEditingText('')
-  }
+  }, [])
 
-  async function handleDeleteMessage(msg: Message) {
-    if (!chatId || !window.confirm(t('home.deleteConfirm'))) return
-    setOpenMenuId(null)
-    try {
-      await deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id))
-    } catch (err) {
-      setFileError(err instanceof Error ? err.message : t('home.deleteFailed'))
-    }
-  }
+  const handleDeleteMessage = useCallback(
+    async (msg: ChatMessage) => {
+      if (!chatId || !window.confirm(t('home.deleteConfirm'))) return
+      setOpenMenuId(null)
+      try {
+        await deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id))
+      } catch (err) {
+        setFileError(err instanceof Error ? err.message : t('home.deleteFailed'))
+      }
+    },
+    [chatId, t],
+  )
 
   async function handleLogout() {
     await signOut(auth)
@@ -672,165 +705,30 @@ export default function Home() {
                 const isOwn = msg.senderId === currentUser?.uid
                 const prevMsg = displayMessages[i - 1] ?? null
                 const showDivider = !isSameDay(msg.createdAt, prevMsg?.createdAt ?? null)
-                // 返信があれば既読とみなす（未読のまま返信は不自然なため）
-                const hasReplyAfter = isOwn && currentUser && msg.createdAt && displayMessages.some(
-                  (m) => m.senderId !== currentUser.uid && m.createdAt && m.createdAt > msg.createdAt!,
-                )
-                const isRead = msg.readAt || hasReplyAfter
+                const hasReplyAfter = hasReplyAfterIds.has(msg.id)
+                const isRead = Boolean(msg.readAt || hasReplyAfter)
 
                 return (
-                  <div
+                  <ChatMessageRow
                     key={msg.id}
-                    ref={(el) => {
-                      if (el) messageRefsMap.current.set(msg.id, el)
-                    }}
-                  >
-                    {showDivider && (
-                      <div className="flex items-center justify-center my-4">
-                        <div className="flex-1 border-t border-[#e5e5ea]" />
-                        <span className="px-3 text-[13px] text-[#86868b]">
-                          {formatDateDivider(msg.createdAt)}
-                        </span>
-                        <div className="flex-1 border-t border-[#e5e5ea]" />
-                      </div>
-                    )}
-
-                    <div className={`flex items-end gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                      {!isOwn && (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0095B6] to-[#5BC8D7] flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <span className="text-white text-xs font-semibold">♛</span>
-                        </div>
-                      )}
-
-                      <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col group/message`}>
-                        {!isOwn && (
-                          <span className="text-[13px] text-[#0095B6] mb-0.5 ml-1 font-medium">{t('home.manager')}</span>
-                        )}
-                        <div className="flex items-end gap-1">
-                        <div
-                          className={`px-4 py-2.5 rounded-2xl text-[17px] leading-relaxed ${
-                            isOwn
-                              ? 'bg-[#0095B6] text-white rounded-br-sm shadow-sm'
-                              : 'bg-white text-[#1d1d1f] border border-[#e5e5ea] rounded-bl-sm shadow-[0_1px_4px_rgba(0,0,0,0.04)]'
-                          }`}
-                        >
-                          {editingMessageId === msg.id ? (
-                            <div className="space-y-2">
-                              <textarea
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                className="w-full min-h-[60px] bg-transparent border-none outline-none resize-none text-inherit placeholder-white/70"
-                                placeholder={t('home.placeholderEdit')}
-                                autoFocus
-                                rows={2}
-                                name="vip-chat-edit-body"
-                                autoComplete="off"
-                                data-form-type="other"
-                              />
-                              <div className="flex gap-2 justify-end">
-                                <button
-                                  type="button"
-                                  onClick={handleCancelEdit}
-                                  className="text-sm px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30"
-                                >
-                                  {t('home.cancel')}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleSaveEdit}
-                                  disabled={!editingText.trim()}
-                                  className="text-sm px-3 py-1 rounded-lg bg-white/30 hover:bg-white/40 disabled:opacity-50"
-                                >
-                                  {t('home.save')}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                          <>
-                          {msg.attachmentUrl && isSafeUrl(msg.attachmentUrl) && (
-                            <div className="mb-2">
-                              {msg.attachmentType === 'image' ? (
-                                <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
-                                  <img
-                                    src={msg.attachmentUrl}
-                                    alt={msg.attachmentName ?? t('home.imageAlt')}
-                                    className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
-                                  />
-                                </a>
-                              ) : (
-                                <a
-                                  href={msg.attachmentUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`text-sm underline ${isOwn ? 'text-white/90' : 'text-[#0095B6]'}`}
-                                >
-                                  📎{' '}
-                                  {searchQuery.trim() && msg.attachmentName
-                                    ? highlightMatch(msg.attachmentName, searchQuery)
-                                    : (msg.attachmentName ?? t('home.fileFallback'))}
-                                </a>
-                              )}
-                            </div>
-                          )}
-                          {msg.text && (
-                            <span className="whitespace-pre-wrap">
-                              {searchQuery.trim()
-                                ? highlightMatch(msg.text, searchQuery)
-                                : msg.text}
-                            </span>
-                          )}
-                          </>
-                          )}
-                        </div>
-                        {isOwn && canEditMessage(msg) && editingMessageId !== msg.id && (
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
-                              aria-label={t('home.messageMenuAria')}
-                              className="p-1.5 rounded-lg hover:bg-black/10 text-white/80 hover:text-white"
-                            >
-                              ⋮
-                            </button>
-                            {openMenuId === msg.id && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-10"
-                                  aria-hidden
-                                  onClick={() => setOpenMenuId(null)}
-                                />
-                                <div className="absolute right-0 top-full mt-1 py-1 bg-white rounded-lg shadow-lg border border-[#e5e5ea] z-20 min-w-[100px]">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditMessage(msg)}
-                                    className="w-full text-left px-3 py-2 text-sm text-[#1d1d1f] hover:bg-[#f5f5f7]"
-                                  >
-                                    {t('home.edit')}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteMessage(msg)}
-                                    className="w-full text-left px-3 py-2 text-sm text-[#FF3B30] hover:bg-[#f5f5f7]"
-                                  >
-                                    {t('home.delete')}
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                        </div>
-                        <span className={`text-[13px] text-[#86868b] mt-0.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
-                          {formatTime(msg.createdAt)}
-                          {isOwn && (
-                            <span className="ml-1 text-[11px] opacity-80">
-                              {isRead ? t('home.read') : t('home.unread')}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    msg={msg}
+                    showDivider={showDivider}
+                    isOwn={isOwn}
+                    isRead={isRead}
+                    searchQuery={searchQuery}
+                    isEditing={editingMessageId === msg.id}
+                    editingText={editingText}
+                    menuOpen={openMenuId === msg.id}
+                    canEdit={canEditMessage(msg)}
+                    setMessageNodeRef={setMessageNodeRef}
+                    onEditingTextChange={onEditingTextChange}
+                    onSaveEdit={handleSaveEdit}
+                    onCancelEdit={handleCancelEdit}
+                    onMenuButtonClick={onMenuButtonClick}
+                    onCloseMenuOverlay={onCloseMenuOverlay}
+                    onEdit={handleEditMessage}
+                    onDelete={handleDeleteMessage}
+                  />
                 )
               })
             )}

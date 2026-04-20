@@ -293,14 +293,18 @@ export default function AdminDashboard() {
     })
   }, [currentUser, selectedUid, messages])
 
-  const sortedUsers = [...users].sort((a, b) => {
-    const aTime = chatMeta[a.uid]?.lastMessageAt
-    const bTime = chatMeta[b.uid]?.lastMessageAt
-    if (aTime && bTime) return bTime.getTime() - aTime.getTime()
-    if (aTime) return -1
-    if (bTime) return 1
-    return 0
-  })
+  const sortedUsers = useMemo(
+    () =>
+      [...users].sort((a, b) => {
+        const aTime = chatMeta[a.uid]?.lastMessageAt
+        const bTime = chatMeta[b.uid]?.lastMessageAt
+        if (aTime && bTime) return bTime.getTime() - aTime.getTime()
+        if (aTime) return -1
+        if (bTime) return 1
+        return 0
+      }),
+    [users, chatMeta],
+  )
 
   const matchedIndices = useMemo(
     () =>

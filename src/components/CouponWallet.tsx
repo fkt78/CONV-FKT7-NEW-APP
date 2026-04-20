@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   collection,
@@ -212,18 +212,20 @@ export default function CouponWallet() {
 
   // onSnapshot にインデックス未作成のフォールバックが効かない場合でも
   // processedIds に入っているIDは未使用リストから除外する
-  const visibleUnused = unusedCoupons.filter((c) => !processedIds.current.has(c.id))
-  const validUnusedCount = visibleUnused.filter((c) => !isExpired(c)).length
-  // 使えるものを上に、期限切れを下に並べる
-  const sortedUnused = [...visibleUnused].sort((a, b) => {
-    const aExpired = isExpired(a)
-    const bExpired = isExpired(b)
-    if (aExpired && !bExpired) return 1
-    if (!aExpired && bExpired) return -1
-    const aTime = a.distributedAt?.getTime() ?? 0
-    const bTime = b.distributedAt?.getTime() ?? 0
-    return bTime - aTime
-  })
+  const { validUnusedCount, sortedUnused } = useMemo(() => {
+    const visible = unusedCoupons.filter((c) => !processedIds.current.has(c.id))
+    const validCount = visible.filter((c) => !isExpired(c)).length
+    const sorted = [...visible].sort((a, b) => {
+      const aExpired = isExpired(a)
+      const bExpired = isExpired(b)
+      if (aExpired && !bExpired) return 1
+      if (!aExpired && bExpired) return -1
+      const aTime = a.distributedAt?.getTime() ?? 0
+      const bTime = b.distributedAt?.getTime() ?? 0
+      return bTime - aTime
+    })
+    return { validUnusedCount: validCount, sortedUnused: sorted }
+  }, [unusedCoupons])
 
   async function handleUse(coupon: OwnedCoupon) {
     if (!currentUser || marking) return
