@@ -34,6 +34,20 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'firebase-app': ['firebase/app'],
+          'firebase-auth': ['firebase/auth'],
+          'firebase-firestore': ['firebase/firestore'],
+          'firebase-functions': ['firebase/functions'],
+          'firebase-storage': ['firebase/storage'],
+          'firebase-messaging': ['firebase/messaging'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'i18n-vendor': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+        },
+      },
+    },
   },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(getAppVersion()),

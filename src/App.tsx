@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
@@ -11,18 +11,30 @@ import VersionBadge from './components/VersionBadge'
 import PwaUpdatePrompt from './components/PwaUpdatePrompt'
 import AppBadge from './components/AppBadge'
 import NotificationRegistration from './components/NotificationRegistration'
-import Register from './pages/Register'
-import Login from './pages/Login'
-import ForgotPassword from './pages/ForgotPassword'
-import Home from './pages/Home'
-import AdminDashboard from './pages/AdminDashboard'
-import InstallGuide from './pages/InstallGuide'
-import PrivacyPolicy from './pages/PrivacyPolicy'
-import TermsOfUse from './pages/TermsOfUse'
-import Tokushoho from './pages/Tokushoho'
-import AdvertisingNotice from './pages/AdvertisingNotice'
-import Licenses from './pages/Licenses'
-import NotificationSettings from './pages/NotificationSettings'
+
+const Register = lazy(() => import('./pages/Register'))
+const Login = lazy(() => import('./pages/Login'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const Home = lazy(() => import('./pages/Home'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const InstallGuide = lazy(() => import('./pages/InstallGuide'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsOfUse = lazy(() => import('./pages/TermsOfUse'))
+const Tokushoho = lazy(() => import('./pages/Tokushoho'))
+const AdvertisingNotice = lazy(() => import('./pages/AdvertisingNotice'))
+const Licenses = lazy(() => import('./pages/Licenses'))
+const NotificationSettings = lazy(() => import('./pages/NotificationSettings'))
+
+function PageLoader() {
+  return (
+    <div className="h-dvh flex items-center justify-center bg-[#f5f5f7]">
+      <div className="flex flex-col items-center gap-3">
+        <span className="text-[#0095B6] text-3xl">♛</span>
+        <div className="w-6 h-6 border-2 border-[#0095B6]/30 border-t-[#0095B6] rounded-full animate-spin" />
+      </div>
+    </div>
+  )
+}
 
 function DocumentLangSync() {
   const { i18n } = useTranslation()
@@ -45,42 +57,44 @@ export default function App() {
           <ChatBadgeProvider>
             <AppBadge />
             <NotificationRegistration />
-            <Routes>
-              <Route path="/install-guide" element={<InstallGuide />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfUse />} />
-              <Route path="/tokushoho" element={<Tokushoho />} />
-              <Route path="/advertising" element={<AdvertisingNotice />} />
-              <Route path="/licenses" element={<Licenses />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route
-                path="/settings/notifications"
-                element={
-                  <ProtectedRoute>
-                    <NotificationSettings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Home />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <AdminDashboard />
-                  </AdminRoute>
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/install-guide" element={<InstallGuide />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfUse />} />
+                <Route path="/tokushoho" element={<Tokushoho />} />
+                <Route path="/advertising" element={<AdvertisingNotice />} />
+                <Route path="/licenses" element={<Licenses />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route
+                  path="/settings/notifications"
+                  element={
+                    <ProtectedRoute>
+                      <NotificationSettings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </ChatBadgeProvider>
         </AuthProvider>
       </BrowserRouter>
