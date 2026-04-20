@@ -61,6 +61,55 @@ const ERR_COUPON_NOT_FOUND = 'COUPON_NOT_FOUND'
 const ERR_COUPON_ALREADY_USED = 'COUPON_ALREADY_USED'
 const ERR_COUPON_EXPIRED = 'COUPON_EXPIRED'
 
+// ── sessionStorage キャッシュ（未使用クーポン・TTL 3分） ──────────────────
+const COUPON_CACHE_KEY = 'vip-coupon-wallet-cache'
+const COUPON_CACHE_TTL_MS = 3 * 60 * 1000
+
+interface CouponCacheShape {
+  items: Array<Record<string, unknown>>
+  fetchedAt: number
+}
+
+function readCouponCache(): Array<Record<string, unknown>> | null {
+  try {
+    const raw = sessionStorage.getItem(COUPON_CACHE_KEY)
+    if (!raw) return null
+    const cache = JSON.parse(raw) as CouponCacheShape
+    if (Date.now() - cache.fetchedAt > COUPON_CACHE_TTL_MS) return null
+    return cache.items
+  } catch {
+    return null
+  }
+}
+
+function writeCouponCache(items: Array<Record<string, unknown>>) {
+  try {
+    const cache: CouponCacheShape = { fetchedAt: Date.now(), items }
+    sessionStorage.setItem(COUPON_CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // 容量オーバーは無視
+  }
+}
+
+function couponToSerializable(c: OwnedCoupon): Record<string, unknown> {
+  return {
+    ...c,
+    distributedAt: c.distributedAt?.toISOString() ?? null,
+    usedAt: c.usedAt?.toISOString() ?? null,
+    expiresAt: c.expiresAt?.toISOString() ?? null,
+  }
+}
+
+function couponFromSerializable(raw: Record<string, unknown>): OwnedCoupon {
+  return {
+    ...(raw as Omit<OwnedCoupon, 'distributedAt' | 'usedAt' | 'expiresAt'>),
+    distributedAt: raw.distributedAt ? new Date(raw.distributedAt as string) : null,
+    usedAt: raw.usedAt ? new Date(raw.usedAt as string) : null,
+    expiresAt: raw.expiresAt ? new Date(raw.expiresAt as string) : null,
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function CouponWallet() {
   const { t, i18n } = useTranslation()
   const { currentUser } = useAuth()
@@ -94,6 +143,13 @@ export default function CouponWallet() {
   useEffect(() => {
     if (!currentUser) return
     setUnusedError(false)
+
+    // キャッシュがあれば即時反映（stale-while-revalidate）
+    const cached = readCouponCache()
+    if (cached) {
+      setUnusedCoupons(cached.map(couponFromSerializable))
+    }
+
     const q = query(
       collection(db, 'users', currentUser.uid, 'coupons'),
       where('status', '==', 'unused'),
@@ -101,7 +157,9 @@ export default function CouponWallet() {
     )
     return onSnapshot(q, (snap) => {
       setUnusedError(false)
-      setUnusedCoupons(snap.docs.map((d) => mapCoupon(d)))
+      const coupons = snap.docs.map((d) => mapCoupon(d))
+      setUnusedCoupons(coupons)
+      writeCouponCache(coupons.map(couponToSerializable))
     }, (err) => {
       console.error('未使用クーポン購読エラー:', err)
       setUnusedError(true)

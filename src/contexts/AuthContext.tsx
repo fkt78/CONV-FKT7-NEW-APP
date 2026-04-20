@@ -94,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRole(null)
           setUserData(null)
           setLoading(false)
+          // ログアウト時にクーポンキャッシュをクリア
+          try { sessionStorage.removeItem('vip-coupon-wallet-cache') } catch { /* ignore */ }
           return
         }
 
