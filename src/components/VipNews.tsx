@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   collection,
@@ -77,6 +77,89 @@ function writeCache(items: NewsItem[]) {
   }
 }
 
+interface NewsCardProps {
+  item: NewsItem
+  isOpen: boolean
+  now: number
+  onToggle: (id: string) => void
+  formatDate: (d: Date | null) => string
+  t: (key: string, opts?: Record<string, unknown>) => string
+}
+
+const NewsCard = memo(function NewsCard({
+  item,
+  isOpen,
+  now,
+  onToggle,
+  formatDate,
+  t,
+}: NewsCardProps) {
+  return (
+    <div className="rounded-2xl bg-white border border-[#e5e5ea] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+      <button
+        onClick={() => onToggle(item.id)}
+        aria-label={
+          isOpen
+            ? t('vipNews.closeItem', { title: item.title })
+            : t('vipNews.openItem', { title: item.title })
+        }
+        aria-expanded={isOpen}
+        className="w-full min-h-[44px] text-left px-4 py-3 flex items-center gap-2 hover:bg-[#f5f5f7] transition"
+      >
+        {item.createdAt && now - item.createdAt.getTime() < 86_400_000 && (
+          <span className="text-[11px] bg-[#FF3B30] text-white px-2 py-0.5 rounded-lg font-semibold flex-shrink-0">
+            NEW
+          </span>
+        )}
+        <span className="flex-1 text-[#1d1d1f] text-[15px] font-semibold truncate">{item.title}</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {item.imageUrls.length > 0 && (
+            <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasImage')}>🖼️</span>
+          )}
+          {item.audioUrl && (
+            <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasAudio')}>🎵</span>
+          )}
+          <span className="text-[#86868b] text-[13px]">{formatDate(item.createdAt)}</span>
+          <svg
+            className={`w-4 h-4 text-[#86868b] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-4 pb-4 space-y-3 border-t border-[#e5e5ea]">
+          {item.imageUrls.length > 0 && (
+            <div className="pt-3 space-y-3">
+              {item.imageUrls.map((url) => (
+                <img
+                  key={url}
+                  src={url}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full rounded-xl border border-[#e5e5ea] object-contain max-h-[min(70vh,480px)] bg-[#f5f5f7]"
+                />
+              ))}
+            </div>
+          )}
+          {item.content && (
+            <p className="text-[#86868b] text-[15px] leading-relaxed whitespace-pre-wrap">
+              {item.content}
+            </p>
+          )}
+          {item.audioUrl && <AudioPlayer src={item.audioUrl} title={item.title} />}
+        </div>
+      )}
+    </div>
+  )
+})
+
 export default function VipNews() {
   const { t } = useTranslation()
   const [newsList, setNewsList] = useState<NewsItem[]>([])
@@ -123,13 +206,17 @@ export default function VipNews() {
     }
   }, [])
 
-  function formatDate(d: Date | null) {
+  const formatDate = useCallback((d: Date | null) => {
     if (!d) return ''
-    const now = new Date()
-    const isToday = d.toDateString() === now.toDateString()
+    const nowDate = new Date()
+    const isToday = d.toDateString() === nowDate.toDateString()
     if (isToday) return i18n.t('date.today')
     return d.toLocaleDateString(getLocaleTag(), { month: 'numeric', day: 'numeric' })
-  }
+  }, [])
+
+  const handleToggle = useCallback((id: string) => {
+    setExpanded((curr) => (curr === id ? null : id))
+  }, [])
 
   if (loading) {
     return (
@@ -172,71 +259,17 @@ export default function VipNews() {
       </div>
 
       {/* ニュースカード一覧（Apple風：白カード・ソフトシャドウ） */}
-      {displayList.map((item) => {
-        const isOpen = expanded === item.id
-        return (
-          <div
-            key={item.id}
-            className="rounded-2xl bg-white border border-[#e5e5ea] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
-          >
-            <button
-              onClick={() => setExpanded(isOpen ? null : item.id)}
-              aria-label={
-                isOpen ? t('vipNews.closeItem', { title: item.title }) : t('vipNews.openItem', { title: item.title })
-              }
-              aria-expanded={isOpen}
-              className="w-full min-h-[44px] text-left px-4 py-3 flex items-center gap-2 hover:bg-[#f5f5f7] transition"
-            >
-              {item.createdAt && now - item.createdAt.getTime() < 86_400_000 && (
-                <span className="text-[11px] bg-[#FF3B30] text-white px-2 py-0.5 rounded-lg font-semibold flex-shrink-0">
-                  NEW
-                </span>
-              )}
-              <span className="flex-1 text-[#1d1d1f] text-[15px] font-semibold truncate">{item.title}</span>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {item.imageUrls.length > 0 && (
-                  <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasImage')}>🖼️</span>
-                )}
-                {item.audioUrl && <span className="text-[#0095B6]/70 text-[13px]" title={t('vipNews.hasAudio')}>🎵</span>}
-                <span className="text-[#86868b] text-[13px]">{formatDate(item.createdAt)}</span>
-                <svg
-                  className={`w-4 h-4 text-[#86868b] transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-            </button>
-
-            {isOpen && (
-              <div className="px-4 pb-4 space-y-3 border-t border-[#e5e5ea]">
-                {item.imageUrls.length > 0 && (
-                  <div className="pt-3 space-y-3">
-                    {item.imageUrls.map((url) => (
-                      <img
-                        key={url}
-                        src={url}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full rounded-xl border border-[#e5e5ea] object-contain max-h-[min(70vh,480px)] bg-[#f5f5f7]"
-                      />
-                    ))}
-                  </div>
-                )}
-                {item.content && (
-                  <p className="text-[#86868b] text-[15px] leading-relaxed whitespace-pre-wrap">
-                    {item.content}
-                  </p>
-                )}
-                {item.audioUrl && (
-                  <AudioPlayer src={item.audioUrl} title={item.title} />
-                )}
-              </div>
-            )}
-          </div>
-        )
-      })}
+      {displayList.map((item) => (
+        <NewsCard
+          key={item.id}
+          item={item}
+          isOpen={expanded === item.id}
+          now={now}
+          onToggle={handleToggle}
+          formatDate={formatDate}
+          t={t}
+        />
+      ))}
     </div>
   )
 }

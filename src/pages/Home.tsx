@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
@@ -120,7 +120,7 @@ export default function Home() {
     [olderMessages, messages],
   )
 
-  async function loadOlderMessages() {
+  const loadOlderMessages = useCallback(async () => {
     if (!currentUser || loadingOlder) return
     const oldest = displayMessages[0]
     if (!oldest?.createdAt) return
@@ -153,7 +153,7 @@ export default function Home() {
     } finally {
       setLoadingOlder(false)
     }
-  }
+  }, [currentUser, loadingOlder, displayMessages, MSG_LIMIT])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -222,12 +222,12 @@ export default function Home() {
     }
   }, [searchQuery, matchCount, matchedIndices, displayMessages])
 
-  const scrollToMatch = (index: number) => {
+  const scrollToMatch = useCallback((index: number) => {
     const idx = matchedIndices[index]
     const msg = displayMessages[idx]
     if (!msg) return
     messageRefsMap.current.get(msg.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  }, [matchedIndices, displayMessages])
 
   function handleSearchPrev() {
     if (matchCount <= 1) return
@@ -392,13 +392,13 @@ export default function Home() {
 
   const displayName = userData?.fullName ?? currentUser?.displayName ?? t('home.defaultMemberName')
 
-  function attributeLabel(attr: string): string {
+  const attributeLabel = useCallback((attr: string): string => {
     const keys = ['male', 'female', 'student', 'other'] as const
     if (keys.includes(attr as (typeof keys)[number])) {
       return t(`home.attributeLabels.${attr}`)
     }
     return attr
-  }
+  }, [t])
 
   if (authLoading) return <HomeSkeleton />
 
