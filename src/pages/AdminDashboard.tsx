@@ -136,7 +136,6 @@ export default function AdminDashboard() {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersRefreshKey, setUsersRefreshKey] = useState(0)
-  const [templatesLoaded, setTemplatesLoaded] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -144,7 +143,6 @@ export default function AdminDashboard() {
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const messagesForChatRef = useRef<string | null>(null)
   const chatMetaUnsubRef = useRef<(() => void) | null>(null)
-  const prevAdminTabRef = useRef<AdminTab>('chat')
 
   useEffect(() => {
     let cancelled = false
@@ -189,12 +187,11 @@ export default function AdminDashboard() {
     }
   }, [])
 
+  // チャット入力・一斉送信・テンプレートピッカーは同一データを参照する（ピッカーを開くまで空にならないよう常時購読）
   useEffect(() => {
-    if (!showTemplatePicker || templatesLoaded) return
-    let cancelled = false
-    getDocs(query(collection(db, 'messageTemplates'), orderBy('createdAt', 'desc')))
-      .then((snap) => {
-        if (cancelled) return
+    return onSnapshot(
+      query(collection(db, 'messageTemplates'), orderBy('createdAt', 'desc')),
+      (snap) => {
         setMessageTemplates(
           snap.docs.map((d) => {
             const data = d.data()
@@ -205,23 +202,10 @@ export default function AdminDashboard() {
             }
           }),
         )
-        setTemplatesLoaded(true)
-      })
-      .catch((err) => {
-        if (cancelled) return
-        console.error('messageTemplates フェッチエラー:', err)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [showTemplatePicker, templatesLoaded])
-
-  useEffect(() => {
-    if (prevAdminTabRef.current === 'templates' && adminTab !== 'templates') {
-      setTemplatesLoaded(false)
-    }
-    prevAdminTabRef.current = adminTab
-  }, [adminTab])
+      },
+      (err) => console.error('messageTemplates購読エラー:', err),
+    )
+  }, [])
 
   useEffect(() => {
     if (!selectedUid) return
