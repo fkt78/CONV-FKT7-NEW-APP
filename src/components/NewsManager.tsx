@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   collection,
   query,
@@ -60,6 +60,7 @@ export default function NewsManager() {
   const [upload, setUpload] = useState<UploadProgress | null>(null)
   const [savingStage, setSavingStage] = useState<'uploading' | 'writing' | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const [newsLoading, setNewsLoading] = useState(false)
   const [newsRefreshKey, setNewsRefreshKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -186,6 +187,18 @@ export default function NewsManager() {
 
   async function handleSave() {
     if (!title.trim()) return
+
+    // ① 期限チェックをアップロード前に実施（キャンセルしてもファイルが孤立しない）
+    if (expiresAt.trim()) {
+      const expDate = new Date(expiresAt.trim())
+      if (expDate.getTime() <= Date.now()) {
+        const proceed = window.confirm(
+          '設定した公開期限がすでに過去の日時です。このまま投稿するとすぐに非表示になります。\n続けて投稿しますか？',
+        )
+        if (!proceed) return
+      }
+    }
+
     setSaving(true)
     setUpload(null)
     setSavingStage(null)
@@ -227,20 +240,6 @@ export default function NewsManager() {
         payload.imageUrl = deleteField()
       }
 
-      if (expiresAt.trim()) {
-        const expDate = new Date(expiresAt.trim())
-        if (expDate.getTime() <= Date.now()) {
-          const proceed = window.confirm(
-            '設定した公開期限がすでに過去の日時です。このまま投稿するとすぐに非表示になります。\n続けて投稿しますか？',
-          )
-          if (!proceed) {
-            setSaving(false)
-            setSavingStage(null)
-            return
-          }
-        }
-      }
-
       setSavingStage('writing')
       const WRITE_TIMEOUT_MS = 30_000
       const WRITE_TIMEOUT_MSG = 'Firestoreへの保存がタイムアウトしました。ネットワーク状態を確認して再試行してください。'
@@ -272,10 +271,23 @@ export default function NewsManager() {
 
   async function handleDelete(item: NewsItem) {
     if (!confirm(`「${item.title}」を削除しますか？`)) return
-    if (item.audioUrl) await deleteAudio(item.audioUrl)
-    for (const u of item.imageUrls) await deleteAudio(u)
-    await deleteDoc(doc(db, 'news', item.id))
-    setNewsRefreshKey((k) => k + 1)
+    setDeleting(item.id)
+    try {
+      if (item.audioUrl) await deleteAudio(item.audioUrl)
+      for (const u of item.imageUrls) await deleteAudio(u)
+      await withTimeout(
+        deleteDoc(doc(db, 'news', item.id)),
+        30_000,
+        '削除がタイムアウトしました。ネットワーク状態を確認して再試行してください。',
+      )
+      setNewsRefreshKey((k) => k + 1)
+    } catch (err) {
+      console.error('ニュース削除エラー:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`削除に失敗しました${msg ? `: ${msg}` : ''}`)
+    } finally {
+      setDeleting(null)
+    }
   }
 
   function formatDate(d: Date | null) {
@@ -283,8 +295,30 @@ export default function NewsManager() {
     return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
   }
 
+  // audioFile の blob URL を毎レンダリング生成するとメモリリークになるため useMemo で安定化
+  // audioFile が変わったときだけ新しい URL を生成する（revoke は次の変更時に自動）
+  const audioBlobUrl = useMemo(() => {
+    if (!audioFile) return ''
+    const url = URL.createObjectURL(audioFile)
+    return url
+  }, [audioFile])
+
+  // audioFile が差し替わったとき古い blob URL を revoke して解放
+  const prevAudioFileRef = useRef<string>('')
+  useEffect(() => {
+    if (!audioBlobUrl) {
+      prevAudioFileRef.current = ''
+      return
+    }
+    const prev = prevAudioFileRef.current
+    prevAudioFileRef.current = audioBlobUrl
+    return () => {
+      if (prev && prev !== audioBlobUrl) URL.revokeObjectURL(prev)
+    }
+  }, [audioBlobUrl])
+
   const currentAudioToShow = audioFile
-    ? URL.createObjectURL(audioFile)
+    ? audioBlobUrl
     : !removeAudio && editingAudioUrl ? editingAudioUrl : ''
 
   const visibleNewsList = newsList.filter(
@@ -575,9 +609,13 @@ export default function NewsManager() {
                   </button>
                   <button
                     onClick={() => handleDelete(item)}
-                    className="text-[#86868b] hover:text-red-500 transition text-xs p-1"
+                    disabled={deleting === item.id}
+                    className="text-[#86868b] hover:text-red-500 transition text-xs p-1 disabled:opacity-40"
+                    aria-label="削除"
                   >
-                    ✕
+                    {deleting === item.id ? (
+                      <span className="w-3 h-3 border border-[#e5e5ea] border-t-red-400 rounded-full animate-spin inline-block" />
+                    ) : '✕'}
                   </button>
                 </div>
               </div>
