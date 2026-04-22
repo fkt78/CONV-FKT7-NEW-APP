@@ -290,6 +290,19 @@ export default function AdminDashboard() {
     [users, chatMeta],
   )
 
+  // 未選択のままだと入力欄が出ないため、会員（非管理者）がいれば先頭を自動選択
+  useEffect(() => {
+    if (adminTab !== 'chat' || showGlobalSearchResults) return
+    if (selectedUid != null) return
+    if (sortedUsers.length === 0) return
+    const candidates = sortedUsers.filter((u) => u.role !== 'admin' && u.uid !== currentUser?.uid)
+    const pick = candidates[0]
+    if (pick) {
+      setSelectedUid(pick.uid)
+      setShowChatPanel(true)
+    }
+  }, [adminTab, showGlobalSearchResults, selectedUid, sortedUsers, currentUser?.uid])
+
   const matchedIndices = useMemo(
     () =>
       searchQuery.trim()
@@ -794,9 +807,9 @@ export default function AdminDashboard() {
           onSendToSelected={(uids) => openBroadcastModal(uids)}
         />
       ) : adminTab === 'chat' ? (
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden min-h-0">
         {/* ── 左パネル：顧客リスト / 全チャット検索 ── */}
-        <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-[#e5e5ea] flex flex-col bg-white ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-[#e5e5ea] flex flex-col bg-white min-h-0 ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
           {/* 全チャット検索バー・一斉送信 */}
           <div className="px-4 py-3 border-b border-[#e5e5ea] space-y-2">
             <button
@@ -1000,8 +1013,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ── 右パネル：チャットエリア ── */}
-        <div className={`flex-1 flex flex-col ${showChatPanel ? 'flex' : 'hidden md:flex'}`}>
+        {/* ── 右パネル：チャットエリア（min-h-0 で flex 子の縮小を許可し、入力欄がビューポート外に押し出されるのを防ぐ） ── */}
+        <div className={`flex-1 flex flex-col min-h-0 ${showChatPanel ? 'flex' : 'hidden md:flex'}`}>
           {selectedUser ? (
             <>
               <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
@@ -1389,6 +1402,23 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </>
+          ) : selectedUid ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center bg-[#f5f5f7] px-6">
+              <span className="text-5xl text-[#0095B6]/30 mb-4">♛</span>
+              <p className="text-[#86868b] text-sm">
+                会員情報を一覧から読み込めません（無効化・削除などで一覧に含まれない可能性があります）。
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedUid(null)
+                  setShowChatPanel(false)
+                }}
+                className="mt-4 px-4 py-2 rounded-xl bg-[#0095B6] text-white text-sm font-medium hover:bg-[#007A96] transition"
+              >
+                選択を解除して一覧に戻る
+              </button>
+            </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center bg-[#f5f5f7]">
               <span className="text-5xl text-[#0095B6]/30 mb-4">♛</span>
