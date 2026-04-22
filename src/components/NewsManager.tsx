@@ -17,8 +17,6 @@ import RefreshButton from './RefreshButton'
 import { uploadAudio, uploadImage, deleteAudio, type UploadProgress } from '../lib/newsStorage'
 import { normalizeNewsImageUrls, MAX_NEWS_IMAGES } from '../lib/newsImages'
 import AudioPlayer from './AudioPlayer'
-import { withTimeout } from '../lib/chatUtils'
-
 interface NewsItem {
   id: string
   title: string
@@ -240,23 +238,23 @@ export default function NewsManager() {
         payload.imageUrl = deleteField()
       }
 
-      setSavingStage('writing')
-      const WRITE_TIMEOUT_MS = 60_000
-      const WRITE_TIMEOUT_MSG = 'Firestoreへの保存がタイムアウトしました（60秒）。ネットワーク状態を確認して再試行してください。'
-      if (editingId) {
-        await withTimeout(
-          updateDoc(doc(db, 'news', editingId), payload),
-          WRITE_TIMEOUT_MS,
-          WRITE_TIMEOUT_MSG,
-        )
-      } else {
-        await withTimeout(
-          addDoc(collection(db, 'news'), { ...payload, createdAt: serverTimestamp() }),
-          WRITE_TIMEOUT_MS,
-          WRITE_TIMEOUT_MSG,
-        )
-      }
-      setNewsRefreshKey((k) => k + 1)
+      // Firestore 書き込みは await しない（チャット送信と同じ方式）。
+      // これで画像アップロード完了後に UI がブロックされない。
+      // サーバー確認前にフォームを閉じ、書き込み成否はバックグラウンドで反映。
+      const writePromise = editingId
+        ? updateDoc(doc(db, 'news', editingId), payload)
+        : addDoc(collection(db, 'news'), { ...payload, createdAt: serverTimestamp() })
+
+      writePromise
+        .then(() => {
+          setNewsRefreshKey((k) => k + 1)
+        })
+        .catch((err) => {
+          console.error('ニュース保存エラー（バックグラウンド）:', err)
+          const msg = err instanceof Error ? err.message : String(err)
+          alert(`お知らせの保存に失敗しました${msg ? `: ${msg}` : ''}`)
+        })
+
       resetForm()
     } catch (err) {
       console.error('ニュース保存エラー:', err)
@@ -272,19 +270,30 @@ export default function NewsManager() {
   async function handleDelete(item: NewsItem) {
     if (!confirm(`「${item.title}」を削除しますか？`)) return
     setDeleting(item.id)
+
+    // 一覧から先に楽観的に削除して UI を即座に応答させる
+    setNewsList((prev) => prev.filter((n) => n.id !== item.id))
+
     try {
       if (item.audioUrl) await deleteAudio(item.audioUrl)
       for (const u of item.imageUrls) await deleteAudio(u)
-      await withTimeout(
-        deleteDoc(doc(db, 'news', item.id)),
-        60_000,
-        '削除がタイムアウトしました（60秒）。ネットワーク状態を確認して再試行してください。',
-      )
-      setNewsRefreshKey((k) => k + 1)
+
+      // Firestore 削除は await しない。バックグラウンドで処理。
+      deleteDoc(doc(db, 'news', item.id))
+        .then(() => {
+          setNewsRefreshKey((k) => k + 1)
+        })
+        .catch((err) => {
+          console.error('ニュース削除エラー（バックグラウンド）:', err)
+          const msg = err instanceof Error ? err.message : String(err)
+          alert(`削除に失敗しました${msg ? `: ${msg}` : ''}`)
+          setNewsRefreshKey((k) => k + 1)
+        })
     } catch (err) {
       console.error('ニュース削除エラー:', err)
       const msg = err instanceof Error ? err.message : String(err)
       alert(`削除に失敗しました${msg ? `: ${msg}` : ''}`)
+      setNewsRefreshKey((k) => k + 1)
     } finally {
       setDeleting(null)
     }
