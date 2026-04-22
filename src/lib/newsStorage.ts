@@ -47,8 +47,13 @@ export function uploadAudio(
       },
       (err) => reject(err),
       async () => {
-        const url = await getDownloadURL(task.snapshot.ref)
-        resolve(url)
+        try {
+          const url = await getDownloadURL(task.snapshot.ref)
+          onProgress({ percent: 100, state: 'success' })
+          resolve(url)
+        } catch (err) {
+          reject(err)
+        }
       },
     )
   })
@@ -86,8 +91,13 @@ export function uploadImage(
       },
       (err) => reject(err),
       async () => {
-        const url = await getDownloadURL(task.snapshot.ref)
-        resolve(url)
+        try {
+          const url = await getDownloadURL(task.snapshot.ref)
+          onProgress({ percent: 100, state: 'success' })
+          resolve(url)
+        } catch (err) {
+          reject(err)
+        }
       },
     )
   })

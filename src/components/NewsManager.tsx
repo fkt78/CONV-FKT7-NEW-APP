@@ -474,7 +474,7 @@ export default function NewsManager() {
               )}
             </div>
 
-            {upload && upload.state === 'running' && (
+            {upload && (upload.state === 'running' || upload.state === 'paused') && (
               <div className="space-y-1">
                 <div className="h-1 rounded-full bg-[#e5e5ea] overflow-hidden">
                   <div
