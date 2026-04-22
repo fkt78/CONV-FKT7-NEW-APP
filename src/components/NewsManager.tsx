@@ -17,6 +17,7 @@ import RefreshButton from './RefreshButton'
 import { uploadAudio, uploadImage, deleteAudio, type UploadProgress } from '../lib/newsStorage'
 import { normalizeNewsImageUrls, MAX_NEWS_IMAGES } from '../lib/newsImages'
 import AudioPlayer from './AudioPlayer'
+import { withTimeout } from '../lib/chatUtils'
 
 interface NewsItem {
   id: string
@@ -57,6 +58,7 @@ export default function NewsManager() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [removeAudio, setRemoveAudio] = useState(false)
   const [upload, setUpload] = useState<UploadProgress | null>(null)
+  const [savingStage, setSavingStage] = useState<'uploading' | 'writing' | null>(null)
   const [saving, setSaving] = useState(false)
   const [newsLoading, setNewsLoading] = useState(false)
   const [newsRefreshKey, setNewsRefreshKey] = useState(0)
@@ -153,6 +155,7 @@ export default function NewsManager() {
     setAudioFile(null)
     setRemoveAudio(false)
     setUpload(null)
+    setSavingStage(null)
     setEditingId(null)
     setEditingAudioUrl('')
     initialImageUrlsRef.current = []
@@ -185,8 +188,12 @@ export default function NewsManager() {
     if (!title.trim()) return
     setSaving(true)
     setUpload(null)
+    setSavingStage(null)
     try {
       let audioUrl = editingId ? editingAudioUrl : ''
+
+      const needsUpload = !!audioFile || pendingImages.length > 0
+      if (needsUpload) setSavingStage('uploading')
 
       if (editingId && removeAudio && editingAudioUrl) {
         await deleteAudio(editingAudioUrl)
@@ -228,15 +235,27 @@ export default function NewsManager() {
           )
           if (!proceed) {
             setSaving(false)
+            setSavingStage(null)
             return
           }
         }
       }
 
+      setSavingStage('writing')
+      const WRITE_TIMEOUT_MS = 30_000
+      const WRITE_TIMEOUT_MSG = 'Firestoreへの保存がタイムアウトしました。ネットワーク状態を確認して再試行してください。'
       if (editingId) {
-        await updateDoc(doc(db, 'news', editingId), payload)
+        await withTimeout(
+          updateDoc(doc(db, 'news', editingId), payload),
+          WRITE_TIMEOUT_MS,
+          WRITE_TIMEOUT_MSG,
+        )
       } else {
-        await addDoc(collection(db, 'news'), { ...payload, createdAt: serverTimestamp() })
+        await withTimeout(
+          addDoc(collection(db, 'news'), { ...payload, createdAt: serverTimestamp() }),
+          WRITE_TIMEOUT_MS,
+          WRITE_TIMEOUT_MSG,
+        )
       }
       setNewsRefreshKey((k) => k + 1)
       resetForm()
@@ -247,6 +266,7 @@ export default function NewsManager() {
     } finally {
       setSaving(false)
       setUpload(null)
+      setSavingStage(null)
     }
   }
 
@@ -485,13 +505,24 @@ export default function NewsManager() {
                 <p className="text-[#86868b] text-[10px]">アップロード中... {upload.percent}%</p>
               </div>
             )}
+            {savingStage === 'writing' && (
+              <p className="text-[#86868b] text-[10px] text-center">Firestore に保存中...</p>
+            )}
 
             <button
               onClick={handleSave}
               disabled={!title.trim() || saving}
               className="w-full bg-[#0095B6] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#007A96] transition disabled:opacity-50"
             >
-              {saving ? '保存中...' : editingId ? '更新する' : '投稿する'}
+              {savingStage === 'uploading'
+                ? 'アップロード中...'
+                : savingStage === 'writing'
+                  ? 'Firestore保存中...'
+                  : saving
+                    ? '保存中...'
+                    : editingId
+                      ? '更新する'
+                      : '投稿する'}
             </button>
           </div>
         )}

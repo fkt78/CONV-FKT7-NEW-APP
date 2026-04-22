@@ -12,13 +12,20 @@ function getStoragePathFromUrl(url: string): string | null {
   }
 }
 
+function raceTimeout<T>(p: Promise<T>, ms: number, msg: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(msg)), ms)),
+  ])
+}
+
 export interface UploadProgress {
   percent: number
   state: 'running' | 'paused' | 'success' | 'error'
 }
 
-const MAX_AUDIO_SIZE = 100 * 1024 * 1024 // 100MB（Firebase Storage は最大 5GB まで対応）
-const MAX_IMAGE_SIZE = 15 * 1024 * 1024 // 15MB
+const MAX_AUDIO_SIZE = 100 * 1024 * 1024 // 100MB
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024  // 15MB
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
@@ -48,7 +55,11 @@ export function uploadAudio(
       (err) => reject(err),
       async () => {
         try {
-          const url = await getDownloadURL(task.snapshot.ref)
+          const url = await raceTimeout(
+            getDownloadURL(task.snapshot.ref),
+            30_000,
+            'ダウンロードURLの取得がタイムアウトしました。再試行してください。',
+          )
           onProgress({ percent: 100, state: 'success' })
           resolve(url)
         } catch (err) {
@@ -92,7 +103,11 @@ export function uploadImage(
       (err) => reject(err),
       async () => {
         try {
-          const url = await getDownloadURL(task.snapshot.ref)
+          const url = await raceTimeout(
+            getDownloadURL(task.snapshot.ref),
+            30_000,
+            'ダウンロードURLの取得がタイムアウトしました。再試行してください。',
+          )
           onProgress({ percent: 100, state: 'success' })
           resolve(url)
         } catch (err) {
@@ -108,8 +123,12 @@ export async function deleteAudio(audioUrl: string): Promise<void> {
   const path = getStoragePathFromUrl(audioUrl)
   if (!path) return
   try {
-    await deleteObject(ref(storage, path))
+    await raceTimeout(
+      deleteObject(ref(storage, path)),
+      15_000,
+      '削除タイムアウト',
+    )
   } catch {
-    // 既に削除済み or 参照不正の場合は無視
+    // 既に削除済み・参照不正・タイムアウトは無視
   }
 }
