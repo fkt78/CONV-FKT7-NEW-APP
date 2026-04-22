@@ -241,8 +241,8 @@ export default function NewsManager() {
       }
 
       setSavingStage('writing')
-      const WRITE_TIMEOUT_MS = 30_000
-      const WRITE_TIMEOUT_MSG = 'Firestoreへの保存がタイムアウトしました。ネットワーク状態を確認して再試行してください。'
+      const WRITE_TIMEOUT_MS = 60_000
+      const WRITE_TIMEOUT_MSG = 'Firestoreへの保存がタイムアウトしました（60秒）。ネットワーク状態を確認して再試行してください。'
       if (editingId) {
         await withTimeout(
           updateDoc(doc(db, 'news', editingId), payload),
@@ -277,8 +277,8 @@ export default function NewsManager() {
       for (const u of item.imageUrls) await deleteAudio(u)
       await withTimeout(
         deleteDoc(doc(db, 'news', item.id)),
-        30_000,
-        '削除がタイムアウトしました。ネットワーク状態を確認して再試行してください。',
+        60_000,
+        '削除がタイムアウトしました（60秒）。ネットワーク状態を確認して再試行してください。',
       )
       setNewsRefreshKey((k) => k + 1)
     } catch (err) {

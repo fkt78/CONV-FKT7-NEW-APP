@@ -3,8 +3,6 @@ import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth'
 import {
   initializeFirestore,
   memoryLocalCache,
-  persistentLocalCache,
-  persistentSingleTabManager,
 } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { getStorage } from 'firebase/storage'
@@ -47,22 +45,13 @@ export const authPersistenceReady = setPersistence(auth, browserLocalPersistence
 })
 
 /**
- * IndexedDB に書き込みを一時保存し、接続回復後に自動同期する（シングルタブ用）。
- * 一時的なネット断で addDoc が長時間待機しにくくなる。
- * IndexedDB が使えない環境は memoryLocalCache にフォールバック。
+ * メモリキャッシュを使用。IndexedDB（persistentLocalCache）は蓄積した
+ * ペンディング書き込みが多くなると addDoc/updateDoc が数十秒ブロックする
+ * 既知の問題があるため、サーバーへの直接書き込みを保証する memoryLocalCache を採用。
+ * admin 操作はサーバー確認が取れることが重要なため、オフラインキャッシュは不要。
  */
-let firestoreCache
-try {
-  firestoreCache = persistentLocalCache({
-    tabManager: persistentSingleTabManager({}),
-  })
-} catch (e) {
-  console.warn('[firebase] persistentLocalCache unavailable, using memoryLocalCache', e)
-  firestoreCache = memoryLocalCache()
-}
-
 export const db = initializeFirestore(app, {
-  localCache: firestoreCache,
+  localCache: memoryLocalCache(),
 })
 export const functions = getFunctions(app)
 export const storage = getStorage(app)
