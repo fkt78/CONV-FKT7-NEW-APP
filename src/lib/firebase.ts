@@ -50,13 +50,11 @@ export const authPersistenceReady = setPersistence(auth, browserLocalPersistence
  * 既知の問題があるため、サーバーへの直接書き込みを保証する memoryLocalCache を採用。
  * admin 操作はサーバー確認が取れることが重要なため、オフラインキャッシュは不要。
  *
- * experimentalAutoDetectLongPolling: プロキシ・ファイアウォール・VPN環境で
- * WebChannel 通信が詰まる既知の問題を自動検出して Long Polling にフォールバックする。
- * これを有効にしないと updateDoc/addDoc が無応答のまま数十秒ハングする。
+ * Note: experimentalAutoDetectLongPolling は初回起動時のプローブ遅延で
+ * users/{uid} 初回読み取りが失敗し管理者ロールが取れなくなる副作用があるため使わない。
  */
 export const db = initializeFirestore(app, {
   localCache: memoryLocalCache(),
-  experimentalAutoDetectLongPolling: true,
 })
 export const functions = getFunctions(app)
 export const storage = getStorage(app)
