@@ -60,7 +60,7 @@ export default function Home() {
   const { couponCount, setUnreadCount } = useChatBadge()
   const navigate = useNavigate()
 
-  const [homeTab, setHomeTab] = useState<HomeTab>('chat')
+  const [homeTab, setHomeTab] = useState<HomeTab>('home')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [olderMessages, setOlderMessages] = useState<ChatMessage[]>([])
   const [loadingOlder, setLoadingOlder] = useState(false)
