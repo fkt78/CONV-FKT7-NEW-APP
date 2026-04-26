@@ -47,10 +47,17 @@ interface UserRecord {
   email: string
   attribute: string
   birthMonth: string
+  status: string
   yellowCards: number
   totalSavedAmount: number
   memberNumber: number | null
   role?: string
+}
+
+function normalizeYellowCards(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, value)
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.max(0, n) : 0
 }
 
 interface ChatMeta {
@@ -152,17 +159,21 @@ export default function AdminDashboard() {
       .then((snap) => {
         if (cancelled) return
         setUsers(
-          snap.docs.map((d) => ({
-            uid: d.id,
-            fullName: d.data().fullName as string,
-            email: d.data().email as string,
-            attribute: d.data().attribute as string,
-            birthMonth: d.data().birthMonth as string,
-            yellowCards: (d.data().yellowCards as number) ?? 0,
-            totalSavedAmount: (d.data().totalSavedAmount as number) ?? 0,
-            memberNumber: (d.data().memberNumber as number) ?? null,
-            role: d.data().role as string | undefined,
-          })),
+          snap.docs.map((d) => {
+            const data = d.data()
+            return {
+              uid: d.id,
+              fullName: data.fullName as string,
+              email: data.email as string,
+              attribute: data.attribute as string,
+              birthMonth: data.birthMonth as string,
+              status: (data.status as string) ?? 'active',
+              yellowCards: normalizeYellowCards(data.yellowCards),
+              totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
+              memberNumber: (data.memberNumber as number) ?? null,
+              role: data.role as string | undefined,
+            }
+          }),
         )
         setUsersLoading(false)
       })
@@ -465,15 +476,31 @@ export default function AdminDashboard() {
     const label = delta > 0 ? 'イエローカードを付与' : 'イエローカードを取消'
     if (!confirm(`${selectedUser.fullName}さんに${label}しますか？（${selectedUser.yellowCards}枚→${next}枚）${next >= 3 ? '\n⚠️ 3枚到達のためブラックリストに入ります' : ''}`)) return
     const update: Record<string, unknown> = { yellowCards: next }
-    if (next >= 3 && selectedUser.role !== 'admin') update.status = 'blacklisted'
-    if (next < 3) update.status = 'active'
-    await updateDoc(doc(db, 'users', selectedUser.uid), update)
+    if (next >= 3 && selectedUser.status === 'active' && selectedUser.role !== 'admin') {
+      update.status = 'blacklisted'
+    }
+    if (next < 3 && selectedUser.status === 'blacklisted') {
+      update.status = 'active'
+    }
+    try {
+      await updateDoc(doc(db, 'users', selectedUser.uid), update)
+      setUsersRefreshKey((k) => k + 1)
+    } catch (err) {
+      console.error('イエローカード更新エラー:', err)
+      alert(`イエローカードの更新に失敗しました: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   async function handleRedCard() {
     if (!selectedUser) return
     if (!confirm(`${selectedUser.fullName}さんにレッドカードを出しますか？\n即座にブラックリストに入ります。`)) return
-    await updateDoc(doc(db, 'users', selectedUser.uid), { status: 'blacklisted', yellowCards: 3 })
+    try {
+      await updateDoc(doc(db, 'users', selectedUser.uid), { status: 'blacklisted', yellowCards: 3 })
+      setUsersRefreshKey((k) => k + 1)
+    } catch (err) {
+      console.error('レッドカード更新エラー:', err)
+      alert(`更新に失敗しました: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   const CHAT_TIMEOUT_MSG =

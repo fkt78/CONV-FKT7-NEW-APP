@@ -50,6 +50,12 @@ type UserSortKey =
   | 'status'
   | 'totalSavedAmount'
 
+function normalizeYellowCards(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, value)
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.max(0, n) : 0
+}
+
 function sortUsersList(
   list: UserRecord[],
   sortKey: UserSortKey,
@@ -150,7 +156,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
               attribute: (data.attribute as string) ?? '',
               birthMonth: (data.birthMonth as string) ?? '',
               status: (data.status as string) ?? 'active',
-              yellowCards: (data.yellowCards as number) ?? 0,
+              yellowCards: normalizeYellowCards(data.yellowCards),
               totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
               usedCouponCount: 0,
               memberNumber: (data.memberNumber as number) ?? null,
@@ -197,7 +203,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           attribute: (data.attribute as string) ?? '',
           birthMonth: (data.birthMonth as string) ?? '',
           status: (data.status as string) ?? 'active',
-          yellowCards: (data.yellowCards as number) ?? 0,
+          yellowCards: normalizeYellowCards(data.yellowCards),
           totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
           usedCouponCount: usedCountMap.get(uid) ?? 0,
           memberNumber: (data.memberNumber as number) ?? null,
