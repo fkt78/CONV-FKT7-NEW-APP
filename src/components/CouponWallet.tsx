@@ -5,7 +5,7 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
+  getDocs,
   doc,
   runTransaction,
   Timestamp,
@@ -140,6 +140,12 @@ export default function CouponWallet() {
     }
   }, [])
 
+  /**
+   * クーポン一覧は onSnapshot ではなく getDocs + 60 秒ポーリングで取得する。
+   * クーポン配信は数秒で間に合う必要が無いため、リアルタイム購読をやめて
+   * Firestore の読み取り回数を削減する。
+   * 表示直後と「タブを開いた瞬間」、および 60 秒ごとに再取得する。
+   */
   useEffect(() => {
     if (!currentUser) return
     setUnusedError(false)
@@ -150,37 +156,61 @@ export default function CouponWallet() {
       setUnusedCoupons(cached.map(couponFromSerializable))
     }
 
+    let cancelled = false
     const q = query(
       collection(db, 'users', currentUser.uid, 'coupons'),
       where('status', '==', 'unused'),
       orderBy('distributedAt', 'desc'),
     )
-    return onSnapshot(q, (snap) => {
-      setUnusedError(false)
-      const coupons = snap.docs.map((d) => mapCoupon(d))
-      setUnusedCoupons(coupons)
-      writeCouponCache(coupons.map(couponToSerializable))
-    }, (err) => {
-      console.error('未使用クーポン購読エラー:', err)
-      setUnusedError(true)
-    })
+    const fetchUnused = async () => {
+      try {
+        const snap = await getDocs(q)
+        if (cancelled) return
+        setUnusedError(false)
+        const coupons = snap.docs.map((d) => mapCoupon(d))
+        setUnusedCoupons(coupons)
+        writeCouponCache(coupons.map(couponToSerializable))
+      } catch (err) {
+        if (cancelled) return
+        console.error('未使用クーポン取得エラー:', err)
+        setUnusedError(true)
+      }
+    }
+    void fetchUnused()
+    const timer = setInterval(fetchUnused, 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
   }, [currentUser])
 
   useEffect(() => {
     if (!currentUser || !showUsedTab) return
     setUsedError(false)
+    let cancelled = false
     const q = query(
       collection(db, 'users', currentUser.uid, 'coupons'),
       where('status', '==', 'used'),
       orderBy('usedAt', 'desc'),
     )
-    return onSnapshot(q, (snap) => {
-      setUsedError(false)
-      setUsedCoupons(snap.docs.map((d) => mapCoupon(d)))
-    }, (err) => {
-      console.error('使用済みクーポン購読エラー:', err)
-      setUsedError(true)
-    })
+    const fetchUsed = async () => {
+      try {
+        const snap = await getDocs(q)
+        if (cancelled) return
+        setUsedError(false)
+        setUsedCoupons(snap.docs.map((d) => mapCoupon(d)))
+      } catch (err) {
+        if (cancelled) return
+        console.error('使用済みクーポン取得エラー:', err)
+        setUsedError(true)
+      }
+    }
+    void fetchUsed()
+    const timer = setInterval(fetchUsed, 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
   }, [currentUser, showUsedTab])
 
   function mapCoupon(d: import('firebase/firestore').QueryDocumentSnapshot): OwnedCoupon {

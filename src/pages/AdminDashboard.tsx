@@ -149,7 +149,10 @@ export default function AdminDashboard() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const messagesForChatRef = useRef<string | null>(null)
-  const chatMetaUnsubRef = useRef<(() => void) | null>(null)
+  /** chats メタ情報の取得方式を「ポーリング」化したため、unsub ではなくタイマーIDを保持する */
+  const chatMetaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  /** 既読更新済みのメッセージID（onSnapshot 再発火時の二重 updateDoc を抑止して書き込みループを断つ） */
+  const markedAsReadRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -187,14 +190,28 @@ export default function AdminDashboard() {
     }
   }, [usersRefreshKey])
 
+  /**
+   * chats（最新メッセージ・未読フラグ）は onSnapshot ではなく 30 秒ポーリングで取得する。
+   * onSnapshot だと顧客 1 通の送信ごとに 100 件再取得 → 既読更新で連鎖的に再発火し、
+   * Firestore 読み取り/書き込みが爆発するため。
+   */
   useEffect(() => {
-    const unsub = onSnapshot(buildChatMetaQuery(), (snap) => {
-      setChatMeta(parseChatMetaSnap(snap))
-    })
-    chatMetaUnsubRef.current = unsub
+    let cancelled = false
+    const fetchChatMeta = async () => {
+      try {
+        const snap = await getDocs(buildChatMetaQuery())
+        if (cancelled) return
+        setChatMeta(parseChatMetaSnap(snap))
+      } catch (err) {
+        console.error('chats メタ取得エラー:', err)
+      }
+    }
+    void fetchChatMeta()
+    chatMetaTimerRef.current = setInterval(fetchChatMeta, 30_000)
     return () => {
-      unsub()
-      chatMetaUnsubRef.current = null
+      cancelled = true
+      if (chatMetaTimerRef.current) clearInterval(chatMetaTimerRef.current)
+      chatMetaTimerRef.current = null
     }
   }, [])
 
@@ -263,30 +280,52 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setSending(false)
+    // チャットを切り替えたら、既読マーク済みID履歴をリセット
+    markedAsReadRef.current = new Set()
   }, [selectedUid])
 
   // 受信メッセージを既読にする（顧客からのメッセージ）
+  // ※ onSnapshot 再発火のたびに updateDoc が走ると書き込みが連鎖するため、
+  //   1) すでに readAt 済みは除外、
+  //   2) このセッションでマーク済みID は除外、
+  //   3) chats/{uid} の unreadFromCustomer がすでに false なら setDoc を呼ばない、
+  //   の3段階で抑止する。
   useEffect(() => {
     if (!currentUser || !selectedUid || messages.length === 0) return
     if (messagesForChatRef.current !== selectedUid) return
     const toMark = messages.filter(
-      (m) => m.senderId === selectedUid && !m.readAt,
+      (m) =>
+        m.senderId === selectedUid &&
+        !m.readAt &&
+        !markedAsReadRef.current.has(m.id),
     )
     if (toMark.length === 0) return
-    Promise.all([
-      ...toMark.map((m) =>
-        updateDoc(doc(db, 'chats', selectedUid, 'messages', m.id), {
-          readAt: serverTimestamp(),
-          readBy: currentUser.uid,
-        }),
-      ),
-      setDoc(doc(db, 'chats', selectedUid), { unreadFromCustomer: false }, { merge: true }),
-    ]).catch((err) => {
+
+    // 楽観的にローカルでマーク済みにして、再発火時の重複書き込みを防ぐ
+    toMark.forEach((m) => markedAsReadRef.current.add(m.id))
+
+    const meta = chatMeta[selectedUid]
+    const needsMetaUpdate = meta?.unreadFromCustomer !== false
+
+    const updates: Promise<unknown>[] = toMark.map((m) =>
+      updateDoc(doc(db, 'chats', selectedUid, 'messages', m.id), {
+        readAt: serverTimestamp(),
+        readBy: currentUser.uid,
+      }),
+    )
+    if (needsMetaUpdate) {
+      updates.push(
+        setDoc(doc(db, 'chats', selectedUid), { unreadFromCustomer: false }, { merge: true }),
+      )
+    }
+    Promise.all(updates).catch((err) => {
+      // 失敗したら次回再試行できるようローカルマークを取り消す
+      toMark.forEach((m) => markedAsReadRef.current.delete(m.id))
       if ((err as { code?: string })?.code !== 'not-found') {
         console.error('既読更新エラー:', err)
       }
     })
-  }, [currentUser, selectedUid, messages])
+  }, [currentUser, selectedUid, messages, chatMeta])
 
   const sortedUsers = useMemo(
     () =>
@@ -648,8 +687,11 @@ export default function AdminDashboard() {
       return
     }
 
-    chatMetaUnsubRef.current?.()
-    chatMetaUnsubRef.current = null
+    // 一斉送信中は chats メタのポーリングを一旦止め、終了時にまとめて1回だけ取り直す
+    if (chatMetaTimerRef.current) {
+      clearInterval(chatMetaTimerRef.current)
+      chatMetaTimerRef.current = null
+    }
 
     setBroadcastSending(true)
     setBroadcastProgress({ current: 0, total: targets.length })
@@ -681,10 +723,16 @@ export default function AdminDashboard() {
       setBroadcastProgress(null)
       setSendTargetUids(null)
       setUsersRefreshKey((k) => k + 1)
-      const unsub = onSnapshot(buildChatMetaQuery(), (snap) => {
-        setChatMeta(parseChatMetaSnap(snap))
-      })
-      chatMetaUnsubRef.current = unsub
+      const refetch = async () => {
+        try {
+          const snap = await getDocs(buildChatMetaQuery())
+          setChatMeta(parseChatMetaSnap(snap))
+        } catch (err) {
+          console.error('chats メタ取得エラー（送信後）:', err)
+        }
+      }
+      void refetch()
+      chatMetaTimerRef.current = setInterval(refetch, 30_000)
     }
   }
 
