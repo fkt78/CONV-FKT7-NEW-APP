@@ -215,11 +215,17 @@ export default function AdminDashboard() {
     }
   }, [])
 
-  // チャット入力・一斉送信・テンプレートピッカーは同一データを参照する（ピッカーを開くまで空にならないよう常時購読）
+  /**
+   * messageTemplates は常時購読（onSnapshot）ではなく、チャットタブを開いた時だけ
+   * getDocs で取得する。テンプレートはほぼ変化しないため常時購読は不要。
+   * チャットタブを開くたびに最新化されるので実用上問題ない。
+   */
   useEffect(() => {
-    return onSnapshot(
-      query(collection(db, 'messageTemplates'), orderBy('createdAt', 'desc')),
-      (snap) => {
+    if (adminTab !== 'chat') return
+    let cancelled = false
+    getDocs(query(collection(db, 'messageTemplates'), orderBy('createdAt', 'desc')))
+      .then((snap) => {
+        if (cancelled) return
         setMessageTemplates(
           snap.docs.map((d) => {
             const data = d.data()
@@ -230,10 +236,10 @@ export default function AdminDashboard() {
             }
           }),
         )
-      },
-      (err) => console.error('messageTemplates購読エラー:', err),
-    )
-  }, [])
+      })
+      .catch((err) => console.error('messageTemplates取得エラー:', err))
+    return () => { cancelled = true }
+  }, [adminTab])
 
   useEffect(() => {
     if (!selectedUid) return
