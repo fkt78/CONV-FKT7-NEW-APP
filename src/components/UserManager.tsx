@@ -135,6 +135,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
   const [couponModalUser, setCouponModalUser] = useState<UserRecord | null>(null)
   const [userCoupons, setUserCoupons] = useState<UserCoupon[]>([])
   const [loadingCoupons, setLoadingCoupons] = useState(false)
+  const [couponVisibleCount, setCouponVisibleCount] = useState(10)
   const [sortKey, setSortKey] = useState<UserSortKey>('memberNumber')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [usersLoading, setUsersLoading] = useState(false)
@@ -369,6 +370,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     setCouponModalUser(user)
     setLoadingCoupons(true)
     setUserCoupons([])
+    setCouponVisibleCount(10)
     try {
       const snap = await getDocs(
         query(
@@ -747,63 +749,77 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                 </div>
               ) : userCoupons.length === 0 ? (
                 <p className="text-[#86868b] text-sm text-center py-8">配信されたクーポンはありません</p>
-              ) : (
-                <div className="space-y-2">
-                  {[...userCoupons]
-                    .sort((a, b) => {
-                      const order = (c: UserCoupon) =>
-                        c.status === 'used' ? 2 : c.isExpired ? 1 : 0
-                      const diff = order(a) - order(b)
-                      if (diff !== 0) return diff
-                      const aT = a.distributedAt?.getTime() ?? 0
-                      const bT = b.distributedAt?.getTime() ?? 0
-                      return bT - aT
-                    })
-                    .map((c) => {
-                    const statusLabel =
-                      c.status === 'used'
-                        ? '使用済'
-                        : c.isExpired
-                          ? '期限切れ'
-                          : '未使用'
-                    const statusClass =
-                      c.status === 'used'
-                        ? 'bg-[#86868b]/20 text-[#86868b]'
-                        : c.isExpired
-                          ? 'bg-[#FF3B30]/15 text-[#FF3B30]'
-                          : 'bg-[#34C759]/15 text-[#34C759]'
-                    return (
-                      <div
-                        key={c.id}
-                        className="flex items-center justify-between gap-3 p-3 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7]/50"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[#1d1d1f] font-medium text-sm truncate">{c.title}</p>
-                          <p className="text-[#86868b] text-xs mt-0.5">
-                            {c.distributedDate} 配信
-                            {c.expiresAt && (
-                              <span> 〜 {formatDate(c.expiresAt)}</span>
+              ) : (() => {
+                const sorted = [...userCoupons].sort((a, b) => {
+                  const order = (c: UserCoupon) =>
+                    c.status === 'used' ? 2 : c.isExpired ? 1 : 0
+                  const diff = order(a) - order(b)
+                  if (diff !== 0) return diff
+                  const aT = a.distributedAt?.getTime() ?? 0
+                  const bT = b.distributedAt?.getTime() ?? 0
+                  return bT - aT
+                })
+                const visible = sorted.slice(0, couponVisibleCount)
+                const remaining = sorted.length - couponVisibleCount
+                return (
+                  <div className="space-y-2">
+                    {visible.map((c) => {
+                      const statusLabel =
+                        c.status === 'used'
+                          ? '使用済'
+                          : c.isExpired
+                            ? '期限切れ'
+                            : '未使用'
+                      const statusClass =
+                        c.status === 'used'
+                          ? 'bg-[#86868b]/20 text-[#86868b]'
+                          : c.isExpired
+                            ? 'bg-[#FF3B30]/15 text-[#FF3B30]'
+                            : 'bg-[#34C759]/15 text-[#34C759]'
+                      return (
+                        <div
+                          key={c.id}
+                          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7]/50"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[#1d1d1f] font-medium text-sm truncate">{c.title}</p>
+                            <p className="text-[#86868b] text-xs mt-0.5">
+                              {c.distributedDate} 配信
+                              {c.expiresAt && (
+                                <span> 〜 {formatDate(c.expiresAt)}</span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {c.discountAmount > 0 && (
+                              <span className="text-[#0095B6] font-bold text-sm">¥{c.discountAmount}</span>
                             )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {c.discountAmount > 0 && (
-                            <span className="text-[#0095B6] font-bold text-sm">¥{c.discountAmount}</span>
-                          )}
-                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusClass}`}>
-                            {statusLabel}
-                          </span>
-                          {c.status === 'used' && c.usedAt && (
-                            <span className="text-[#86868b] text-[10px]">
-                              {formatDate(c.usedAt)} 使用
+                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusClass}`}>
+                              {statusLabel}
                             </span>
-                          )}
+                            {c.status === 'used' && c.usedAt && (
+                              <span className="text-[#86868b] text-[10px]">
+                                {formatDate(c.usedAt)} 使用
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                      )
+                    })}
+                    {remaining > 0 && (
+                      <button
+                        onClick={() => setCouponVisibleCount((n) => n + 10)}
+                        className="w-full py-2.5 rounded-xl border border-[#e5e5ea] text-[#0095B6] text-sm font-medium hover:bg-[#f0f9fc] transition"
+                      >
+                        次の10件を表示（残り{remaining}件）
+                      </button>
+                    )}
+                    <p className="text-center text-[#86868b] text-[10px] pt-1">
+                      {Math.min(couponVisibleCount, sorted.length)} / {sorted.length} 件表示
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="p-4 border-t border-[#e5e5ea] flex-shrink-0">
