@@ -50,6 +50,8 @@ type UserSortKey =
   | 'status'
   | 'totalSavedAmount'
 
+type CouponSortKey = 'date' | 'amount' | 'status' | 'title'
+
 function normalizeYellowCards(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, value)
   const n = Number(value)
@@ -136,6 +138,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
   const [userCoupons, setUserCoupons] = useState<UserCoupon[]>([])
   const [loadingCoupons, setLoadingCoupons] = useState(false)
   const [couponVisibleCount, setCouponVisibleCount] = useState(10)
+  const [couponSortKey, setCouponSortKey] = useState<CouponSortKey>('date')
+  const [couponSortDir, setCouponSortDir] = useState<'asc' | 'desc'>('desc')
   const [sortKey, setSortKey] = useState<UserSortKey>('memberNumber')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [usersLoading, setUsersLoading] = useState(false)
@@ -371,6 +375,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     setLoadingCoupons(true)
     setUserCoupons([])
     setCouponVisibleCount(10)
+    setCouponSortKey('date')
+    setCouponSortDir('desc')
     try {
       const snap = await getDocs(
         query(
@@ -740,6 +746,44 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                   ? `会員番号 #${String(couponModalUser.memberNumber).padStart(5, '0')}`
                   : ''}
               </p>
+              {/* ソートバー */}
+              {userCoupons.length > 0 && !loadingCoupons && (() => {
+                const sortOptions: { key: CouponSortKey; label: string }[] = [
+                  { key: 'date', label: '日付' },
+                  { key: 'amount', label: '金額' },
+                  { key: 'status', label: 'ステータス' },
+                  { key: 'title', label: '内容' },
+                ]
+                return (
+                  <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                    <span className="text-[#86868b] text-[11px] mr-0.5">ソート:</span>
+                    {sortOptions.map(({ key, label }) => {
+                      const active = couponSortKey === key
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            if (active) {
+                              setCouponSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                            } else {
+                              setCouponSortKey(key)
+                              setCouponSortDir(key === 'amount' ? 'desc' : key === 'date' ? 'desc' : 'asc')
+                            }
+                            setCouponVisibleCount(10)
+                          }}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition ${
+                            active
+                              ? 'bg-[#0095B6] text-white border-[#0095B6]'
+                              : 'bg-white text-[#86868b] border-[#e5e5ea] hover:border-[#0095B6] hover:text-[#0095B6]'
+                          }`}
+                        >
+                          {label}{active ? (couponSortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-0 p-4">
@@ -750,14 +794,22 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
               ) : userCoupons.length === 0 ? (
                 <p className="text-[#86868b] text-sm text-center py-8">配信されたクーポンはありません</p>
               ) : (() => {
+                const statusOrder = (c: UserCoupon) =>
+                  c.status === 'used' ? 2 : c.isExpired ? 1 : 0
                 const sorted = [...userCoupons].sort((a, b) => {
-                  const order = (c: UserCoupon) =>
-                    c.status === 'used' ? 2 : c.isExpired ? 1 : 0
-                  const diff = order(a) - order(b)
-                  if (diff !== 0) return diff
-                  const aT = a.distributedAt?.getTime() ?? 0
-                  const bT = b.distributedAt?.getTime() ?? 0
-                  return bT - aT
+                  let cmp = 0
+                  if (couponSortKey === 'date') {
+                    const aT = a.distributedAt?.getTime() ?? 0
+                    const bT = b.distributedAt?.getTime() ?? 0
+                    cmp = aT - bT
+                  } else if (couponSortKey === 'amount') {
+                    cmp = (a.discountAmount ?? 0) - (b.discountAmount ?? 0)
+                  } else if (couponSortKey === 'status') {
+                    cmp = statusOrder(a) - statusOrder(b)
+                  } else if (couponSortKey === 'title') {
+                    cmp = (a.title ?? '').localeCompare(b.title ?? '', 'ja')
+                  }
+                  return couponSortDir === 'asc' ? cmp : -cmp
                 })
                 const visible = sorted.slice(0, couponVisibleCount)
                 const remaining = sorted.length - couponVisibleCount
