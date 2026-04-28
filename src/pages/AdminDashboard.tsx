@@ -153,6 +153,8 @@ export default function AdminDashboard() {
   const chatMetaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   /** 既読更新済みのメッセージID（onSnapshot 再発火時の二重 updateDoc を抑止して書き込みループを断つ） */
   const markedAsReadRef = useRef<Set<string>>(new Set())
+  /** 最近 unreadFromCustomer をクリアした UID と時刻。ポーリングで古い true 値に上書きされるのを防ぐ */
+  const recentlyClearedRef = useRef<Map<string, number>>(new Map())
 
   useEffect(() => {
     let cancelled = false
@@ -201,7 +203,21 @@ export default function AdminDashboard() {
       try {
         const snap = await getDocs(buildChatMetaQuery())
         if (cancelled) return
-        setChatMeta(parseChatMetaSnap(snap))
+        const fresh = parseChatMetaSnap(snap)
+        // 最近 (10 秒以内に) ローカルでクリアした UID は、ポーリングが拾ってきた古い true 値で
+        // 上書きしない。Cloud Function の遅延書き込みやレース条件への対策。
+        const now = Date.now()
+        const clearedMap = recentlyClearedRef.current
+        for (const [uid, clearedAt] of Array.from(clearedMap.entries())) {
+          if (now - clearedAt > 10_000) {
+            clearedMap.delete(uid)
+            continue
+          }
+          if (fresh[uid]?.unreadFromCustomer) {
+            fresh[uid] = { ...fresh[uid], unreadFromCustomer: false }
+          }
+        }
+        setChatMeta(fresh)
       } catch (err) {
         console.error('chats メタ取得エラー:', err)
       }
@@ -315,6 +331,7 @@ export default function AdminDashboard() {
       ...prev,
       [selectedUid]: { ...prev[selectedUid], unreadFromCustomer: false },
     }))
+    recentlyClearedRef.current.set(selectedUid, Date.now())
 
     // 未読メッセージがある場合は必ず Firestore に unreadFromCustomer: false を書き込む。
     // ※ selectUser() の楽観的更新でローカルが先に false になっていても、
@@ -326,7 +343,11 @@ export default function AdminDashboard() {
           readBy: currentUser.uid,
         }),
       ),
-      setDoc(doc(db, 'chats', selectedUid), { unreadFromCustomer: false }, { merge: true }),
+      setDoc(
+        doc(db, 'chats', selectedUid),
+        { unreadFromCustomer: false, lastReadAt: serverTimestamp() },
+        { merge: true },
+      ),
     ]
     Promise.all(updates).catch((err) => {
       // 失敗したら次回再試行できるようローカルマークを取り消す
@@ -416,10 +437,26 @@ export default function AdminDashboard() {
     setSelectedUid(uid)
     setShowChatPanel(true)
     // クリック直後に緑ドットを消す（Firestore 書き込み完了・ポーリング待ちを不要にする）
+    const wasUnread = !!chatMeta[uid]?.unreadFromCustomer
     setChatMeta((prev) => {
       if (!prev[uid]?.unreadFromCustomer) return prev
       return { ...prev, [uid]: { ...prev[uid], unreadFromCustomer: false } }
     })
+    // 全メッセージが既読済みでも、管理者が「閲覧した」事実を必ず Firestore に記録する。
+    // lastReadAt は Cloud Function が「新着メッセージが既読時刻より新しいか」を判定するために使う。
+    // これにより、Cloud Function とのレース条件で unreadFromCustomer: true が誤って残るのを防ぐ。
+    if (wasUnread) {
+      recentlyClearedRef.current.set(uid, Date.now())
+      void setDoc(
+        doc(db, 'chats', uid),
+        { unreadFromCustomer: false, lastReadAt: serverTimestamp() },
+        { merge: true },
+      ).catch((err) => {
+        if ((err as { code?: string })?.code !== 'not-found') {
+          console.error('selectUser meta clear error:', err)
+        }
+      })
+    }
   }
 
   async function runGlobalSearch() {

@@ -166,12 +166,27 @@ export const onChatMessageCreated = onDocumentCreated(
         return
       }
       const customerName = (senderDoc.data()?.fullName as string | undefined) ?? ''
+
+      // レース条件対策: 管理者がこのメッセージより後に既読操作した場合は unreadFromCustomer を立てない。
+      // 1) 管理者の setDoc({unreadFromCustomer: false, lastReadAt}) が先に走った場合、
+      //    Cloud Function 後続実行で誤って true に上書きするのを防ぐ。
+      // 2) message.createdAt が lastReadAt より古い場合は「既読済みの過去メッセージ」とみなす。
+      const chatDocSnap = await db.collection('chats').doc(chatId).get()
+      const lastReadAt = chatDocSnap.data()?.lastReadAt as
+        | FirebaseFirestore.Timestamp
+        | undefined
+      const messageCreatedAt = data?.createdAt as FirebaseFirestore.Timestamp | undefined
+      const shouldMarkUnread =
+        !lastReadAt ||
+        !messageCreatedAt ||
+        messageCreatedAt.toMillis() > lastReadAt.toMillis()
+
       await db
         .collection('chats')
         .doc(chatId)
         .set(
           {
-            unreadFromCustomer: true,
+            ...(shouldMarkUnread && { unreadFromCustomer: true }),
             lastMessage: lastMessageText,
             lastMessageAt: FieldValue.serverTimestamp(),
             customerUid: chatId,
@@ -179,7 +194,11 @@ export const onChatMessageCreated = onDocumentCreated(
           },
           { merge: true },
         )
-      console.log('[onChatMessageCreated] customer message → meta updated', { chatId, messageId })
+      console.log('[onChatMessageCreated] customer message → meta updated', {
+        chatId,
+        messageId,
+        shouldMarkUnread,
+      })
       return
     }
 
