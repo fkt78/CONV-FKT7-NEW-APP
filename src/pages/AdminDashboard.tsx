@@ -310,28 +310,24 @@ export default function AdminDashboard() {
     // 楽観的にローカルでマーク済みにして、再発火時の重複書き込みを防ぐ
     toMark.forEach((m) => markedAsReadRef.current.add(m.id))
 
-    const meta = chatMeta[selectedUid]
-    const needsMetaUpdate = meta?.unreadFromCustomer !== false
+    // 楽観的に chatMeta を更新して緑ドットを即座に消す（ポーリング待ちを防ぐ）
+    setChatMeta((prev) => ({
+      ...prev,
+      [selectedUid]: { ...prev[selectedUid], unreadFromCustomer: false },
+    }))
 
-    // 楽観的に chatMeta を更新して緑ドットを即座に消す（30秒ポーリング待ちを防ぐ）
-    if (needsMetaUpdate) {
-      setChatMeta((prev) => ({
-        ...prev,
-        [selectedUid]: { ...prev[selectedUid], unreadFromCustomer: false },
-      }))
-    }
-
-    const updates: Promise<unknown>[] = toMark.map((m) =>
-      updateDoc(doc(db, 'chats', selectedUid, 'messages', m.id), {
-        readAt: serverTimestamp(),
-        readBy: currentUser.uid,
-      }),
-    )
-    if (needsMetaUpdate) {
-      updates.push(
-        setDoc(doc(db, 'chats', selectedUid), { unreadFromCustomer: false }, { merge: true }),
-      )
-    }
+    // 未読メッセージがある場合は必ず Firestore に unreadFromCustomer: false を書き込む。
+    // ※ selectUser() の楽観的更新でローカルが先に false になっていても、
+    //   Firestore 側はまだ true のままなので、ここで必ず書き込む。
+    const updates: Promise<unknown>[] = [
+      ...toMark.map((m) =>
+        updateDoc(doc(db, 'chats', selectedUid, 'messages', m.id), {
+          readAt: serverTimestamp(),
+          readBy: currentUser.uid,
+        }),
+      ),
+      setDoc(doc(db, 'chats', selectedUid), { unreadFromCustomer: false }, { merge: true }),
+    ]
     Promise.all(updates).catch((err) => {
       // 失敗したら次回再試行できるようローカルマークを取り消す
       toMark.forEach((m) => markedAsReadRef.current.delete(m.id))
