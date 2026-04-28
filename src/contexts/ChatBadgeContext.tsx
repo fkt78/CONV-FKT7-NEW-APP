@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { collection, query, where, getDocs, type Timestamp } from 'firebase/firestore'
+import { collection, query, where, getCountFromServer } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from './AuthContext'
 
@@ -32,10 +32,10 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   /**
-   * バッジ用クーポン枚数は onSnapshot（常時購読）ではなく 60 秒ポーリングで取得。
-   * 全ログインユーザーが常時購読すると、クーポン配信のたびに全員分の読み取りが発生し
-   * Firestore 読み取りコストが線形に増大するため。
-   * クーポンバッジは数秒の遅延があっても体験上問題ない。
+   * バッジ用クーポン枚数は getCountFromServer() で取得する。
+   * getDocs で全件取得すると「クーポン枚数 × ユーザー数 × ポーリング回数」の読み取りが発生するが、
+   * getCountFromServer() はドキュメント数に関わらず常に 1 読み取りで済む。
+   * 期限切れフィルタをサーバー側で行うため expiresAt > now の where 条件も追加。
    */
   useEffect(() => {
     if (!currentUser) {
@@ -43,30 +43,33 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
       return
     }
     let cancelled = false
-    const q = query(
+    const now = new Date()
+    // 有効期限なし（expiresAt が null）のものと、期限内のものを合算するため 2 クエリ
+    const qNoExpiry = query(
       collection(db, 'users', currentUser.uid, 'coupons'),
       where('status', '==', 'unused'),
+      where('expiresAt', '==', null),
+    )
+    const qWithExpiry = query(
+      collection(db, 'users', currentUser.uid, 'coupons'),
+      where('status', '==', 'unused'),
+      where('expiresAt', '>', now),
     )
     const fetchCount = async () => {
       try {
-        const snap = await getDocs(q)
+        const [snapNoExpiry, snapWithExpiry] = await Promise.all([
+          getCountFromServer(qNoExpiry),
+          getCountFromServer(qWithExpiry),
+        ])
         if (cancelled) return
-        const now = Date.now()
-        const validCount = snap.docs.filter((d) => {
-          const exp = d.data().expiresAt as Timestamp | null | undefined
-          if (!exp) return true
-          const expMs = exp.toDate?.()?.getTime?.()
-          if (typeof expMs !== 'number' || Number.isNaN(expMs)) return true
-          return now <= expMs
-        }).length
-        setCouponCount(validCount)
+        setCouponCount(snapNoExpiry.data().count + snapWithExpiry.data().count)
       } catch (err) {
         if (cancelled) return
         console.error('[ChatBadgeContext] coupon count fetch error:', err)
       }
     }
     void fetchCount()
-    const timer = setInterval(fetchCount, 60_000)
+    const timer = setInterval(fetchCount, 120_000)
     return () => {
       cancelled = true
       clearInterval(timer)

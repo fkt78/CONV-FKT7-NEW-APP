@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { type User, onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc, onSnapshot, type DocumentSnapshot } from 'firebase/firestore'
+import { doc, getDoc, type DocumentSnapshot } from 'firebase/firestore'
 import { auth, authPersistenceReady, db } from '../lib/firebase'
 
 export type UserStatus = 'active' | 'blacklisted' | null
@@ -79,14 +79,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsubAuth: (() => void) | undefined
-    let unsubUser: (() => void) | undefined
+    let userPollTimer: ReturnType<typeof setInterval> | undefined
     let cancelled = false
 
     void authPersistenceReady.then(() => {
       if (cancelled) return
       unsubAuth = onAuthStateChanged(auth, (user) => {
-        unsubUser?.()
-        unsubUser = undefined
+        if (userPollTimer) { clearInterval(userPollTimer); userPollTimer = undefined }
         setCurrentUser(user)
 
         if (!user) {
@@ -94,7 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRole(null)
           setUserData(null)
           setLoading(false)
-          // ログアウト時にクーポンキャッシュをクリア
           try { sessionStorage.removeItem('vip-coupon-wallet-cache') } catch { /* ignore */ }
           return
         }
@@ -102,41 +100,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(true)
         const uid = user.uid
 
-        // 即時 getDoc（以前の挙動）。onSnapshot だけだと初回が遅い／失敗する環境があり、管理者メニューが出ないことがある
-        void getDoc(doc(db, 'users', uid))
-          .then((snap) => {
-            if (auth.currentUser?.uid !== uid) return
-            applyUserDoc(snap, setUserStatus, setUserRole, setUserData)
-            setLoading(false)
-          })
-          .catch((err) => {
-            console.error('[AuthContext] users getDoc 失敗', err)
-            if (auth.currentUser?.uid !== uid) return
-            setUserStatus(null)
-            setUserRole(null)
-            setUserData(null)
-            setLoading(false)
-          })
+        // 初回即時取得（ロール判定を遅延させないため getDoc を優先）
+        const fetchUserDoc = () => {
+          void getDoc(doc(db, 'users', uid))
+            .then((snap) => {
+              if (cancelled || auth.currentUser?.uid !== uid) return
+              applyUserDoc(snap, setUserStatus, setUserRole, setUserData)
+              setLoading(false)
+            })
+            .catch((err) => {
+              console.error('[AuthContext] users getDoc 失敗', err)
+              if (cancelled || auth.currentUser?.uid !== uid) return
+              setLoading(false)
+            })
+        }
 
-        unsubUser = onSnapshot(
-          doc(db, 'users', uid),
-          (snap) => {
-            if (auth.currentUser?.uid !== uid) return
-            applyUserDoc(snap, setUserStatus, setUserRole, setUserData)
-            setLoading(false)
-          },
-          (err) => {
-            // 購読だけ失敗した場合、getDoc で既に admin が入っていることがある。ロールを消さない
-            console.error('[AuthContext] users 購読エラー（ロールは維持）', err)
-            setLoading(false)
-          },
-        )
+        fetchUserDoc()
+        // onSnapshot の代わりに 5 分ポーリング。ロール・ステータスは頻繁に変わらないため
+        // 5 分間隔で十分。onSnapshot は users/{uid} の更新（黄色カード等）のたびに
+        // 全ユーザー分の読み取りが発生し、Firestore コストが増大するため廃止。
+        userPollTimer = setInterval(fetchUserDoc, 300_000)
       })
     })
 
     return () => {
       cancelled = true
-      unsubUser?.()
+      if (userPollTimer) clearInterval(userPollTimer)
       unsubAuth?.()
     }
   }, [])

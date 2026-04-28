@@ -177,7 +177,7 @@ export default function CouponWallet() {
       }
     }
     void fetchUnused()
-    const timer = setInterval(fetchUnused, 60_000)
+    const timer = setInterval(fetchUnused, 120_000)
     return () => {
       cancelled = true
       clearInterval(timer)
@@ -206,7 +206,7 @@ export default function CouponWallet() {
       }
     }
     void fetchUsed()
-    const timer = setInterval(fetchUsed, 60_000)
+    const timer = setInterval(fetchUsed, 120_000)
     return () => {
       cancelled = true
       clearInterval(timer)

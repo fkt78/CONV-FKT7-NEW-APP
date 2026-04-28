@@ -207,7 +207,7 @@ export default function AdminDashboard() {
       }
     }
     void fetchChatMeta()
-    chatMetaTimerRef.current = setInterval(fetchChatMeta, 30_000)
+    chatMetaTimerRef.current = setInterval(fetchChatMeta, 60_000)
     return () => {
       cancelled = true
       if (chatMetaTimerRef.current) clearInterval(chatMetaTimerRef.current)
@@ -751,7 +751,7 @@ export default function AdminDashboard() {
         }
       }
       void refetch()
-      chatMetaTimerRef.current = setInterval(refetch, 30_000)
+      chatMetaTimerRef.current = setInterval(refetch, 60_000)
     }
   }
 
