@@ -313,6 +313,14 @@ export default function AdminDashboard() {
     const meta = chatMeta[selectedUid]
     const needsMetaUpdate = meta?.unreadFromCustomer !== false
 
+    // 楽観的に chatMeta を更新して緑ドットを即座に消す（30秒ポーリング待ちを防ぐ）
+    if (needsMetaUpdate) {
+      setChatMeta((prev) => ({
+        ...prev,
+        [selectedUid]: { ...prev[selectedUid], unreadFromCustomer: false },
+      }))
+    }
+
     const updates: Promise<unknown>[] = toMark.map((m) =>
       updateDoc(doc(db, 'chats', selectedUid, 'messages', m.id), {
         readAt: serverTimestamp(),
@@ -411,6 +419,11 @@ export default function AdminDashboard() {
   function selectUser(uid: string) {
     setSelectedUid(uid)
     setShowChatPanel(true)
+    // クリック直後に緑ドットを消す（Firestore 書き込み完了・ポーリング待ちを不要にする）
+    setChatMeta((prev) => {
+      if (!prev[uid]?.unreadFromCustomer) return prev
+      return { ...prev, [uid]: { ...prev[uid], unreadFromCustomer: false } }
+    })
   }
 
   async function runGlobalSearch() {
