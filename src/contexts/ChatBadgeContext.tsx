@@ -9,6 +9,7 @@ import {
 import { collection, query, where, getCountFromServer } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from './AuthContext'
+import { useVisibilityPolling } from '../hooks/useVisibilityPolling'
 
 interface ChatBadgeValue {
   unreadMessageCount: number
@@ -32,49 +33,38 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   /**
-   * バッジ用クーポン枚数は getCountFromServer() で取得する。
-   * getDocs で全件取得すると「クーポン枚数 × ユーザー数 × ポーリング回数」の読み取りが発生するが、
-   * getCountFromServer() はドキュメント数に関わらず常に 1 読み取りで済む。
-   * 期限切れフィルタをサーバー側で行うため expiresAt > now の where 条件も追加。
+   * バッジ用クーポン枚数は getCountFromServer() で取得する（1リクエスト=1読み取り）。
+   * 画面表示中のみ 120 秒ポーリング。非表示時は停止して Firestore 読み取りを削減。
    */
   useEffect(() => {
-    if (!currentUser) {
-      setCouponCount(0)
-      return
-    }
-    let cancelled = false
-    const now = new Date()
-    // 有効期限なし（expiresAt が null）のものと、期限内のものを合算するため 2 クエリ
-    const qNoExpiry = query(
-      collection(db, 'users', currentUser.uid, 'coupons'),
-      where('status', '==', 'unused'),
-      where('expiresAt', '==', null),
-    )
-    const qWithExpiry = query(
-      collection(db, 'users', currentUser.uid, 'coupons'),
-      where('status', '==', 'unused'),
-      where('expiresAt', '>', now),
-    )
-    const fetchCount = async () => {
-      try {
-        const [snapNoExpiry, snapWithExpiry] = await Promise.all([
-          getCountFromServer(qNoExpiry),
-          getCountFromServer(qWithExpiry),
-        ])
-        if (cancelled) return
-        setCouponCount(snapNoExpiry.data().count + snapWithExpiry.data().count)
-      } catch (err) {
-        if (cancelled) return
-        console.error('[ChatBadgeContext] coupon count fetch error:', err)
-      }
-    }
-    void fetchCount()
-    const timer = setInterval(fetchCount, 120_000)
-    return () => {
-      cancelled = true
-      clearInterval(timer)
+    if (!currentUser) setCouponCount(0)
+  }, [currentUser])
+
+  const fetchCouponCount = useCallback(async () => {
+    if (!currentUser) return
+    try {
+      const now = new Date()
+      const qNoExpiry = query(
+        collection(db, 'users', currentUser.uid, 'coupons'),
+        where('status', '==', 'unused'),
+        where('expiresAt', '==', null),
+      )
+      const qWithExpiry = query(
+        collection(db, 'users', currentUser.uid, 'coupons'),
+        where('status', '==', 'unused'),
+        where('expiresAt', '>', now),
+      )
+      const [snapNoExpiry, snapWithExpiry] = await Promise.all([
+        getCountFromServer(qNoExpiry),
+        getCountFromServer(qWithExpiry),
+      ])
+      setCouponCount(snapNoExpiry.data().count + snapWithExpiry.data().count)
+    } catch (err) {
+      console.error('[ChatBadgeContext] coupon count fetch error:', err)
     }
   }, [currentUser])
+
+  useVisibilityPolling(fetchCouponCount, 120_000, !!currentUser, [currentUser?.uid])
 
   return (
     <ChatBadgeContext.Provider value={{ unreadMessageCount, couponCount, setUnreadCount }}>

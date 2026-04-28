@@ -15,6 +15,7 @@ import { db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { getLocaleTag } from '../lib/formatTime'
 import { resolveCouponTexts } from '../lib/coupon'
+import { useVisibilityPolling } from '../hooks/useVisibilityPolling'
 
 type WalletTab = 'unused' | 'history'
 
@@ -146,72 +147,60 @@ export default function CouponWallet() {
    * Firestore の読み取り回数を削減する。
    * 表示直後と「タブを開いた瞬間」、および 60 秒ごとに再取得する。
    */
+  // キャッシュからの即時反映（mount 時のみ）
   useEffect(() => {
     if (!currentUser) return
     setUnusedError(false)
-
-    // キャッシュがあれば即時反映（stale-while-revalidate）
     const cached = readCouponCache()
     if (cached) {
       setUnusedCoupons(cached.map(couponFromSerializable))
     }
-
-    let cancelled = false
-    const q = query(
-      collection(db, 'users', currentUser.uid, 'coupons'),
-      where('status', '==', 'unused'),
-      orderBy('distributedAt', 'desc'),
-    )
-    const fetchUnused = async () => {
-      try {
-        const snap = await getDocs(q)
-        if (cancelled) return
-        setUnusedError(false)
-        const coupons = snap.docs.map((d) => mapCoupon(d))
-        setUnusedCoupons(coupons)
-        writeCouponCache(coupons.map(couponToSerializable))
-      } catch (err) {
-        if (cancelled) return
-        console.error('未使用クーポン取得エラー:', err)
-        setUnusedError(true)
-      }
-    }
-    void fetchUnused()
-    const timer = setInterval(fetchUnused, 120_000)
-    return () => {
-      cancelled = true
-      clearInterval(timer)
-    }
   }, [currentUser])
 
-  useEffect(() => {
-    if (!currentUser || !showUsedTab) return
-    setUsedError(false)
-    let cancelled = false
-    const q = query(
-      collection(db, 'users', currentUser.uid, 'coupons'),
-      where('status', '==', 'used'),
-      orderBy('usedAt', 'desc'),
-    )
-    const fetchUsed = async () => {
-      try {
-        const snap = await getDocs(q)
-        if (cancelled) return
-        setUsedError(false)
-        setUsedCoupons(snap.docs.map((d) => mapCoupon(d)))
-      } catch (err) {
-        if (cancelled) return
-        console.error('使用済みクーポン取得エラー:', err)
-        setUsedError(true)
-      }
+  const fetchUnused = useCallback(async () => {
+    if (!currentUser) return
+    try {
+      const q = query(
+        collection(db, 'users', currentUser.uid, 'coupons'),
+        where('status', '==', 'unused'),
+        orderBy('distributedAt', 'desc'),
+      )
+      const snap = await getDocs(q)
+      setUnusedError(false)
+      const coupons = snap.docs.map((d) => mapCoupon(d))
+      setUnusedCoupons(coupons)
+      writeCouponCache(coupons.map(couponToSerializable))
+    } catch (err) {
+      console.error('未使用クーポン取得エラー:', err)
+      setUnusedError(true)
     }
-    void fetchUsed()
-    const timer = setInterval(fetchUsed, 120_000)
-    return () => {
-      cancelled = true
-      clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser])
+
+  const fetchUsed = useCallback(async () => {
+    if (!currentUser) return
+    try {
+      const q = query(
+        collection(db, 'users', currentUser.uid, 'coupons'),
+        where('status', '==', 'used'),
+        orderBy('usedAt', 'desc'),
+      )
+      const snap = await getDocs(q)
+      setUsedError(false)
+      setUsedCoupons(snap.docs.map((d) => mapCoupon(d)))
+    } catch (err) {
+      console.error('使用済みクーポン取得エラー:', err)
+      setUsedError(true)
     }
-  }, [currentUser, showUsedTab])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser])
+
+  // 画面表示中のみ 120 秒ポーリング。非表示時は停止して Firestore 読み取りを削減。
+  useVisibilityPolling(fetchUnused, 120_000, !!currentUser, [currentUser?.uid])
+  useVisibilityPolling(fetchUsed, 120_000, !!currentUser && showUsedTab, [
+    currentUser?.uid,
+    showUsedTab,
+  ])
 
   function mapCoupon(d: import('firebase/firestore').QueryDocumentSnapshot): OwnedCoupon {
     const data = d.data()

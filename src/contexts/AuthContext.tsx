@@ -81,14 +81,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let unsubAuth: (() => void) | undefined
     let userPollTimer: ReturnType<typeof setInterval> | undefined
     let cancelled = false
+    let activeUid: string | null = null
+
+    const fetchUserDoc = () => {
+      const uid = activeUid
+      if (!uid) return
+      void getDoc(doc(db, 'users', uid))
+        .then((snap) => {
+          if (cancelled || auth.currentUser?.uid !== uid) return
+          applyUserDoc(snap, setUserStatus, setUserRole, setUserData)
+          setLoading(false)
+        })
+        .catch((err) => {
+          console.error('[AuthContext] users getDoc 失敗', err)
+          if (cancelled || auth.currentUser?.uid !== uid) return
+          setLoading(false)
+        })
+    }
+    const startPolling = () => {
+      if (userPollTimer || !activeUid) return
+      // onSnapshot の代わりに 5 分ポーリング。画面非表示時はタイマーを止める。
+      userPollTimer = setInterval(fetchUserDoc, 300_000)
+    }
+    const stopPolling = () => {
+      if (userPollTimer) {
+        clearInterval(userPollTimer)
+        userPollTimer = undefined
+      }
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        if (activeUid) {
+          // 復帰時は最新を即時取得
+          fetchUserDoc()
+          startPolling()
+        }
+      } else {
+        stopPolling()
+      }
+    }
 
     void authPersistenceReady.then(() => {
       if (cancelled) return
       unsubAuth = onAuthStateChanged(auth, (user) => {
-        if (userPollTimer) { clearInterval(userPollTimer); userPollTimer = undefined }
+        stopPolling()
         setCurrentUser(user)
 
         if (!user) {
+          activeUid = null
           setUserStatus(null)
           setUserRole(null)
           setUserData(null)
@@ -98,34 +138,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setLoading(true)
-        const uid = user.uid
-
-        // 初回即時取得（ロール判定を遅延させないため getDoc を優先）
-        const fetchUserDoc = () => {
-          void getDoc(doc(db, 'users', uid))
-            .then((snap) => {
-              if (cancelled || auth.currentUser?.uid !== uid) return
-              applyUserDoc(snap, setUserStatus, setUserRole, setUserData)
-              setLoading(false)
-            })
-            .catch((err) => {
-              console.error('[AuthContext] users getDoc 失敗', err)
-              if (cancelled || auth.currentUser?.uid !== uid) return
-              setLoading(false)
-            })
-        }
-
+        activeUid = user.uid
         fetchUserDoc()
-        // onSnapshot の代わりに 5 分ポーリング。ロール・ステータスは頻繁に変わらないため
-        // 5 分間隔で十分。onSnapshot は users/{uid} の更新（黄色カード等）のたびに
-        // 全ユーザー分の読み取りが発生し、Firestore コストが増大するため廃止。
-        userPollTimer = setInterval(fetchUserDoc, 300_000)
+        if (document.visibilityState === 'visible') startPolling()
       })
     })
 
+    document.addEventListener('visibilitychange', handleVisibility)
     return () => {
       cancelled = true
-      if (userPollTimer) clearInterval(userPollTimer)
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibility)
       unsubAuth?.()
     }
   }, [])

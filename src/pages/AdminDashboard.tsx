@@ -222,12 +222,29 @@ export default function AdminDashboard() {
         console.error('chats メタ取得エラー:', err)
       }
     }
-    void fetchChatMeta()
-    chatMetaTimerRef.current = setInterval(fetchChatMeta, 60_000)
+    // 画面が非表示の間はポーリングを停止し、復帰時に即時再取得＋再開する。
+    // Firestore 読み取りを大幅に削減（ブラウザタブを背面化・端末スリープ中など）。
+    const startPolling = () => {
+      if (chatMetaTimerRef.current) return
+      void fetchChatMeta()
+      chatMetaTimerRef.current = setInterval(fetchChatMeta, 60_000)
+    }
+    const stopPolling = () => {
+      if (chatMetaTimerRef.current) {
+        clearInterval(chatMetaTimerRef.current)
+        chatMetaTimerRef.current = null
+      }
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') startPolling()
+      else stopPolling()
+    }
+    if (document.visibilityState === 'visible') startPolling()
+    document.addEventListener('visibilitychange', handleVisibility)
     return () => {
       cancelled = true
-      if (chatMetaTimerRef.current) clearInterval(chatMetaTimerRef.current)
-      chatMetaTimerRef.current = null
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [])
 
