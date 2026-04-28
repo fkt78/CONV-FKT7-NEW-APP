@@ -23,7 +23,7 @@ export default function PwaUpdatePrompt() {
             if (!registration?.installing && navigator.onLine) {
               await registration?.update()
             }
-          }, 60 * 60 * 1000)
+          }, 5 * 60 * 1000)
         },
       })
       updateSWRef.current = updateSW
