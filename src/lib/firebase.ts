@@ -14,6 +14,7 @@ const required = [
   'VITE_FIREBASE_PROJECT_ID',
   'VITE_FIREBASE_STORAGE_BUCKET',
   'VITE_FIREBASE_APP_ID',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
 ] as const
 const missing = required.filter((k) => !env[k])
 if (missing.length > 0) {

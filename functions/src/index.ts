@@ -382,14 +382,23 @@ export const onNewsCreated = onDocumentCreated('news/{newsId}', async (event) =>
   const data = snap.data()
   const title = (data?.title as string) ?? 'お知らせ'
   const usersSnap = await db.collection('users').get()
-  for (const doc of usersSnap.docs) {
-    const uid = doc.id
+
+  // 逐次 await ではなく並列バッチ処理にし、タイムアウトを回避する
+  const targets = usersSnap.docs.filter((doc) => {
     const user = doc.data()
     const settings = (user?.notificationSettings ?? {}) as NotificationSettings
-    if (settings.news === false) continue
-    if (settings.enabled === false) continue
-    if (!user?.fcmToken) continue
-    await sendToUser(uid, '新しいお知らせ', title, 'news')
+    if (settings.news === false || settings.enabled === false) return false
+    if (!user?.fcmToken) return false
+    return true
+  })
+
+  const BATCH = 20
+  for (let i = 0; i < targets.length; i += BATCH) {
+    await Promise.all(
+      targets.slice(i, i + BATCH).map((doc) =>
+        sendToUser(doc.id, '新しいお知らせ', title, 'news'),
+      ),
+    )
   }
 })
 

@@ -11,7 +11,6 @@ import { useEffect, useRef } from 'react'
  * - firebase/messaging は動的インポート（Safari/LINE内ブラウザで白画面を防ぐ）
  */
 export function useNotificationRegistration(uid: string | null) {
-  const registeredRef = useRef(false)
   // フォアグラウンドハンドラーの登録解除関数
   const fgUnsubRef = useRef<(() => void) | null>(null)
 
@@ -50,7 +49,6 @@ export function useNotificationRegistration(uid: string | null) {
         if (cancelled) return
 
         await mod.registerForPushNotifications(uid!, reg)
-        registeredRef.current = true
 
         // フォアグラウンド通知ハンドラーを登録
         // アプリが開いているときは SW の push ではなく onMessage が呼ばれるため
