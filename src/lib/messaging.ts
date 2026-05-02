@@ -1,7 +1,7 @@
 /**
  * Firebase Cloud Messaging（プッシュ通知）の登録・トークン管理
  */
-import { getMessaging, getToken, isSupported } from 'firebase/messaging'
+import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db, app } from './firebase'
 
@@ -84,11 +84,55 @@ export async function getNotificationSettings(
   const data = snap.data()
   const s = data?.notificationSettings
   if (!s || typeof s !== 'object') return { ...DEFAULT_NOTIFICATION_SETTINGS }
+  // フィールドが undefined の場合は true（デフォルト ON）扱い。
+  // Cloud Functions 側も「=== false のときだけ OFF」で統一しているため、
+  // Boolean(undefined) = false にしてしまうと画面と実際の送信状況がズレる。
   return {
-    enabled: Boolean(s.enabled),
-    messages: Boolean(s.messages),
-    coupons: Boolean(s.coupons),
-    news: Boolean(s.news),
-    sound: Boolean(s.sound),
+    enabled: s.enabled !== false,
+    messages: s.messages !== false,
+    coupons: s.coupons !== false,
+    news: s.news !== false,
+    sound: s.sound !== false,
   }
+}
+
+/**
+ * フォアグラウンド（アプリが開いている状態）での通知ハンドラーを登録する。
+ *
+ * FCM の仕様上、アプリがフォアグラウンドのとき Service Worker の push ハンドラーは
+ * 呼ばれず、代わりに onMessage が呼ばれる。
+ * onMessage を登録しないと、アプリを開いた状態で受信したメッセージが
+ * サイレントに破棄される（通知が一切表示されない）。
+ *
+ * @returns 登録解除関数（unmount 時に呼ぶこと）
+ */
+export async function setupForegroundMessageHandler(
+  swRegistration: ServiceWorkerRegistration,
+): Promise<() => void> {
+  const supported = await isSupported()
+  if (!supported) return () => {}
+
+  const messaging = getMessaging(app)
+  const unsubscribe = onMessage(messaging, (payload) => {
+    const title =
+      payload.notification?.title ?? (payload.data?.title as string | undefined) ?? 'FKT7'
+    const body =
+      payload.notification?.body ?? (payload.data?.body as string | undefined) ?? ''
+    const url = (payload.data?.url as string | undefined) ?? '/'
+    const sound = payload.data?.sound !== 'false'
+
+    // フォアグラウンドでも確実に通知を表示するため SW の showNotification を使う
+    void swRegistration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      // メッセージごとにユニークな tag にして「潰れ」を防ぐ
+      tag: `fkt7-fg-${Date.now()}`,
+      renotify: true,
+      silent: !sound,
+      data: { url },
+    } as NotificationOptions)
+  })
+
+  return unsubscribe
 }
