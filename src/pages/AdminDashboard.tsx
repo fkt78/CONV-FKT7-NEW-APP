@@ -279,34 +279,57 @@ export default function AdminDashboard() {
     setMessages([])
     setSearchQuery('')
     messagesForChatRef.current = null
-    // limitToLast(100) で最新100件を昇順取得。全件取得より初回表示が大幅に速くなる。
+
     const q = query(
       collection(db, 'chats', selectedUid, 'messages'),
       orderBy('createdAt', 'asc'),
       limitToLast(100),
     )
-    return onSnapshot(
-      q,
-      (snap) => {
-        messagesForChatRef.current = selectedUid
-        setMessages(
-          snap.docs.map((d) => {
-            const data = d.data()
-            return {
-              id: d.id,
-              senderId: data.senderId as string,
-              text: (data.text as string) ?? '',
-              createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
-              readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
-              attachmentUrl: data.attachmentUrl as string | undefined,
-              attachmentType: data.attachmentType as AttachmentType | undefined,
-              attachmentName: data.attachmentName as string | undefined,
-            }
-          }),
-        )
-      },
-      (err) => console.error('[admin messages onSnapshot]', err),
-    )
+
+    let unsub: (() => void) | null = null
+
+    const subscribe = () => {
+      if (unsub) return
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          messagesForChatRef.current = selectedUid
+          setMessages(
+            snap.docs.map((d) => {
+              const data = d.data()
+              return {
+                id: d.id,
+                senderId: data.senderId as string,
+                text: (data.text as string) ?? '',
+                createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+                readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+                attachmentUrl: data.attachmentUrl as string | undefined,
+                attachmentType: data.attachmentType as AttachmentType | undefined,
+                attachmentName: data.attachmentName as string | undefined,
+              }
+            }),
+          )
+        },
+        (err) => console.error('[admin messages onSnapshot]', err),
+      )
+    }
+    const unsubscribe = () => {
+      unsub?.()
+      unsub = null
+    }
+    // 画面が非表示のときは購読を停止し Firestore 読み取りを削減。
+    // 復帰時に再購読して最新メッセージを取得する。
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') subscribe()
+      else unsubscribe()
+    }
+
+    if (document.visibilityState === 'visible') subscribe()
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [selectedUid])
 
   useEffect(() => {

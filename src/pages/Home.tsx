@@ -93,40 +93,62 @@ export default function Home() {
     initialLoadCheckedRef.current = false
     setOlderMessages([])
     setCanLoadMore(false)
-    // limitToLast(30) で最新30件を昇順取得。desc+reverse より送信直後も正しく表示される。
-    // serverTimestamps: 'estimate' で送信直後の pending timestamp を推定値として扱う。
+
     const q = query(
       collection(db, 'chats', currentUser.uid, 'messages'),
       orderBy('createdAt', 'asc'),
       limitToLast(MSG_LIMIT),
     )
-    return onSnapshot(
-      q,
-      (snap) => {
-        setMessages(
-          snap.docs.map((d) => {
-            const data = d.data({ serverTimestamps: 'estimate' })
-            return {
-              id: d.id,
-              senderId: data.senderId as string,
-              text: (data.text as string) ?? '',
-              createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
-              readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
-              attachmentUrl: data.attachmentUrl as string | undefined,
-              attachmentType: data.attachmentType as AttachmentType | undefined,
-              attachmentName: data.attachmentName as string | undefined,
-            }
-          }),
-        )
-        if (!initialLoadCheckedRef.current) {
-          initialLoadCheckedRef.current = true
-          setCanLoadMore(snap.docs.length >= MSG_LIMIT)
-        }
-      },
-      (err) => {
-        console.error('[messages onSnapshot]', err)
-      },
-    )
+
+    let unsub: (() => void) | null = null
+
+    const subscribe = () => {
+      if (unsub) return
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          setMessages(
+            snap.docs.map((d) => {
+              const data = d.data({ serverTimestamps: 'estimate' })
+              return {
+                id: d.id,
+                senderId: data.senderId as string,
+                text: (data.text as string) ?? '',
+                createdAt: (data.createdAt as Timestamp | null)?.toDate() ?? null,
+                readAt: (data.readAt as Timestamp | null)?.toDate() ?? null,
+                attachmentUrl: data.attachmentUrl as string | undefined,
+                attachmentType: data.attachmentType as AttachmentType | undefined,
+                attachmentName: data.attachmentName as string | undefined,
+              }
+            }),
+          )
+          if (!initialLoadCheckedRef.current) {
+            initialLoadCheckedRef.current = true
+            setCanLoadMore(snap.docs.length >= MSG_LIMIT)
+          }
+        },
+        (err) => {
+          console.error('[messages onSnapshot]', err)
+        },
+      )
+    }
+    const unsubscribe = () => {
+      unsub?.()
+      unsub = null
+    }
+    // 画面が非表示のときは購読を停止し Firestore 読み取りを削減。
+    // 復帰時に再購読して最新メッセージを取得する。
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') subscribe()
+      else unsubscribe()
+    }
+
+    if (document.visibilityState === 'visible') subscribe()
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [currentUser])
 
   const displayMessages = useMemo(
