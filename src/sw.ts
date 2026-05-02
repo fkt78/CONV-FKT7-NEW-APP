@@ -4,11 +4,50 @@ import { registerRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
+import { initializeApp } from 'firebase/app'
+import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw'
 
 declare let self: ServiceWorkerGlobalScope
 
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
+
+// ── Firebase Messaging (SW) ───────────────────────────────────────────────────
+// Firebase Messaging をここで初期化することで、フォアグラウンド時の
+// 「SW → アプリページ」メッセージ中継チャンネルが確立される。
+// これがないと onMessage() にメッセージが届かない。
+const firebaseApp = initializeApp({
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
+})
+
+const fbMessaging = getMessaging(firebaseApp)
+
+// バックグラウンド受信時（アプリが閉じているまたは非表示）の通知表示
+// ※フォアグラウンド時はアプリ側の onMessage() が呼ばれるため、この関数は呼ばれない
+onBackgroundMessage(fbMessaging, (payload) => {
+  const title =
+    payload.notification?.title ?? (payload.data?.title as string | undefined) ?? 'FKT7'
+  const body =
+    payload.notification?.body ?? (payload.data?.body as string | undefined) ?? ''
+  const url = (payload.data?.url as string | undefined) ?? '/'
+  const sound = payload.data?.sound !== 'false'
+
+  void self.registration.showNotification(title, {
+    body,
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    tag: 'fkt7-notification',
+    renotify: true,
+    silent: !sound,
+    data: { url },
+  } as NotificationOptions)
+})
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── ランタイムキャッシュ ──────────────────────────────────────────────────────
 
@@ -75,31 +114,6 @@ self.addEventListener('message', (event) => {
   }
 })
 
-self.addEventListener('push', (event) => {
-  if (!event.data) return
-  let data: { notification?: { title?: string; body?: string }; title?: string; body?: string; data?: { url?: string; sound?: string } } = {}
-  try {
-    data = event.data.json()
-  } catch {
-    return
-  }
-  const title = data.notification?.title ?? data.title ?? 'FKT7'
-  const body = data.notification?.body ?? data.body ?? ''
-  const url = data.data?.url ?? '/'
-  const sound = data.data?.sound !== 'false'
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
-      tag: 'fkt7-notification',
-      renotify: true,
-      silent: !sound,
-      data: { url },
-    } as NotificationOptions),
-  )
-})
-
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const url = event.notification.data?.url ?? '/'
@@ -107,7 +121,7 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url)
+          void (client as WindowClient).navigate(url)
           return client.focus()
         }
       }

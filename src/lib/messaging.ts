@@ -114,6 +114,8 @@ export async function setupForegroundMessageHandler(
 
   const messaging = getMessaging(app)
   const unsubscribe = onMessage(messaging, (payload) => {
+    console.log('[Messaging] onMessage fired (foreground)', payload)
+
     const title =
       payload.notification?.title ?? (payload.data?.title as string | undefined) ?? 'FKT7'
     const body =
@@ -122,7 +124,7 @@ export async function setupForegroundMessageHandler(
     const sound = payload.data?.sound !== 'false'
 
     // フォアグラウンドでも確実に通知を表示するため SW の showNotification を使う
-    void swRegistration.showNotification(title, {
+    swRegistration.showNotification(title, {
       body,
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-192x192.png',
@@ -131,7 +133,9 @@ export async function setupForegroundMessageHandler(
       renotify: true,
       silent: !sound,
       data: { url },
-    } as NotificationOptions)
+    } as NotificationOptions).catch((err) => {
+      console.error('[Messaging] showNotification failed:', err)
+    })
   })
 
   return unsubscribe
