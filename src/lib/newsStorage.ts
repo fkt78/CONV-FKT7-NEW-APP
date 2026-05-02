@@ -29,21 +29,43 @@ const MAX_IMAGE_SIZE = 15 * 1024 * 1024  // 15MB
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
-/** 拡張子から音声 MIME タイプを推定する。file.type が空の場合に備えるため独自に解決する */
+/**
+ * 音声ファイルの正規 MIME タイプを返す。
+ *
+ * 優先順位:
+ *   1. 拡張子が既知 → 拡張子ベースの標準型（最優先）
+ *      ブラウザが返す audio/x-m4a, audio/x-wav などの非標準型を上書きするため。
+ *   2. 拡張子不明 + file.type あり → 非標準型を正規化して返す
+ *   3. それ以外 → audio/mpeg をデフォルト
+ *
+ * iOS Safari は audio/x-m4a を E4(SRC_NOT_SUPPORTED) で拒否する。
+ * 必ず audio/mp4 に正規化する必要がある。
+ */
 function inferAudioContentType(file: File): string {
-  if (file.type) return file.type
   const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-  const map: Record<string, string> = {
-    mp3: 'audio/mpeg',
-    m4a: 'audio/mp4',
-    mp4: 'audio/mp4',
-    aac: 'audio/aac',
-    wav: 'audio/wav',
-    ogg: 'audio/ogg',
+  const extMap: Record<string, string> = {
+    mp3:  'audio/mpeg',
+    m4a:  'audio/mp4',
+    mp4:  'audio/mp4',
+    aac:  'audio/aac',
+    wav:  'audio/wav',
+    ogg:  'audio/ogg',
     flac: 'audio/flac',
     webm: 'audio/webm',
   }
-  return map[ext] ?? 'audio/mpeg'
+  if (extMap[ext]) return extMap[ext]
+
+  // 拡張子不明のとき: 非標準 MIME を正規化
+  const normalizeMap: Record<string, string> = {
+    'audio/x-m4a':       'audio/mp4',
+    'audio/mp4a-latm':   'audio/mp4',
+    'audio/x-wav':       'audio/wav',
+    'audio/x-mp3':       'audio/mpeg',
+    'audio/x-mpeg':      'audio/mpeg',
+    'audio/x-aac':       'audio/aac',
+  }
+  if (file.type) return normalizeMap[file.type] ?? file.type
+  return 'audio/mpeg'
 }
 
 export function uploadAudio(

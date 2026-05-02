@@ -5,6 +5,43 @@ interface AudioPlayerProps {
   title?: string
 }
 
+/**
+ * Firebase Storage が返す / ブラウザが設定した非標準 MIME を
+ * iOS Safari が受け付ける標準 MIME に正規化する。
+ * audio/x-m4a → audio/mp4 など。
+ */
+function normalizeMime(type: string, url: string): string {
+  // 1. URL の拡張子が判明している場合は最優先
+  const decoded = decodeURIComponent(url.split('?')[0])
+  const ext = decoded.split('.').pop()?.toLowerCase() ?? ''
+  const extMap: Record<string, string> = {
+    mp3:  'audio/mpeg',
+    m4a:  'audio/mp4',
+    mp4:  'audio/mp4',
+    aac:  'audio/aac',
+    wav:  'audio/wav',
+    ogg:  'audio/ogg',
+    flac: 'audio/flac',
+    webm: 'audio/webm',
+  }
+  if (extMap[ext]) return extMap[ext]
+
+  // 2. 非標準 MIME を正規化
+  const normalizeMap: Record<string, string> = {
+    'audio/x-m4a':       'audio/mp4',
+    'audio/mp4a-latm':   'audio/mp4',
+    'audio/x-wav':       'audio/wav',
+    'audio/x-mp3':       'audio/mpeg',
+    'audio/x-mpeg':      'audio/mpeg',
+    'audio/x-aac':       'audio/aac',
+  }
+  if (normalizeMap[type]) return normalizeMap[type]
+
+  // 3. 不明/汎用の場合は audio/mpeg をフォールバック
+  if (!type || type === 'application/octet-stream') return 'audio/mpeg'
+  return type
+}
+
 function formatTime(sec: number): string {
   if (!isFinite(sec) || isNaN(sec) || sec <= 0) return '0:00'
   const m = Math.floor(sec / 60)
@@ -27,6 +64,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
 
   // blob URL state（iOS 対策の核心）
   const [blobSrc, setBlobSrc] = useState<string | null>(null)
+  const [blobMime, setBlobMime] = useState<string>('')
   const blobUrlRef = useRef<string | null>(null)
 
   // 再生状態
@@ -49,6 +87,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
       blobUrlRef.current = null
     }
     setBlobSrc(null)
+    setBlobMime('')
     setErrorCode(null)
     setPlaying(false)
     setPlayLoading(false)
@@ -65,9 +104,14 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
       })
       .then(blob => {
         if (cancelled) return
-        const url = URL.createObjectURL(blob)
+        // iOS Safari E4 対策: blob の MIME を正規化（audio/x-m4a → audio/mp4 など）
+        const mime = normalizeMime(blob.type, src)
+        const fixedBlob = mime !== blob.type ? new Blob([blob], { type: mime }) : blob
+        console.debug('[AudioPlayer] blob type:', blob.type, '→', mime)
+        const url = URL.createObjectURL(fixedBlob)
         blobUrlRef.current = url
         setBlobSrc(url)
+        setBlobMime(mime)
         setFetchLoading(false)
       })
       .catch(err => {
@@ -205,7 +249,9 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
             <span className="text-[#86868b] text-xs flex-1">
               音声を読み込めませんでした
               {errorCode !== -1 && (
-                <span className="ml-1 opacity-60">(E{errorCode})</span>
+                <span className="ml-1 opacity-60">
+                  (E{errorCode}{blobMime ? ` · ${blobMime}` : ''})
+                </span>
               )}
             </span>
             <button
