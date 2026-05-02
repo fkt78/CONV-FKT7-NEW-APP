@@ -6,7 +6,7 @@ interface AudioPlayerProps {
 }
 
 function formatTime(sec: number): string {
-  if (!isFinite(sec) || isNaN(sec)) return '0:00'
+  if (!isFinite(sec) || isNaN(sec) || sec <= 0) return '0:00'
   const m = Math.floor(sec / 60)
   const s = Math.floor(sec % 60)
   return `${m}:${s.toString().padStart(2, '0')}`
@@ -17,17 +17,23 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [loading, setLoading] = useState(true)
+  // preload='none' のため初期ローディングは false（ボタンを即表示）
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    const audio = new Audio(src)
-    audio.preload = 'metadata'
+    const audio = new Audio()
+    /**
+     * preload='none' に設定することで iOS Safari のメディア自動読み込み制限を回避する。
+     * Safari は preload='metadata' でもバックグラウンド読み込みをブロックする場合があり、
+     * ユーザーが再生ボタンをタップした時点で初めてネットワークアクセスが発生するようにする。
+     */
+    audio.preload = 'none'
+    audio.src = src
     audioRef.current = audio
 
     const onLoaded = () => {
       setDuration(audio.duration)
-      setLoading(false)
     }
     const onTime = () => setCurrentTime(audio.currentTime)
     const onEnded = () => {
@@ -36,8 +42,13 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
       audio.currentTime = 0
     }
     const onError = () => {
+      // MediaError.code: 1=ABORTED 2=NETWORK 3=DECODE 4=SRC_NOT_SUPPORTED
+      const code = audio.error?.code ?? '?'
+      const msg = audio.error?.message ?? ''
+      console.error('[AudioPlayer] media error', { code, msg, src })
       setError(true)
       setLoading(false)
+      setPlaying(false)
     }
 
     audio.addEventListener('loadedmetadata', onLoaded)
@@ -51,10 +62,12 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
       audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('ended', onEnded)
       audio.removeEventListener('error', onError)
+      // src を空にしてブラウザのメディアリソースを解放する
+      audio.src = ''
     }
   }, [src])
 
-  /* 他アプリへ切り替え・タブ非表示時は再生を止める（バックグラウンドで鳴り続けないようにする） */
+  /* 他アプリへ切り替え・タブ非表示時は再生を止める */
   useEffect(() => {
     const pausePlayback = () => {
       const audio = audioRef.current
@@ -66,7 +79,6 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
       if (document.visibilityState === 'hidden') pausePlayback()
     }
     document.addEventListener('visibilitychange', onVisibility)
-    /* iOS Safari / PWA で visibility だけ取りこぼす場合の補助 */
     window.addEventListener('pagehide', pausePlayback)
     return () => {
       document.removeEventListener('visibilitychange', onVisibility)
@@ -74,15 +86,31 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     }
   }, [])
 
-  function togglePlay() {
+  async function togglePlay() {
     const audio = audioRef.current
-    if (!audio || loading || error) return
+    if (!audio || error) return
     if (playing) {
       audio.pause()
       setPlaying(false)
     } else {
-      audio.play()
-      setPlaying(true)
+      try {
+        setLoading(true)
+        /**
+         * audio.play() は Promise を返す。
+         * iOS Safari ではユーザー操作の連鎖が切れると reject されるため、
+         * await + try/catch で確実にエラーを捕捉する。
+         * （以前は戻り値を無視していたため、iOS でサイレントに失敗していた）
+         */
+        await audio.play()
+        setPlaying(true)
+        setLoading(false)
+      } catch (err) {
+        const code = audioRef.current?.error?.code ?? '?'
+        console.error('[AudioPlayer] play() rejected:', err, 'media error code:', code)
+        setError(true)
+        setLoading(false)
+        setPlaying(false)
+      }
     }
   }
 
@@ -168,7 +196,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
               {formatTime(currentTime)}
             </span>
             <span className="text-[#86868b]/80 text-[10px] tabular-nums">
-              {formatTime(duration)}
+              {duration > 0 ? formatTime(duration) : '--:--'}
             </span>
           </div>
         </div>

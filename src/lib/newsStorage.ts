@@ -29,6 +29,23 @@ const MAX_IMAGE_SIZE = 15 * 1024 * 1024  // 15MB
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
+/** 拡張子から音声 MIME タイプを推定する。file.type が空の場合に備えるため独自に解決する */
+function inferAudioContentType(file: File): string {
+  if (file.type) return file.type
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  const map: Record<string, string> = {
+    mp3: 'audio/mpeg',
+    m4a: 'audio/mp4',
+    mp4: 'audio/mp4',
+    aac: 'audio/aac',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    flac: 'audio/flac',
+    webm: 'audio/webm',
+  }
+  return map[ext] ?? 'audio/mpeg'
+}
+
 export function uploadAudio(
   file: File,
   onProgress: (p: UploadProgress) => void,
@@ -40,9 +57,8 @@ export function uploadAudio(
     const ext = file.name.split('.').pop() ?? 'mp3'
     const filename = `news_audio/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
     const storageRef = ref(storage, filename)
-    const task = uploadBytesResumable(storageRef, file, {
-      contentType: file.type || 'audio/mpeg',
-    })
+    const contentType = inferAudioContentType(file)
+    const task = uploadBytesResumable(storageRef, file, { contentType })
 
     task.on(
       'state_changed',
