@@ -12,140 +12,184 @@ function formatTime(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+/**
+ * iOS Safari 対策まとめ:
+ *   1. fetch() で音声を Blob としてダウンロードし blob: URL に変換する。
+ *      → <audio src> が cross-origin になる問題 / media-src CSP の Safari バグを回避。
+ *      → connect-src で https://*.googleapis.com が許可されているので fetch() は通る。
+ *      → blob: URL は media-src blob: で明示許可されている。
+ *   2. <audio> を実際に DOM に接続した JSX 要素として配置する（new Audio() 廃止）。
+ *   3. togglePlay() では audio.play() の前に await を入れず、ユーザージェスチャー
+ *      の連鎖を維持する。blob URL なら play() 時にネットワーク待ちが不要。
+ */
 export default function AudioPlayer({ src, title }: AudioPlayerProps) {
-  /**
-   * iOS Safari は new Audio() で作った「DOM 非接続」要素だと再生が制限される。
-   * <audio> を実際に JSX に置いて DOM に接続することで iOS でも動作する。
-   */
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [playing, setPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(false)
 
-  /* src が変わったらすべての状態をリセット */
+  // blob URL state（iOS 対策の核心）
+  const [blobSrc, setBlobSrc] = useState<string | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
+
+  // 再生状態
+  const [playing, setPlaying]       = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration]     = useState(0)
+
+  // UI 状態
+  const [fetchLoading, setFetchLoading] = useState(false)
+  const [playLoading, setPlayLoading]   = useState(false)
+  const [errorCode, setErrorCode]       = useState<number | null>(null)
+
+  /* src が変わるたびに fetch() でブロブ取得 */
   useEffect(() => {
-    setError(false)
-    setLoading(false)
+    let cancelled = false
+
+    // 前回の blob URL を破棄
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current)
+      blobUrlRef.current = null
+    }
+    setBlobSrc(null)
+    setErrorCode(null)
     setPlaying(false)
+    setPlayLoading(false)
     setCurrentTime(0)
     setDuration(0)
-    const audio = audioRef.current
-    if (audio) {
-      audio.load()  // src 変更を即座に反映させる
+
+    if (!src) return
+
+    setFetchLoading(true)
+    fetch(src)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.blob()
+      })
+      .then(blob => {
+        if (cancelled) return
+        const url = URL.createObjectURL(blob)
+        blobUrlRef.current = url
+        setBlobSrc(url)
+        setFetchLoading(false)
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('[AudioPlayer] fetch failed:', err, src)
+        setFetchLoading(false)
+        // fetch 失敗時はフォールバックとして直接 URL を試みる
+        setBlobSrc(src)
+      })
+
+    return () => {
+      cancelled = true
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
     }
   }, [src])
 
-  /* 他アプリへ切り替え・タブ非表示時は再生を止める */
+  /* 他アプリへ切り替え・タブ非表示時は再生停止 */
   useEffect(() => {
-    const pausePlayback = () => {
-      const audio = audioRef.current
-      if (!audio) return
-      audio.pause()
+    const pause = () => {
+      audioRef.current?.pause()
       setPlaying(false)
     }
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') pausePlayback()
-    }
+    const onVisibility = () => { if (document.visibilityState === 'hidden') pause() }
     document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('pagehide', pausePlayback)
+    window.addEventListener('pagehide', pause)
     return () => {
       document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('pagehide', pausePlayback)
+      window.removeEventListener('pagehide', pause)
     }
   }, [])
 
   function handleLoadedMetadata() {
-    const audio = audioRef.current
-    if (audio) setDuration(audio.duration)
+    const a = audioRef.current
+    if (a) setDuration(a.duration)
   }
 
   function handleTimeUpdate() {
-    const audio = audioRef.current
-    if (audio) setCurrentTime(audio.currentTime)
+    const a = audioRef.current
+    if (a) setCurrentTime(a.currentTime)
   }
 
   function handleEnded() {
-    const audio = audioRef.current
-    if (!audio) return
+    const a = audioRef.current
+    if (!a) return
     setPlaying(false)
     setCurrentTime(0)
-    audio.currentTime = 0
+    a.currentTime = 0
   }
 
-  function handleError() {
-    const audio = audioRef.current
-    // MediaError.code: 1=ABORTED 2=NETWORK 3=DECODE 4=SRC_NOT_SUPPORTED
-    const code = audio?.error?.code ?? '?'
-    const msg = audio?.error?.message ?? ''
+  function handleMediaError() {
+    const a = audioRef.current
+    // code: 1=ABORTED 2=NETWORK 3=DECODE 4=SRC_NOT_SUPPORTED
+    const code = a?.error?.code ?? -1
+    const msg  = a?.error?.message ?? ''
     console.error('[AudioPlayer] media error', { code, msg, src })
-    setError(true)
-    setLoading(false)
+    setErrorCode(code)
+    setPlayLoading(false)
     setPlaying(false)
   }
 
   async function togglePlay() {
-    const audio = audioRef.current
-    if (!audio) return
+    const a = audioRef.current
+    if (!a || fetchLoading) return
     if (playing) {
-      audio.pause()
+      a.pause()
       setPlaying(false)
       return
     }
     try {
-      setLoading(true)
-      /**
-       * iOS Safari ではユーザー操作の連鎖が切れると reject されるため
-       * await + try/catch で確実にエラーを捕捉する。
-       * audio.play() より前に await を入れないことで iOS のユーザージェスチャー
-       * 要件を満たす。
-       */
-      await audio.play()
+      setPlayLoading(true)
+      setErrorCode(null)
+      // blob URL が既にメモリにあるため、ここで await するのは play() のみ。
+      // ネットワーク待ちなし → iOS のユーザージェスチャー要件を満たす。
+      await a.play()
       setPlaying(true)
-      setLoading(false)
+      setPlayLoading(false)
     } catch (err) {
-      const code = audioRef.current?.error?.code ?? '?'
-      console.error('[AudioPlayer] play() rejected:', err, 'media error code:', code)
-      setError(true)
-      setLoading(false)
+      const code = audioRef.current?.error?.code ?? -1
+      console.error('[AudioPlayer] play() rejected:', err, 'code:', code)
+      setErrorCode(code)
+      setPlayLoading(false)
       setPlaying(false)
     }
   }
 
+  function handleRetry() {
+    setErrorCode(null)
+    setPlaying(false)
+    setPlayLoading(false)
+    setCurrentTime(0)
+    setDuration(0)
+    const a = audioRef.current
+    if (a) a.load()
+  }
+
   function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
-    const audio = audioRef.current
-    if (!audio) return
+    const a = audioRef.current
+    if (!a) return
     const t = Number(e.target.value)
-    audio.currentTime = t
+    a.currentTime = t
     setCurrentTime(t)
   }
 
-  function handleRetry() {
-    const audio = audioRef.current
-    if (!audio) return
-    setError(false)
-    setLoading(false)
-    setPlaying(false)
-    setCurrentTime(0)
-    setDuration(0)
-    audio.load()
-  }
-
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
+  const hasError = errorCode !== null
+  const isLoading = fetchLoading || playLoading
 
   return (
     <div className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-3 space-y-2">
-      {/* DOM に接続した <audio> 要素（iOS Safari での再生安定化） */}
+      {/* DOM に直接置く <audio> 要素。src は blob: URL */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audioRef}
-        src={src}
-        preload="none"
+        src={blobSrc ?? undefined}
+        preload="auto"
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
-        onError={handleError}
+        onError={handleMediaError}
         style={{ display: 'none' }}
       />
 
@@ -155,25 +199,41 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
         </p>
       )}
 
-      {error ? (
-        <div className="flex items-center gap-3">
-          <span className="text-[#86868b] text-xs flex-1">音声を読み込めませんでした</span>
-          <button
-            onClick={handleRetry}
-            className="text-[#0095B6] text-[12px] font-medium underline flex-shrink-0"
+      {hasError ? (
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <span className="text-[#86868b] text-xs flex-1">
+              音声を読み込めませんでした
+              {errorCode !== -1 && (
+                <span className="ml-1 opacity-60">(E{errorCode})</span>
+              )}
+            </span>
+            <button
+              onClick={handleRetry}
+              className="text-[#0095B6] text-[12px] font-medium underline flex-shrink-0"
+            >
+              再試行
+            </button>
+          </div>
+          {/* フォールバック: Safari で直接開く */}
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#0095B6] text-[11px] underline"
           >
-            再試行
-          </button>
+            ブラウザで開く
+          </a>
         </div>
       ) : (
         <div className="flex items-center gap-3">
           <button
             onClick={togglePlay}
-            disabled={loading}
+            disabled={isLoading}
             className="w-9 h-9 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0 shadow-sm hover:bg-[#007A96] transition disabled:opacity-40 disabled:cursor-wait"
             aria-label={playing ? '一時停止' : '再生'}
           >
-            {loading ? (
+            {isLoading ? (
               <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : playing ? (
               <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
@@ -187,9 +247,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
             )}
           </button>
 
-          {/* プログレス & タイム */}
           <div className="flex-1 space-y-1.5">
-            {/* シークバー */}
             <div className="relative h-1.5 rounded-full bg-[#e5e5ea] group">
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-[#0095B6] pointer-events-none transition-all"
@@ -202,7 +260,7 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
                 step={0.1}
                 value={currentTime}
                 onChange={handleSeek}
-                disabled={loading || duration === 0}
+                disabled={isLoading || duration === 0}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-default"
                 aria-label="シーク"
               />
@@ -214,13 +272,12 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
               )}
             </div>
 
-            {/* 時間表示 */}
             <div className="flex items-center justify-between">
               <span className="text-[#86868b] text-[10px] tabular-nums">
                 {formatTime(currentTime)}
               </span>
               <span className="text-[#86868b]/80 text-[10px] tabular-nums">
-                {duration > 0 ? formatTime(duration) : '--:--'}
+                {duration > 0 ? formatTime(duration) : fetchLoading ? '読込中…' : '--:--'}
               </span>
             </div>
           </div>
