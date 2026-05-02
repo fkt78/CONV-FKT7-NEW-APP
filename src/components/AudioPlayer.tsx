@@ -22,6 +22,13 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    // src が変わるたびにエラー・再生状態をリセットする
+    setError(false)
+    setLoading(false)
+    setPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+
     const audio = new Audio()
     /**
      * preload='none' に設定することで iOS Safari のメディア自動読み込み制限を回避する。
