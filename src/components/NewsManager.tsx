@@ -510,7 +510,7 @@ export default function NewsManager() {
                 className="flex items-center gap-2 border border-dashed border-[#e5e5ea] rounded-lg px-3 py-2.5 cursor-pointer hover:border-[#0095B6]/40 transition"
               >
                 <span className="text-[#86868b] text-xs">
-                  {audioFile ? audioFile.name : '音声ファイルを選択 (.mp3 / .wav / .m4a)'}
+                  {audioFile ? audioFile.name : '音声ファイルを選択（iPhone対応: .mp3 / .m4a / .wav）'}
                 </span>
                 {audioFile && (
                   <button
@@ -528,10 +528,13 @@ export default function NewsManager() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".mp3,.wav,.m4a,audio/*"
+                accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav"
                 className="hidden"
                 onChange={(e) => setAudioFile(e.target.files?.[0] ?? null)}
               />
+              <p className="text-[#86868b] text-[10px]">
+                WebM・OGG・FLAC は iPhone で再生できないため、MP3 または AAC形式のM4A を推奨します。
+              </p>
               {audioFile && currentAudioToShow && (
                 <AudioPlayer src={currentAudioToShow} title={audioFile.name} />
               )}

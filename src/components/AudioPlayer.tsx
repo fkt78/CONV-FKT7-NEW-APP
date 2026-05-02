@@ -247,7 +247,9 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <span className="text-[#86868b] text-xs flex-1">
-              音声を読み込めませんでした
+              {errorCode === 4
+                ? 'iPhone非対応の音声形式です'
+                : '音声を読み込めませんでした'}
               {errorCode !== -1 && (
                 <span className="ml-1 opacity-60">
                   (E{errorCode}{blobMime ? ` · ${blobMime}` : ''})
@@ -261,6 +263,11 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
               再試行
             </button>
           </div>
+          {errorCode === 4 && (
+            <p className="text-[#86868b] text-[11px] leading-relaxed">
+              MP3 または AAC形式のM4A に変換して再アップロードしてください。
+            </p>
+          )}
           {/* フォールバック: Safari で直接開く */}
           <a
             href={src}

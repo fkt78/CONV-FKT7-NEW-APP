@@ -28,6 +28,15 @@ const MAX_AUDIO_SIZE = 100 * 1024 * 1024 // 100MB
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024  // 15MB
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const IOS_COMPATIBLE_AUDIO_EXTENSIONS = new Set(['mp3', 'm4a', 'wav'])
+const IOS_COMPATIBLE_AUDIO_TYPES = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/x-m4a',
+  'audio/wav',
+  'audio/x-wav',
+])
 
 /**
  * 音声ファイルの正規 MIME タイプを返す。
@@ -75,9 +84,13 @@ export function uploadAudio(
   if (file.size > MAX_AUDIO_SIZE) {
     return Promise.reject(new Error(`ファイルサイズは${MAX_AUDIO_SIZE / 1024 / 1024}MB以下にしてください`))
   }
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  const type = file.type.toLowerCase()
+  if (!IOS_COMPATIBLE_AUDIO_EXTENSIONS.has(ext) && !IOS_COMPATIBLE_AUDIO_TYPES.has(type)) {
+    return Promise.reject(new Error('iPhone対応の音声形式（MP3 / AAC形式のM4A / WAV）でアップロードしてください。WebM・OGG・FLACはiPhoneで再生できません。'))
+  }
   return new Promise((resolve, reject) => {
-    const ext = file.name.split('.').pop() ?? 'mp3'
-    const filename = `news_audio/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    const filename = `news_audio/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext || 'mp3'}`
     const storageRef = ref(storage, filename)
     const contentType = inferAudioContentType(file)
     const task = uploadBytesResumable(storageRef, file, { contentType })
