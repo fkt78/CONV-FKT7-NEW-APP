@@ -124,15 +124,6 @@ const BANNER_SLIDES: BannerSlide[] = [
     labelJa: 'ダイワンテレコム',
   },
   {
-    id: 'kojo-kyujin-navi',
-    bgImage: '/banners/kojo-kyujin-navi.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.kojoKyujinNavi',
-    badgeColor: '#1e3a5f',
-    href: 'https://fkt-office.com/life-support.html#kojo-kyujin-navi',
-    labelJa: '工場求人ナビ',
-  },
-  {
     id: 'agoda',
     bgImage: '/banners/agoda.webp',
     bgPosition: 'right center',
