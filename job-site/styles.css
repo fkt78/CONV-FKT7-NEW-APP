@@ -55,6 +55,34 @@ body {
   max-width: 48rem;
 }
 
+.stores-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stores-strip li {
+  margin: 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.18);
+  color: var(--text);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.hero-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
 .toc {
   max-width: 48rem;
   margin: 0 auto 1.25rem;
@@ -251,6 +279,10 @@ main {
   color: var(--muted);
 }
 
+.list--stores li {
+  margin-bottom: 0.35rem;
+}
+
 .hint {
   margin: 1rem 0 0;
   font-size: 0.85rem;
@@ -346,6 +378,11 @@ main {
 
   .hint code {
     background: rgba(15, 23, 42, 0.06);
+  }
+
+  .stores-strip li {
+    background: rgba(14, 165, 233, 0.12);
+    border-color: rgba(14, 165, 233, 0.28);
   }
 
   .pay-table th,
