@@ -171,22 +171,6 @@ const CORE_BANNER_SLIDES: BannerSlide[] = [
   },
 ]
 
-function withOptionalJobSlide(slides: BannerSlide[]): BannerSlide[] {
-  const url = getJobRecruitmentSiteUrl()
-  if (!url) return slides
-  const job: BannerSlide = {
-    id: 'shop-job-github-pages',
-    bgImage: '/banners/shop-job-github-pages.svg',
-    bgPosition: 'right center',
-    i18nKey: 'banner.shopJobGithubPages',
-    badgeColor: '#0369a1',
-    href: url,
-    labelJa: '店舗求人（採用LP）',
-  }
-  return [job, ...slides]
-}
-
-/** マウント時に 1 回だけシャッフル（元配列は変更しない） */
 function shuffleBannerSlides(slides: BannerSlide[]): BannerSlide[] {
   const copy = [...slides]
   for (let i = copy.length - 1; i > 0; i--) {
@@ -210,7 +194,19 @@ interface Props {
 
 export default function AffiliateBannerCarousel({ inCard = false }: Props) {
   const { t } = useTranslation()
-  const slides = useMemo(() => shuffleBannerSlides(withOptionalJobSlide(CORE_BANNER_SLIDES)), [])
+  const slides = useMemo(() => {
+    const jobUrl = getJobRecruitmentSiteUrl()
+    const jobSlide: BannerSlide = {
+      id: 'fukita-recruit',
+      bgImage: '/banners/fukita-recruit.jpg',
+      bgPosition: 'right center',
+      i18nKey: 'banner.fukitaRecruit',
+      badgeColor: '#1e40af',
+      href: jobUrl,
+      labelJa: '吹田総業 求人募集',
+    }
+    return [jobSlide, ...shuffleBannerSlides([...CORE_BANNER_SLIDES])]
+  }, [])
   const [current, setCurrent] = useState(0)
   const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）
   const [fading, setFading] = useState(false)
