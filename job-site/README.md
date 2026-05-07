@@ -50,4 +50,4 @@ npm run build && npx firebase deploy --only hosting:pwa --project conv-fkt7-new-
 
 - 文言・構造: `index.html`
 - 見た目: `styles.css`
-- 連絡先: `mailto:` やフォーム URL を実値に置き換える
+- **Googleフォーム（応募・問い合わせ）:** [GOOGLE_FORM.md](./GOOGLE_FORM.md) の手順でフォームを作成し、公開 URL を `contact-form-url.js` の `GOOGLE_FORM_URL` に設定する

@@ -285,13 +285,20 @@
         <h2>応募・お問い合わせ（伊賀平野北谷・平野東町・忍者市駅南の3店）</h2>
         <p>
           セブン‐イレブン <strong>伊賀平野北谷店</strong>・<strong>伊賀平野東町店</strong>・<strong>伊賀忍者市駅南店</strong>
-          のいずれかへの応募をご希望の方は、店頭または下記の連絡先よりお問い合わせください。勤務店舗・シフト・試用期間の詳細は面接時にご案内します。
+          のいずれかへの応募をご希望の方は、店頭、または下の <strong>Googleフォーム</strong>からお問い合わせください。勤務店舗・シフト・試用期間の詳細は面接時にご案内します。
         </p>
         <div class="actions">
-          <a class="button primary" href="mailto:recruit@example.com">メールで問い合わせ（仮）</a>
+          <a
+            class="button primary"
+            data-google-form
+            href="#apply"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Googleフォームで応募・お問い合わせ</a
+          >
         </div>
         <p class="fineprint">
-          メールアドレス・電話・LINE などは、3店舗の実運用に合わせて差し替えてください。
+          フォームのURLは <code>job-site/contact-form-url.js</code> に設定します。手順は <code>job-site/GOOGLE_FORM.md</code> を参照してください。
         </p>
       </section>
 
@@ -307,5 +314,6 @@
         セブン‐イレブン 伊賀平野北谷店・伊賀平野東町店・伊賀忍者市駅南店 · 採用案内 · Firebase Hosting
       </p>
     </footer>
+    <script src="contact-form-url.js" defer></script>
   </body>
 </html>

@@ -328,6 +328,15 @@ main {
   transform: translateY(-1px);
 }
 
+.button--pending {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.button--pending:hover {
+  transform: none;
+}
+
 .button.ghost {
   border-color: rgba(255, 255, 255, 0.25);
   color: var(--text);
