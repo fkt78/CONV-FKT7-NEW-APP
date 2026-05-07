@@ -1,5 +1,18 @@
 {
   "projects": {
-    "default": "new-check-137f9"
-  }
+    "default": "conv-fkt7-new-app"
+  },
+  "targets": {
+    "conv-fkt7-new-app": {
+      "hosting": {
+        "pwa": [
+          "conv-fkt7-new-app"
+        ],
+        "job": [
+          "conv-fkt7-new-app-job"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getJobRecruitmentSiteUrl } from '../config/jobRecruitmentSite'
 import { logBannerClick } from '../lib/analytics'
 
 interface BannerSlide {
@@ -14,7 +15,7 @@ interface BannerSlide {
   labelJa: string
 }
 
-const BANNER_SLIDES: BannerSlide[] = [
+const CORE_BANNER_SLIDES: BannerSlide[] = [
   {
     id: 'local-ad-recruit',
     bgImage: '/banners/local-ad-recruit.webp',
@@ -170,6 +171,21 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
 ]
 
+function withOptionalJobSlide(slides: BannerSlide[]): BannerSlide[] {
+  const url = getJobRecruitmentSiteUrl()
+  if (!url) return slides
+  const job: BannerSlide = {
+    id: 'shop-job-github-pages',
+    bgImage: '/banners/shop-job-github-pages.svg',
+    bgPosition: 'right center',
+    i18nKey: 'banner.shopJobGithubPages',
+    badgeColor: '#0369a1',
+    href: url,
+    labelJa: '店舗求人（採用LP）',
+  }
+  return [job, ...slides]
+}
+
 /** マウント時に 1 回だけシャッフル（元配列は変更しない） */
 function shuffleBannerSlides(slides: BannerSlide[]): BannerSlide[] {
   const copy = [...slides]
@@ -194,7 +210,7 @@ interface Props {
 
 export default function AffiliateBannerCarousel({ inCard = false }: Props) {
   const { t } = useTranslation()
-  const slides = useMemo(() => shuffleBannerSlides(BANNER_SLIDES), [])
+  const slides = useMemo(() => shuffleBannerSlides(withOptionalJobSlide(CORE_BANNER_SLIDES)), [])
   const [current, setCurrent] = useState(0)
   const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）
   const [fading, setFading] = useState(false)

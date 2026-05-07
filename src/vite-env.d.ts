@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_APP_VERSION: string
   readonly VITE_BUILD_VERSION: string
   readonly VITE_FIREBASE_VAPID_KEY?: string
+  /** GitHub Pages 等の求人 LP 公開 URL（設定時のみバナーにスライド追加） */
+  readonly VITE_JOB_RECRUITMENT_SITE_URL?: string
 }
 
 interface ImportMeta {

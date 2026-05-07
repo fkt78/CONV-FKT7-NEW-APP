@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "deploy": "npm run version:bump && npm run build && firebase deploy",
+    "deploy": "npm run version:bump && npm run build && firebase deploy --project conv-fkt7-new-app",
+    "deploy:job-site": "firebase deploy --only hosting:job --project conv-fkt7-new-app",
     "lint": "eslint .",
     "preview": "vite preview",
     "version:bump": "node scripts/bump-version.js"
