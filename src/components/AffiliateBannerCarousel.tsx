@@ -203,7 +203,7 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
       i18nKey: 'banner.fukitaRecruit',
       badgeColor: '#1e40af',
       href: jobUrl,
-      labelJa: '吹田総業 求人募集',
+      labelJa: '伊賀エリア3店舗 求人',
     }
     return [jobSlide, ...shuffleBannerSlides([...CORE_BANNER_SLIDES])]
   }, [])
@@ -333,7 +333,7 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
         aria-label={`${t(`${slide.i18nKey}.title`)} — ${t(`${slide.i18nKey}.subtitle`)}`}
         className="block relative select-none cursor-grab active:cursor-grabbing"
         style={{
-          height: '118px',
+          height: slide.id === 'fukita-recruit' ? '136px' : '118px',
           touchAction: 'pan-y',
           opacity: fading ? 0 : 1,
           transition: `opacity ${FADE_MS}ms ease-in-out`,
@@ -402,11 +402,12 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
             style={{
               margin: 0,
               color: '#fff',
-              fontSize: '21px',
+              fontSize: slide.id === 'fukita-recruit' ? '12px' : '21px',
               fontWeight: 700,
-              lineHeight: 1.2,
-              letterSpacing: '-0.3px',
+              lineHeight: slide.id === 'fukita-recruit' ? 1.22 : 1.2,
+              letterSpacing: slide.id === 'fukita-recruit' ? '0' : '-0.3px',
               textShadow: '0 1px 8px rgba(0,0,0,0.5)',
+              whiteSpace: slide.id === 'fukita-recruit' ? 'pre-line' : 'normal',
             }}
           >
             {t(`${slide.i18nKey}.title`)}
@@ -415,12 +416,12 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
           {/* サブタイトル */}
           <p
             style={{
-              margin: '5px 0 0',
+              margin: slide.id === 'fukita-recruit' ? '4px 0 0' : '5px 0 0',
               color: 'rgba(255,255,255,0.88)',
-              fontSize: '12px',
+              fontSize: slide.id === 'fukita-recruit' ? '10px' : '12px',
               lineHeight: 1.45,
               textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-              maxWidth: '60%',
+              maxWidth: slide.id === 'fukita-recruit' ? '72%' : '60%',
             }}
           >
             {t(`${slide.i18nKey}.subtitle`)}
