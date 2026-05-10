@@ -8,10 +8,28 @@ interface AudioPlayerProps {
 /**
  * Firebase Storage が返す / ブラウザが設定した非標準 MIME を
  * iOS Safari が受け付ける標準 MIME に正規化する。
- * audio/x-m4a → audio/mp4 など。
+ *
+ * 拡張子で**上書き**せず、
+ *   1. レスポンス／blob の Content-Type を最優先（非標準なら正規化）
+ *   2. 空のときだけ拡張子から推測
+ *   3. それでも不明なら `audio/mpeg` をフォールバック
+ * の順で扱う。拡張子と中身が食い違っているファイルでも、サーバが返す
+ * 正しい Content-Type を尊重して E4 を起こしにくくする。
  */
 function normalizeMime(type: string, url: string): string {
-  // 1. URL の拡張子が判明している場合は最優先
+  const normalizeMap: Record<string, string> = {
+    'audio/x-m4a':       'audio/mp4',
+    'audio/mp4a-latm':   'audio/mp4',
+    'audio/x-wav':       'audio/wav',
+    'audio/x-mp3':       'audio/mpeg',
+    'audio/x-mpeg':      'audio/mpeg',
+    'audio/x-aac':       'audio/aac',
+  }
+  const lower = (type || '').toLowerCase()
+  if (lower && lower !== 'application/octet-stream') {
+    return normalizeMap[lower] ?? lower
+  }
+
   const decoded = decodeURIComponent(url.split('?')[0])
   const ext = decoded.split('.').pop()?.toLowerCase() ?? ''
   const extMap: Record<string, string> = {
@@ -24,22 +42,7 @@ function normalizeMime(type: string, url: string): string {
     flac: 'audio/flac',
     webm: 'audio/webm',
   }
-  if (extMap[ext]) return extMap[ext]
-
-  // 2. 非標準 MIME を正規化
-  const normalizeMap: Record<string, string> = {
-    'audio/x-m4a':       'audio/mp4',
-    'audio/mp4a-latm':   'audio/mp4',
-    'audio/x-wav':       'audio/wav',
-    'audio/x-mp3':       'audio/mpeg',
-    'audio/x-mpeg':      'audio/mpeg',
-    'audio/x-aac':       'audio/aac',
-  }
-  if (normalizeMap[type]) return normalizeMap[type]
-
-  // 3. 不明/汎用の場合は audio/mpeg をフォールバック
-  if (!type || type === 'application/octet-stream') return 'audio/mpeg'
-  return type
+  return extMap[ext] ?? 'audio/mpeg'
 }
 
 function formatTime(sec: number): string {
@@ -50,80 +53,51 @@ function formatTime(sec: number): string {
 }
 
 /**
- * iOS Safari 対策まとめ:
- *   1. fetch() で音声を Blob としてダウンロードし blob: URL に変換する。
- *      → <audio src> が cross-origin になる問題 / media-src CSP の Safari バグを回避。
- *      → connect-src で https://*.googleapis.com が許可されているので fetch() は通る。
- *      → blob: URL は media-src blob: で明示許可されている。
- *   2. <audio> を実際に DOM に接続した JSX 要素として配置する（new Audio() 廃止）。
- *   3. togglePlay() では audio.play() の前に await を入れず、ユーザージェスチャー
- *      の連鎖を維持する。blob URL なら play() 時にネットワーク待ちが不要。
+ * 再生戦略:
+ *   1. まず `<audio src={src}>` で直接再生する。
+ *      Firebase Storage は CORS / Range リクエスト対応済みなので、
+ *      Safari が Content-Type と中身を見て柔軟に再生してくれる。
+ *      → 「ブラウザで開いて再生できるものはアプリでも再生できる」を実現。
+ *   2. それで MEDIA_ERR_SRC_NOT_SUPPORTED など再生不可だった場合のみ、
+ *      fetch → Blob → 正規化 MIME → blob: URL のフォールバックに切替。
+ *   3. blob でも失敗したらエラー UI でブラウザ直接再生を案内する。
  */
+
+type Mode = 'direct' | 'blob'
+
 export default function AudioPlayer({ src, title }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  // blob URL state（iOS 対策の核心）
-  const [blobSrc, setBlobSrc] = useState<string | null>(null)
+  const [mode, setMode] = useState<Mode>('direct')
+  const [resolvedSrc, setResolvedSrc] = useState<string>('')
   const [blobMime, setBlobMime] = useState<string>('')
   const blobUrlRef = useRef<string | null>(null)
 
-  // 再生状態
   const [playing, setPlaying]       = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration]     = useState(0)
 
-  // UI 状態
   const [fetchLoading, setFetchLoading] = useState(false)
   const [playLoading, setPlayLoading]   = useState(false)
   const [errorCode, setErrorCode]       = useState<number | null>(null)
 
-  /* src が変わるたびに fetch() でブロブ取得 */
+  /* src が変わったらまず直接再生にリセット */
   useEffect(() => {
-    let cancelled = false
-
-    // 前回の blob URL を破棄
     if (blobUrlRef.current) {
       URL.revokeObjectURL(blobUrlRef.current)
       blobUrlRef.current = null
     }
-    setBlobSrc(null)
+    setMode('direct')
+    setResolvedSrc(src)
     setBlobMime('')
     setErrorCode(null)
     setPlaying(false)
     setPlayLoading(false)
     setCurrentTime(0)
     setDuration(0)
-
-    if (!src) return
-
-    setFetchLoading(true)
-    fetch(src)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.blob()
-      })
-      .then(blob => {
-        if (cancelled) return
-        // iOS Safari E4 対策: blob の MIME を正規化（audio/x-m4a → audio/mp4 など）
-        const mime = normalizeMime(blob.type, src)
-        const fixedBlob = mime !== blob.type ? new Blob([blob], { type: mime }) : blob
-        console.debug('[AudioPlayer] blob type:', blob.type, '→', mime)
-        const url = URL.createObjectURL(fixedBlob)
-        blobUrlRef.current = url
-        setBlobSrc(url)
-        setBlobMime(mime)
-        setFetchLoading(false)
-      })
-      .catch(err => {
-        if (cancelled) return
-        console.error('[AudioPlayer] fetch failed:', err, src)
-        setFetchLoading(false)
-        // fetch 失敗時はフォールバックとして直接 URL を試みる
-        setBlobSrc(src)
-      })
+    setFetchLoading(false)
 
     return () => {
-      cancelled = true
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current)
         blobUrlRef.current = null
@@ -164,15 +138,46 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     a.currentTime = 0
   }
 
+  /** direct → blob フォールバックを試みる。すでに blob 失敗なら確定エラー。 */
+  async function fallbackToBlob(originalCode: number) {
+    if (mode !== 'direct') {
+      setErrorCode(originalCode)
+      setPlayLoading(false)
+      setPlaying(false)
+      return
+    }
+    console.warn('[AudioPlayer] direct play failed, falling back to blob', { src, originalCode })
+    setFetchLoading(true)
+    try {
+      const res = await fetch(src)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const raw = await res.blob()
+      const mime = normalizeMime(raw.type, src)
+      const blob = mime !== raw.type ? new Blob([raw], { type: mime }) : raw
+      const url = URL.createObjectURL(blob)
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+      blobUrlRef.current = url
+      setBlobMime(mime)
+      setResolvedSrc(url)
+      setMode('blob')
+      setErrorCode(null)
+      setFetchLoading(false)
+    } catch (err) {
+      console.error('[AudioPlayer] blob fallback failed:', err)
+      setFetchLoading(false)
+      setErrorCode(originalCode)
+      setPlayLoading(false)
+      setPlaying(false)
+    }
+  }
+
   function handleMediaError() {
     const a = audioRef.current
     // code: 1=ABORTED 2=NETWORK 3=DECODE 4=SRC_NOT_SUPPORTED
     const code = a?.error?.code ?? -1
     const msg  = a?.error?.message ?? ''
-    console.error('[AudioPlayer] media error', { code, msg, src })
-    setErrorCode(code)
-    setPlayLoading(false)
-    setPlaying(false)
+    console.error('[AudioPlayer] media error', { mode, code, msg, src })
+    void fallbackToBlob(code)
   }
 
   async function togglePlay() {
@@ -186,14 +191,23 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     try {
       setPlayLoading(true)
       setErrorCode(null)
-      // blob URL が既にメモリにあるため、ここで await するのは play() のみ。
-      // ネットワーク待ちなし → iOS のユーザージェスチャー要件を満たす。
       await a.play()
       setPlaying(true)
       setPlayLoading(false)
     } catch (err) {
       const code = audioRef.current?.error?.code ?? -1
       console.error('[AudioPlayer] play() rejected:', err, 'code:', code)
+      if (mode === 'direct') {
+        await fallbackToBlob(code)
+        try {
+          await audioRef.current?.play()
+          setPlaying(true)
+          setPlayLoading(false)
+          return
+        } catch (e2) {
+          console.error('[AudioPlayer] play after blob fallback rejected:', e2)
+        }
+      }
       setErrorCode(code)
       setPlayLoading(false)
       setPlaying(false)
@@ -206,8 +220,18 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     setPlayLoading(false)
     setCurrentTime(0)
     setDuration(0)
-    const a = audioRef.current
-    if (a) a.load()
+    if (mode === 'blob') {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+      setBlobMime('')
+      setMode('direct')
+      setResolvedSrc(src)
+    } else {
+      const a = audioRef.current
+      if (a) a.load()
+    }
   }
 
   function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
@@ -224,12 +248,12 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
 
   return (
     <div className="rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-3 space-y-2">
-      {/* DOM に直接置く <audio> 要素。src は blob: URL */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audioRef}
-        src={blobSrc ?? undefined}
-        preload="auto"
+        src={resolvedSrc || undefined}
+        preload="metadata"
+        playsInline
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
@@ -244,11 +268,11 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
       )}
 
       {hasError ? (
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <span className="text-[#86868b] text-xs flex-1">
+        <div className="space-y-2">
+          <div className="flex items-start gap-3">
+            <span className="text-[#86868b] text-xs flex-1 leading-relaxed">
               {errorCode === 4
-                ? 'iPhone非対応の音声形式です'
+                ? 'この端末ではこの音声形式を再生できませんでした'
                 : '音声を読み込めませんでした'}
               {errorCode !== -1 && (
                 <span className="ml-1 opacity-60">
@@ -263,20 +287,19 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
               再試行
             </button>
           </div>
-          {errorCode === 4 && (
-            <p className="text-[#86868b] text-[11px] leading-relaxed">
-              MP3 または AAC形式のM4A に変換して再アップロードしてください。
-            </p>
-          )}
-          {/* フォールバック: Safari で直接開く */}
           <a
             href={src}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#0095B6] text-[11px] underline"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#0095B6] text-white text-[12px] font-medium hover:bg-[#007A96] transition no-underline"
           >
-            ブラウザで開く
+            ▶ ブラウザで開いて再生
           </a>
+          {errorCode === 4 && (
+            <p className="text-[#86868b] text-[11px] leading-relaxed">
+              ファイルが MP3 / AAC 形式の M4A / WAV であるかご確認のうえ、再アップロードしてください。
+            </p>
+          )}
         </div>
       ) : (
         <div className="flex items-center gap-3">

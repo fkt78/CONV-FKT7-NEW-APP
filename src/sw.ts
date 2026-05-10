@@ -51,9 +51,18 @@ onBackgroundMessage(fbMessaging, (payload) => {
 
 // ── ランタイムキャッシュ ──────────────────────────────────────────────────────
 
-// Firebase Storage の画像（アバター・添付ファイル等）: 30日間 CacheFirst
+// Firebase Storage の画像等: 30日間 CacheFirst。
+// 音声は Range リクエスト（206）対応のため、SW を素通りさせて直接ネットワークから取得する。
 registerRoute(
-  ({ url }) => url.origin === 'https://firebasestorage.googleapis.com',
+  ({ url, request }) => {
+    if (url.origin !== 'https://firebasestorage.googleapis.com') return false
+    if (request.destination === 'audio') return false
+    const path = url.pathname.toLowerCase()
+    if (path.includes('news_audio') || /\.(mp3|m4a|mp4|aac|wav|ogg|flac|webm)$/.test(path)) {
+      return false
+    }
+    return true
+  },
   new CacheFirst({
     cacheName: 'firebase-storage-images',
     plugins: [
