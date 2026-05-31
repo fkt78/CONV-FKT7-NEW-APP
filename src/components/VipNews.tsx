@@ -12,6 +12,7 @@ import { db } from '../lib/firebase'
 import { getLocaleTag } from '../lib/formatTime'
 import { normalizeNewsImageUrls } from '../lib/newsImages'
 import AudioPlayer from './AudioPlayer'
+import NewsImageLightbox from './NewsImageLightbox'
 import i18n from '../i18n'
 
 interface NewsItem {
@@ -82,6 +83,7 @@ interface NewsCardProps {
   isOpen: boolean
   now: number
   onToggle: (id: string) => void
+  onImageOpen: (url: string) => void
   formatDate: (d: Date | null) => string
   t: (key: string, opts?: Record<string, unknown>) => string
 }
@@ -91,6 +93,7 @@ const NewsCard = memo(function NewsCard({
   isOpen,
   now,
   onToggle,
+  onImageOpen,
   formatDate,
   t,
 }: NewsCardProps) {
@@ -136,15 +139,22 @@ const NewsCard = memo(function NewsCard({
         <div className="px-4 pb-4 space-y-3 border-t border-[#e5e5ea]">
           {item.imageUrls.length > 0 && (
             <div className="pt-3 space-y-3">
-              {item.imageUrls.map((url) => (
-                <img
+              {item.imageUrls.map((url, idx) => (
+                <button
                   key={url}
-                  src={url}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full rounded-xl border border-[#e5e5ea] object-contain max-h-[min(70vh,480px)] bg-[#f5f5f7]"
-                />
+                  type="button"
+                  onClick={() => onImageOpen(url)}
+                  className="block w-full min-h-[44px] rounded-xl border border-[#e5e5ea] overflow-hidden bg-[#f5f5f7] cursor-zoom-in active:opacity-90 transition"
+                  aria-label={t('vipNews.enlargeImage', { title: item.title, index: idx + 1 })}
+                >
+                  <img
+                    src={url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full object-contain max-h-[min(70vh,480px)] pointer-events-none"
+                  />
+                </button>
               ))}
             </div>
           )}
@@ -166,6 +176,7 @@ export default function VipNews() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [now] = useState(() => Date.now())
 
   useEffect(() => {
@@ -235,8 +246,18 @@ export default function VipNews() {
 
   const displayList = showAll ? newsList : newsList.slice(0, INITIAL_SHOW)
 
+  const lightboxItem = lightboxUrl
+    ? newsList.find((item) => item.imageUrls.includes(lightboxUrl))
+    : null
+
   return (
     <div className="mx-4 mt-4 flex-shrink-0 space-y-2">
+      <NewsImageLightbox
+        imageUrl={lightboxUrl}
+        alt={lightboxItem?.title ?? ''}
+        closeLabel={t('vipNews.closeImageViewer')}
+        onClose={() => setLightboxUrl(null)}
+      />
       {/* セクションラベル */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -266,6 +287,7 @@ export default function VipNews() {
           isOpen={expanded === item.id}
           now={now}
           onToggle={handleToggle}
+          onImageOpen={setLightboxUrl}
           formatDate={formatDate}
           t={t}
         />

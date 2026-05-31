@@ -201,6 +201,8 @@
     "openItem": "Open {{title}}",
     "closeItem": "Close {{title}}",
     "hasImage": "Has image",
-    "hasAudio": "Has audio"
+    "hasAudio": "Has audio",
+    "enlargeImage": "Enlarge image {{index}} — {{title}}",
+    "closeImageViewer": "Close image"
   }
 }

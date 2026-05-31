@@ -201,6 +201,8 @@
     "openItem": "{{title}}を開く",
     "closeItem": "{{title}}を閉じる",
     "hasImage": "画像あり",
-    "hasAudio": "音声あり"
+    "hasAudio": "音声あり",
+    "enlargeImage": "{{title}}の画像{{index}}を拡大表示",
+    "closeImageViewer": "画像を閉じる"
   }
 }

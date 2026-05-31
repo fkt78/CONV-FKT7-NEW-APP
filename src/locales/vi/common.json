@@ -201,6 +201,8 @@
     "openItem": "Mở {{title}}",
     "closeItem": "Đóng {{title}}",
     "hasImage": "Có hình ảnh",
-    "hasAudio": "Có âm thanh"
+    "hasAudio": "Có âm thanh",
+    "enlargeImage": "Phóng to ảnh {{index}} — {{title}}",
+    "closeImageViewer": "Đóng ảnh"
   }
 }
