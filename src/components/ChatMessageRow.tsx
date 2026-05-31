@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatTime, formatDateDivider } from '../lib/formatTime'
-import { highlightMatch, isSafeUrl } from '../lib/chatUtils'
+import { formatMessageText, highlightMatch, isSafeUrl } from '../lib/chatUtils'
 import type { AttachmentType } from '../lib/chatAttachment'
 
 export interface ChatMessage {
@@ -150,7 +150,12 @@ const ChatMessageRow = memo(function ChatMessageRow({
                   )}
                   {msg.text && (
                     <span className="whitespace-pre-wrap">
-                      {trimmedSearch ? highlightMatch(msg.text, searchQuery) : msg.text}
+                      {formatMessageText(msg.text, {
+                        searchQuery: trimmedSearch ? searchQuery : undefined,
+                        linkClassName: isOwn
+                          ? 'text-white/95 underline underline-offset-2 break-all hover:text-white'
+                          : undefined,
+                      })}
                     </span>
                   )}
                 </>

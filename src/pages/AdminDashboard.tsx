@@ -28,7 +28,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { formatTime, formatTimeCompact, isSameDay, formatDateDivider } from '../lib/formatTime'
-import { messageMatches, highlightMatch, isSafeUrl, withTimeout } from '../lib/chatUtils'
+import { messageMatches, highlightMatch, isSafeUrl, formatMessageText, withTimeout } from '../lib/chatUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadChatAttachment, validateFile, type AttachmentType } from '../lib/chatAttachment'
 import CouponManager from '../components/CouponManager'
@@ -1394,9 +1394,12 @@ export default function AdminDashboard() {
                               )}
                               {msg.text && (
                                 <span className="whitespace-pre-wrap">
-                                  {searchQuery.trim()
-                                    ? highlightMatch(msg.text, searchQuery)
-                                    : msg.text}
+                                  {formatMessageText(msg.text, {
+                                    searchQuery: searchQuery.trim() ? searchQuery : undefined,
+                                    linkClassName: isOwn
+                                      ? 'text-white/90 underline underline-offset-2 break-all hover:text-white'
+                                      : undefined,
+                                  })}
                                 </span>
                               )}
                               </>

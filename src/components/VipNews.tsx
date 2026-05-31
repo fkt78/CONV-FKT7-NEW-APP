@@ -11,7 +11,7 @@ import {
 import { db } from '../lib/firebase'
 import { getLocaleTag } from '../lib/formatTime'
 import { normalizeNewsImageUrls } from '../lib/newsImages'
-import { linkifyText } from '../lib/chatUtils'
+import { formatMessageText } from '../lib/chatUtils'
 import AudioPlayer from './AudioPlayer'
 import NewsImageLightbox from './NewsImageLightbox'
 import i18n from '../i18n'
@@ -161,7 +161,7 @@ const NewsCard = memo(function NewsCard({
           )}
           {item.content && (
             <p className="text-[#86868b] text-[15px] leading-relaxed whitespace-pre-wrap">
-              {linkifyText(item.content)}
+              {formatMessageText(item.content)}
             </p>
           )}
           {item.audioUrl && <AudioPlayer src={item.audioUrl} title={item.title} />}
