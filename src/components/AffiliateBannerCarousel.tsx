@@ -171,6 +171,17 @@ const CORE_BANNER_SLIDES: BannerSlide[] = [
   },
 ]
 
+/** 常に先頭（インデックス0）に固定するスライド */
+const FKT_MALL_SLIDE: BannerSlide = {
+  id: 'fkt-mall',
+  bgImage: '/banners/fkt-mall.jpg',
+  bgPosition: 'right center',
+  i18nKey: 'banner.fktMall',
+  badgeColor: '#c9a227',
+  href: 'https://fkt-mall.web.app/lp/member.html',
+  labelJa: 'FKT Mall（会員登録）',
+}
+
 function shuffleBannerSlides(slides: BannerSlide[]): BannerSlide[] {
   const copy = [...slides]
   for (let i = copy.length - 1; i > 0; i--) {
@@ -205,7 +216,7 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
       href: jobUrl,
       labelJa: '伊賀エリア3店舗 求人',
     }
-    return [jobSlide, ...shuffleBannerSlides([...CORE_BANNER_SLIDES])]
+    return [FKT_MALL_SLIDE, jobSlide, ...shuffleBannerSlides([...CORE_BANNER_SLIDES])]
   }, [])
   const [current, setCurrent] = useState(0)
   const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）

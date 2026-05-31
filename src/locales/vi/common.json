@@ -185,6 +185,12 @@
       "title": "Nexus Card",
       "subtitle": "Tiện lợi cho cuộc sống không tiền mặt",
       "cta": "Xem chi tiết"
+    },
+    "fktMall": {
+      "badge": "Khai trương!",
+      "title": "FKT Mall",
+      "subtitle": "Đăng ký thành viên",
+      "cta": "Xem chi tiết"
     }
   },
   "vipNews": {
