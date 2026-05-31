@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
+
+/** 本文中の http(s) URL（末尾の句読点は除外） */
+const INLINE_URL_REGEX = /(https?:\/\/[^\s<>"')\]]+)/gi
 
 /** メッセージが検索キーワードにマッチするか */
 export function messageMatches(
@@ -33,6 +36,33 @@ export function highlightMatch(text: string | null | undefined, query: string): 
 export function isSafeUrl(url: string | undefined | null): boolean {
   if (!url) return false
   return /^https?:\/\//i.test(url)
+}
+
+/** プレーンテキスト内の URL を外部リンクに変換（改行は維持） */
+export function linkifyText(text: string, linkClassName?: string): ReactNode {
+  const parts = text.split(INLINE_URL_REGEX)
+  if (parts.length === 1) return text
+
+  const linkClass =
+    linkClassName ?? 'text-[#0095B6] underline underline-offset-2 break-all hover:text-[#007A96]'
+
+  return parts.map((part, i) => {
+    if (!part) return null
+    if (isSafeUrl(part)) {
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+        >
+          {part}
+        </a>
+      )
+    }
+    return <Fragment key={i}>{part}</Fragment>
+  })
 }
 
 /**
