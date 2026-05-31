@@ -341,7 +341,11 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
         href={slide.href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`${t(`${slide.i18nKey}.title`)} — ${t(`${slide.i18nKey}.subtitle`)}`}
+        aria-label={
+          slide.id === 'fkt-mall'
+            ? `${t(`${slide.i18nKey}.title`)} — ${t(`${slide.i18nKey}.catchphrase`)} — ${t(`${slide.i18nKey}.subtitle`)}`
+            : `${t(`${slide.i18nKey}.title`)} — ${t(`${slide.i18nKey}.subtitle`)}`
+        }
         className="block relative select-none cursor-grab active:cursor-grabbing"
         style={{
           height: slide.id === 'fukita-recruit' ? '136px' : '118px',
@@ -423,6 +427,23 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
           >
             {t(`${slide.i18nKey}.title`)}
           </p>
+
+          {slide.id === 'fkt-mall' && (
+            <p
+              style={{
+                margin: '4px 0 0',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: 600,
+                lineHeight: 1.35,
+                letterSpacing: '0.01em',
+                textShadow: '0 1px 6px rgba(0,0,0,0.45)',
+                maxWidth: '68%',
+              }}
+            >
+              {t(`${slide.i18nKey}.catchphrase`)}
+            </p>
+          )}
 
           {/* サブタイトル */}
           <p
