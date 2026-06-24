@@ -129,6 +129,7 @@ export default function AdminDashboard() {
     Array<{ chatId: string; fullName: string; memberNumber: number | null; messages: Array<Message & { chatId: string }> }>
   >([])
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false)
+  const [globalSearchScanned, setGlobalSearchScanned] = useState(0)
   const [globalSearchDays, setGlobalSearchDays] = useState<number>(90)
   const [showGlobalSearchResults, setShowGlobalSearchResults] = useState(false)
   const [showBroadcastModal, setShowBroadcastModal] = useState(false)
@@ -149,6 +150,8 @@ export default function AdminDashboard() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const messagesForChatRef = useRef<string | null>(null)
+  /** 進行中の全チャット検索をキャンセルするための世代番号 */
+  const globalSearchRunRef = useRef(0)
   /** chats メタ情報の取得方式を「ポーリング」化したため、unsub ではなくタイマーIDを保持する */
   const chatMetaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   /** 既読更新済みのメッセージID（onSnapshot 再発火時の二重 updateDoc を抑止して書き込みループを断つ） */
@@ -506,11 +509,12 @@ export default function AdminDashboard() {
       setGlobalSearchResults([])
       return
     }
+    const runId = ++globalSearchRunRef.current
     setGlobalSearchLoading(true)
+    setGlobalSearchScanned(0)
     setShowGlobalSearchResults(true)
     try {
       const BATCH_SIZE = 300
-      const MAX_MESSAGES = 300
       const userMap = Object.fromEntries(users.map((u) => [u.uid, { fullName: u.fullName, memberNumber: u.memberNumber }]))
       const matches: Array<Message & { chatId: string }> = []
       let lastDoc: DocumentSnapshot | null = null
@@ -519,7 +523,10 @@ export default function AdminDashboard() {
       const filterDate =
         globalSearchDays > 0 ? new Date(Date.now() - globalSearchDays * 24 * 60 * 60 * 1000) : null
 
-      while (totalFetched < MAX_MESSAGES) {
+      // 選択した期間内のメッセージを最後までページングして検索する
+      while (true) {
+        if (runId !== globalSearchRunRef.current) return
+
         const baseConstraints: QueryConstraint[] = filterDate
           ? [
               where('createdAt', '>=', filterDate),
@@ -555,8 +562,12 @@ export default function AdminDashboard() {
 
         lastDoc = snap.docs[snap.docs.length - 1] ?? null
         totalFetched += snap.docs.length
+        setGlobalSearchScanned(totalFetched)
+
         if (snap.docs.length < BATCH_SIZE) break
       }
+
+      if (runId !== globalSearchRunRef.current) return
 
       const byChat = new Map<string, Array<Message & { chatId: string }>>()
       matches.forEach((m) => {
@@ -576,15 +587,23 @@ export default function AdminDashboard() {
       setGlobalSearchResults(results)
     } catch (err) {
       console.error('全チャット検索エラー:', err)
-      setGlobalSearchResults([])
+      if (runId === globalSearchRunRef.current) {
+        setGlobalSearchResults([])
+      }
     } finally {
-      setGlobalSearchLoading(false)
+      if (runId === globalSearchRunRef.current) {
+        setGlobalSearchLoading(false)
+        setGlobalSearchScanned(0)
+      }
     }
   }
 
   function clearGlobalSearch() {
+    globalSearchRunRef.current += 1
     setGlobalSearchQuery('')
     setGlobalSearchResults([])
+    setGlobalSearchScanned(0)
+    setGlobalSearchLoading(false)
     setShowGlobalSearchResults(false)
   }
 
@@ -1046,7 +1065,14 @@ export default function AdminDashboard() {
           <div className="flex-1 overflow-y-auto">
             {showGlobalSearchResults ? (
               globalSearchLoading ? (
-                <p className="text-[#86868b] text-sm text-center py-10">検索中...</p>
+                <p className="text-[#86868b] text-sm text-center py-10">
+                  検索中...
+                  {globalSearchScanned > 0 && (
+                    <span className="block text-[11px] mt-1">
+                      {globalSearchScanned.toLocaleString()}件を確認しました
+                    </span>
+                  )}
+                </p>
               ) : globalSearchResults.length === 0 ? (
                 <p className="text-[#86868b] text-sm text-center py-10">
                   {globalSearchQuery.trim() ? '該当するメッセージがありません' : 'キーワードを入力して検索'}
