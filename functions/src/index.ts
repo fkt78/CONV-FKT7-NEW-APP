@@ -1,4 +1,4 @@
-import { onDocumentCreated } from 'firebase-functions/v2/firestore'
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { onCall, HttpsError, type CallableRequest } from 'firebase-functions/v2/https'
 import { createHash } from 'node:crypto'
@@ -234,18 +234,45 @@ export const onCouponDistributed = onDocumentCreated(
   },
 )
 
-/** 新規ユーザー登録時：会員番号を自動採番 */
-export const onUserCreated = onDocumentCreated('users/{uid}', async (event) => {
-  const uid = event.params.uid
-  const snap = event.data
-  if (!snap) return
-  const data = snap.data()
-  if (data?.memberNumber != null) return
+/** 会員登録プロフィールが採番可能な完成状態か */
+function isRegistrationProfileComplete(data: FirebaseFirestore.DocumentData | undefined): boolean {
+  if (!data) return false
+  const fullName = data.fullName as string | undefined
+  const email = data.email as string | undefined
+  const birthMonth = data.birthMonth as string | undefined
+  const attribute = data.attribute as string | undefined
+  const status = data.status as string | undefined
+  return (
+    typeof fullName === 'string' &&
+    fullName.trim().length > 0 &&
+    typeof email === 'string' &&
+    email.trim().length > 0 &&
+    typeof birthMonth === 'string' &&
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(birthMonth) &&
+    typeof attribute === 'string' &&
+    attribute.trim().length > 0 &&
+    status === 'active'
+  )
+}
+
+/** プロフィール完成時のみ会員番号を採番（未完成・エラー残骸には付けない） */
+async function assignMemberNumberIfNeeded(
+  uid: string,
+  data: FirebaseFirestore.DocumentData | undefined,
+): Promise<number | null> {
+  if (!isRegistrationProfileComplete(data)) return null
+  if (data?.memberNumber != null) return null
 
   const counterRef = db.collection('settings').doc('memberNumberCounter')
   const userRef = db.collection('users').doc(uid)
 
   const nextNumber = await db.runTransaction(async (tx) => {
+    const userSnap = await tx.get(userRef)
+    if (!userSnap.exists) return null
+    const current = userSnap.data()
+    if (current?.memberNumber != null) return null
+    if (!isRegistrationProfileComplete(current)) return null
+
     const counterSnap = await tx.get(counterRef)
     const next = counterSnap.exists ? ((counterSnap.data()?.next as number) ?? 1) : 1
     tx.set(counterRef, { next: next + 1 }, { merge: true })
@@ -253,7 +280,28 @@ export const onUserCreated = onDocumentCreated('users/{uid}', async (event) => {
     return next
   })
 
-  console.log('Assigned memberNumber', nextNumber, 'to', uid)
+  if (nextNumber != null) {
+    console.log('Assigned memberNumber', nextNumber, 'to', uid)
+  }
+  return nextNumber
+}
+
+/** 新規ユーザー登録時：プロフィール完成時のみ会員番号を自動採番 */
+export const onUserCreated = onDocumentCreated('users/{uid}', async (event) => {
+  const uid = event.params.uid
+  const snap = event.data
+  if (!snap) return
+  await assignMemberNumberIfNeeded(uid, snap.data())
+})
+
+/** プロフィール更新で完成した場合に会員番号を採番 */
+export const onUserUpdated = onDocumentUpdated('users/{uid}', async (event) => {
+  const uid = event.params.uid
+  const after = event.data?.after
+  if (!after?.exists) return
+  const data = after.data()
+  if (data?.memberNumber != null) return
+  await assignMemberNumberIfNeeded(uid, data)
 })
 
 /** checkBlacklist 用：同一クライアントあたりの呼び出し上限（窓内） */
@@ -350,7 +398,10 @@ export const assignMemberNumbers = onCall(async (request) => {
     .get()
 
   const withoutNumber = usersSnap.docs
-    .filter((d) => d.data().memberNumber == null)
+    .filter((d) => {
+      const data = d.data()
+      return data.memberNumber == null && isRegistrationProfileComplete(data)
+    })
     .sort((a, b) => {
       const aAt = (a.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
       const bAt = (b.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0
@@ -361,18 +412,13 @@ export const assignMemberNumbers = onCall(async (request) => {
     return { assigned: 0, message: '割り当て対象のユーザーがいません' }
   }
 
-  const counterRef = db.collection('settings').doc('memberNumberCounter')
-
+  let assigned = 0
   for (const d of withoutNumber) {
-    await db.runTransaction(async (tx) => {
-      const c = await tx.get(counterRef)
-      const n = c.exists ? ((c.data()?.next as number) ?? 1) : 1
-      tx.set(counterRef, { next: n + 1 }, { merge: true })
-      tx.update(db.collection('users').doc(d.id), { memberNumber: n })
-    })
+    const n = await assignMemberNumberIfNeeded(d.id, d.data())
+    if (n != null) assigned++
   }
 
-  return { assigned: withoutNumber.length, message: `${withoutNumber.length}名に会員番号を割り当てました` }
+  return { assigned, message: `${assigned}名に会員番号を割り当てました` }
 })
 
 /** お知らせ投稿時（全ユーザーに通知） */

@@ -25,7 +25,16 @@ service cloud.firestore {
         && (request.auth.uid == uid || isAdmin());
       allow create: if request.auth != null
         && request.auth.uid == uid
-        && !request.resource.data.keys().hasAny(['role'])
+        && !request.resource.data.keys().hasAny(['role', 'memberNumber'])
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.birthMonth is string
+        && request.resource.data.birthMonth.size() > 0
+        && request.resource.data.attribute is string
+        && request.resource.data.attribute.size() > 0
+        && request.resource.data.status == 'active'
         && (!('memberGroups' in request.resource.data)
           || (request.resource.data.memberGroups is list
             && request.resource.data.memberGroups.size() == 0));
@@ -38,7 +47,10 @@ service cloud.firestore {
           )
           || isAdmin()
         );
-      allow delete: if request.auth != null && isAdmin();
+      allow delete: if request.auth != null && (
+        isAdmin()
+        || (request.auth.uid == uid && resource.data.get('memberNumber', null) == null)
+      );
     }
 
     // ── ユーザー保有クーポン：本人または管理者が読み取り、本人は使用済み更新のみ、管理者は作成可 ──

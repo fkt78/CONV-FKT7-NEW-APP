@@ -5,13 +5,28 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   updateProfile,
+  type User,
 } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, functions, httpsCallable } from '../lib/firebase'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
 /** 会員の性別（クーポン配信の attribute フィールドと同一キー） */
 type RegisterGender = 'male' | 'female'
+
+/** 登録失敗時：Firestore 残骸と Auth アカウントを両方削除 */
+async function rollbackRegistration(uid: string, user: User) {
+  try {
+    await deleteDoc(doc(db, 'users', uid))
+  } catch (err) {
+    console.error('登録取り消し（Firestore 削除）に失敗:', err)
+  }
+  try {
+    await deleteUser(user)
+  } catch (err) {
+    console.error('登録取り消し（Auth アカウント削除）に失敗:', err)
+  }
+}
 
 export default function Register() {
   const { t } = useTranslation()
@@ -91,26 +106,23 @@ export default function Register() {
       const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
       const uid = credential.user.uid
 
+      const profile = {
+        uid,
+        fullName: fullName.trim(),
+        birthMonth,
+        attribute,
+        email: trimmedEmail,
+        status: 'active' as const,
+        createdAt: serverTimestamp(),
+      }
+
       try {
-        await updateProfile(credential.user, { displayName: fullName.trim() })
-
-        await setDoc(doc(db, 'users', uid), {
-          uid,
-          fullName: fullName.trim(),
-          birthMonth,
-          attribute,
-          email: trimmedEmail,
-          status: 'active',
-          createdAt: serverTimestamp(),
-        })
-
+        await updateProfile(credential.user, { displayName: profile.fullName })
+        await setDoc(doc(db, 'users', uid), profile)
         navigate('/')
-      } catch {
-        try {
-          await deleteUser(credential.user)
-        } catch (delErr) {
-          console.error('登録取り消し（Auth アカウント削除）に失敗:', delErr)
-        }
+      } catch (err) {
+        console.error('会員登録エラー:', err)
+        await rollbackRegistration(uid, credential.user)
         setError(t('register.error.generic'))
       }
     } catch (err: unknown) {
