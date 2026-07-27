@@ -1214,11 +1214,13 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
                 <button
                   onClick={() => setShowChatPanel(false)}
-                  className="md:hidden text-[#0095B6] hover:text-[#007A96] transition mr-1"
+                  aria-label="顧客一覧に戻る"
+                  className="md:hidden flex items-center gap-0.5 flex-shrink-0 pl-1 pr-2.5 py-1.5 rounded-lg bg-[#0095B6]/10 text-[#0095B6] hover:bg-[#0095B6]/20 transition mr-1 text-xs font-semibold"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 18 9 12 15 6" />
                   </svg>
+                  <span>一覧</span>
                 </button>
 
                 <div className="w-9 h-9 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
