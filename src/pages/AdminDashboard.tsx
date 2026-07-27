@@ -120,7 +120,6 @@ export default function AdminDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
-  const [showChatPanel, setShowChatPanel] = useState(false)
   const [adminTab, setAdminTab] = useState<AdminTab>('chat')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResultIndex, setSearchResultIndex] = useState(0)
@@ -423,8 +422,6 @@ export default function AdminDashboard() {
     const pick = candidates[0]
     if (pick) {
       setSelectedUid(pick.uid)
-      // 狭い画面（md 未満）では顧客リストを先に見せたいので、チャット全幅表示へは切り替えない。
-      // 広い画面では左右両方が常に表示されるため、このフラグは影響しない。
     }
   }, [adminTab, showGlobalSearchResults, selectedUid, sortedUsers, currentUser?.uid])
 
@@ -479,7 +476,6 @@ export default function AdminDashboard() {
 
   function selectUser(uid: string) {
     setSelectedUid(uid)
-    setShowChatPanel(true)
     // クリック直後に緑ドットを消す（Firestore 書き込み完了・ポーリング待ちを不要にする）
     const wasUnread = !!chatMeta[uid]?.unreadFromCustomer
     setChatMeta((prev) => {
@@ -989,14 +985,14 @@ export default function AdminDashboard() {
           onOpenChat={(uid) => {
             setAdminTab('chat')
             setSelectedUid(uid)
-            setShowChatPanel(true)
           }}
           onSendToSelected={(uids) => openBroadcastModal(uids)}
         />
       ) : adminTab === 'chat' ? (
         <div className="flex-1 flex overflow-hidden min-h-0">
         {/* ── 左パネル：顧客リスト / 全チャット検索 ── */}
-        <div className={`w-full md:w-80 md:flex-shrink-0 border-r border-[#e5e5ea] flex flex-col bg-white min-h-0 ${showChatPanel ? 'hidden md:flex' : 'flex'}`}>
+        {/* 顧客リストは画面幅にかかわらず常に表示（狭い画面では列幅を縮める） */}
+        <div className="w-44 sm:w-64 md:w-80 flex-shrink-0 border-r border-[#e5e5ea] flex flex-col bg-white min-h-0">
           {/* 全チャット検索バー・一斉送信 */}
           <div className="px-4 py-3 border-b border-[#e5e5ea] space-y-2">
             <button
@@ -1087,7 +1083,6 @@ export default function AdminDashboard() {
                       key={chatId}
                       onClick={() => {
                         setSelectedUid(chatId)
-                        setShowChatPanel(true)
                         setSearchQuery(globalSearchQuery.trim())
                       }}
                       className={`w-full text-left px-4 py-3 transition flex items-center gap-3 ${
@@ -1208,21 +1203,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── 右パネル：チャットエリア（min-h-0 で flex 子の縮小を許可し、入力欄がビューポート外に押し出されるのを防ぐ） ── */}
-        <div className={`flex-1 flex flex-col min-h-0 ${showChatPanel ? 'flex' : 'hidden md:flex'}`}>
+        <div className="flex-1 flex flex-col min-h-0">
           {selectedUser ? (
             <>
               <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
-                <button
-                  onClick={() => setShowChatPanel(false)}
-                  aria-label="顧客一覧に戻る"
-                  className="md:hidden flex items-center gap-0.5 flex-shrink-0 pl-1 pr-2.5 py-1.5 rounded-lg bg-[#0095B6]/10 text-[#0095B6] hover:bg-[#0095B6]/20 transition mr-1 text-xs font-semibold"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                  <span>一覧</span>
-                </button>
-
                 <div className="w-9 h-9 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-sm">
                     {selectedUser.fullName.charAt(0)}
@@ -1609,10 +1593,7 @@ export default function AdminDashboard() {
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedUid(null)
-                  setShowChatPanel(false)
-                }}
+                onClick={() => setSelectedUid(null)}
                 className="mt-4 px-4 py-2 rounded-xl bg-[#0095B6] text-white text-sm font-medium hover:bg-[#007A96] transition"
               >
                 選択を解除して一覧に戻る
