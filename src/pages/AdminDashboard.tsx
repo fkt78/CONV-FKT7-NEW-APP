@@ -423,7 +423,8 @@ export default function AdminDashboard() {
     const pick = candidates[0]
     if (pick) {
       setSelectedUid(pick.uid)
-      setShowChatPanel(true)
+      // 狭い画面（md 未満）では顧客リストを先に見せたいので、チャット全幅表示へは切り替えない。
+      // 広い画面では左右両方が常に表示されるため、このフラグは影響しない。
     }
   }, [adminTab, showGlobalSearchResults, selectedUid, sortedUsers, currentUser?.uid])
 
