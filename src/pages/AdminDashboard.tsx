@@ -144,7 +144,7 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersRefreshKey, setUsersRefreshKey] = useState(0)
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
@@ -334,9 +334,23 @@ export default function AdminDashboard() {
     }
   }, [selectedUid])
 
+  // scrollIntoView は祖先要素（顧客リストを含む2カラムコンテナ）まで横スクロールさせ、
+  // 狭い画面で左カラムが画面外に押し出される原因になるため、
+  // スクロールは必ずメッセージ領域のコンテナ内に限定する。
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const c = messagesContainerRef.current
+    if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  /** 指定メッセージ要素をメッセージ領域の中央付近へスクロール（コンテナ内のみ動かす） */
+  function scrollMessageToCenter(el: HTMLElement | undefined) {
+    const c = messagesContainerRef.current
+    if (!c || !el) return
+    const cRect = c.getBoundingClientRect()
+    const eRect = el.getBoundingClientRect()
+    const top = c.scrollTop + (eRect.top - cRect.top) - (c.clientHeight - eRect.height) / 2
+    c.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+  }
 
   useEffect(() => {
     if (adminTab !== 'chat') setSending(false)
@@ -446,7 +460,7 @@ export default function AdminDashboard() {
       const msg = messages[matchedIndices[0]]
       if (msg) {
         const timer = setTimeout(() => {
-          messageRefsMap.current.get(msg.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          scrollMessageToCenter(messageRefsMap.current.get(msg.id))
         }, 100)
         return () => clearTimeout(timer)
       }
@@ -457,7 +471,7 @@ export default function AdminDashboard() {
     const idx = matchedIndices[index]
     const msg = messages[idx]
     if (!msg) return
-    messageRefsMap.current.get(msg.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    scrollMessageToCenter(messageRefsMap.current.get(msg.id))
   }
 
   function handleSearchPrev() {
@@ -1202,8 +1216,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ── 右パネル：チャットエリア（min-h-0 で flex 子の縮小を許可し、入力欄がビューポート外に押し出されるのを防ぐ） ── */}
-        <div className="flex-1 flex flex-col min-h-0">
+        {/* ── 右パネル：チャットエリア（min-h-0/min-w-0 で flex 子の縮小を許可し、はみ出しを防ぐ） ── */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
           {selectedUser ? (
             <>
               <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
@@ -1212,8 +1226,8 @@ export default function AdminDashboard() {
                     {selectedUser.fullName.charAt(0)}
                   </span>
                 </div>
-                <div>
-                  <p className="text-[#1d1d1f] text-sm font-medium">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#1d1d1f] text-sm font-medium truncate">
                     {selectedUser.memberNumber != null && (
                       <span className="text-[#86868b] font-mono text-[10px] mr-1.5">
                         #{String(selectedUser.memberNumber).padStart(5, '0')}
@@ -1221,7 +1235,7 @@ export default function AdminDashboard() {
                     )}
                     {selectedUser.fullName}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-[#86868b] text-[10px]">
                       {ATTRIBUTE_LABELS[selectedUser.attribute] ?? selectedUser.attribute} · {selectedUser.birthMonth}
                     </p>
@@ -1285,7 +1299,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-[#f5f5f7]">
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 space-y-3 bg-[#f5f5f7]">
                 {messages.length === 0 ? (
                   <p className="text-[#86868b] text-sm text-center py-10">
                     まだメッセージはありません
@@ -1472,7 +1486,6 @@ export default function AdminDashboard() {
                     )
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* relative z-20: ⋮メニューの fixed オーバーレイ(z-10)より上に置き、タップを塞がせない */}
