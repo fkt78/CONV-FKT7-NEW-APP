@@ -72,46 +72,16 @@
       "subtitle": "地元のお客様へダイレクトにPR・月額1,000円〜",
       "cta": "詳細を見る"
     },
-    "shopJobGithubPages": {
-      "badge": "採用 / We’re hiring",
-      "title": "店舗スタッフ募集",
-      "subtitle": "求人内容・応募は専用ページから",
-      "cta": "詳細を見る"
-    },
     "fukitaRecruit": {
       "badge": "スタッフ募集中",
       "title": "セブンイレブン伊賀平野北谷店\n伊賀平野東町店\n伊賀忍者市駅南店",
       "subtitle": "一緒に働きませんか？",
       "cta": "詳細を見る"
     },
-    "vpn": {
-      "badge": "2ヶ月無料",
-      "title": "セカイVPN",
-      "subtitle": "日本の動画や母国のサイトを安全に閲覧",
-      "cta": "詳細を見る"
-    },
-    "abema": {
-      "badge": "Anime & TV",
-      "title": "ABEMAプレミアム",
-      "subtitle": "アニメや番組が盛りだくさん。日本語の勉強にも最適",
-      "cta": "詳細を見る"
-    },
-    "prepaid": {
-      "badge": "No Credit Card",
-      "title": "スマホプリペイド",
-      "subtitle": "クレカ不要。セブン-イレブンのレジで現金購入できます。",
-      "cta": "詳細を見る"
-    },
     "furnishedShareHouse": {
       "badge": "保証人不要",
       "title": "家具家電付きシェアハウス",
       "subtitle": "カバン1つで即入居OK",
-      "cta": "詳細を見る"
-    },
-    "sim": {
-      "badge": "Save Money",
-      "title": "格安SIM（エキサイト）",
-      "subtitle": "月々のスマホ代を賢く節約。使った分だけ支払う安心プラン。",
       "cta": "詳細を見る"
     },
     "dtisim": {
@@ -142,30 +112,6 @@
       "badge": "スマホ高額買取",
       "title": "ダイワンテレコム",
       "subtitle": "不要なスマホを高く売ろう",
-      "cta": "詳細を見る"
-    },
-    "kojoKyujinNavi": {
-      "badge": "好条件の工場求人",
-      "title": "工場求人ナビ",
-      "subtitle": "寮完備・未経験歓迎",
-      "cta": "詳細を見る"
-    },
-    "commufa": {
-      "badge": "三重・中部限定",
-      "title": "コミュファ光",
-      "subtitle": "圧倒的な速さと地元での信頼。今なら15,000円特典対象。",
-      "cta": "詳細を見る"
-    },
-    "rakuten": {
-      "badge": "Point UP",
-      "title": "楽天市場",
-      "subtitle": "いつものお買い物でポイントがどんどん貯まる。毎日の生活をもっとお得に。",
-      "cta": "詳細を見る"
-    },
-    "onamae": {
-      "badge": "No.1 Domain",
-      "title": "お名前.com",
-      "subtitle": "自分だけのオリジナルドメインを。最短1分で手軽に登録完了。",
       "cta": "詳細を見る"
     },
     "kaNabell": {

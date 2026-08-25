@@ -72,46 +72,16 @@
       "subtitle": "PR trực tiếp tới khách địa phương · Từ 1.000 yên/tháng",
       "cta": "Xem chi tiết"
     },
-    "shopJobGithubPages": {
-      "badge": "Tuyển dụng · We’re hiring",
-      "title": "Tuyển nhân viên cửa hàng",
-      "subtitle": "Chi tiết và ứng tuyển trên trang tuyển dụng",
-      "cta": "Xem chi tiết"
-    },
     "fukitaRecruit": {
       "badge": "Tuyển dụng nhân viên",
       "title": "セブンイレブン伊賀平野北谷店\n伊賀平野東町店\n伊賀忍者市駅南店",
       "subtitle": "Hãy làm việc cùng chúng tôi!",
       "cta": "Xem chi tiết"
     },
-    "vpn": {
-      "badge": "Miễn phí 2 tháng",
-      "title": "Sekai VPN",
-      "subtitle": "Xem nội dung Nhật Bản & trang web quê hương an toàn",
-      "cta": "Xem chi tiết"
-    },
-    "abema": {
-      "badge": "Anime & TV",
-      "title": "ABEMA Premium",
-      "subtitle": "Anime & chương trình TV phong phú. Tuyệt vời để học tiếng Nhật!",
-      "cta": "Xem chi tiết"
-    },
-    "prepaid": {
-      "badge": "No Credit Card",
-      "title": "SIM Trả Trước",
-      "subtitle": "Không cần thẻ tín dụng. Mua bằng tiền mặt tại 7-Eleven.",
-      "cta": "Xem chi tiết"
-    },
     "furnishedShareHouse": {
       "badge": "Không cần người bảo lãnh",
       "title": "Share house đầy đủ nội thất",
       "subtitle": "Đầy đủ nội thất, vào ở ngay",
-      "cta": "Xem chi tiết"
-    },
-    "sim": {
-      "badge": "Save Money",
-      "title": "SIM Giá Rẻ (Excite)",
-      "subtitle": "Tiết kiệm chi phí điện thoại hàng tháng. Trả theo lượng dùng.",
       "cta": "Xem chi tiết"
     },
     "dtisim": {
@@ -142,30 +112,6 @@
       "badge": "Thu mua giá cao",
       "title": "Daiwan Telecom",
       "subtitle": "Bán điện thoại cũ với giá cao",
-      "cta": "Xem chi tiết"
-    },
-    "kojoKyujinNavi": {
-      "badge": "Việc làm nhà máy tốt",
-      "title": "Navi việc làm nhà máy",
-      "subtitle": "Có ký túc xá・Không cần kinh nghiệm",
-      "cta": "Xem chi tiết"
-    },
-    "commufa": {
-      "badge": "Giới hạn Mie・Chubu",
-      "title": "Commufa Hikari",
-      "subtitle": "Internet cáp quang cực nhanh. Ưu đãi lên đến ¥15,000.",
-      "cta": "Xem chi tiết"
-    },
-    "rakuten": {
-      "badge": "Point UP",
-      "title": "Rakuten Ichiba",
-      "subtitle": "Tích điểm với mọi giao dịch. Mua sắm hàng ngày tiết kiệm hơn.",
-      "cta": "Xem chi tiết"
-    },
-    "onamae": {
-      "badge": "No.1 Domain",
-      "title": "Onamae.com",
-      "subtitle": "Sở hữu tên miền riêng của bạn. Đăng ký chỉ trong 1 phút.",
       "cta": "Xem chi tiết"
     },
     "kaNabell": {

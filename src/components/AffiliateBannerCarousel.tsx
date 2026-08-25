@@ -7,7 +7,7 @@ interface BannerSlide {
   id: string
   bgImage: string
   bgPosition: string
-  /** i18n キープレフィックス（例: banner.vpn） */
+  /** i18n キープレフィックス（例: banner.agoda） */
   i18nKey: string
   badgeColor: string
   href: string
@@ -62,33 +62,6 @@ const CORE_BANNER_SLIDES: BannerSlide[] = [
     labelJa: 'ごえんモバイル',
   },
   {
-    id: 'vpn',
-    bgImage: '/banners/vpn-bg.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.vpn',
-    badgeColor: '#ff3b30',
-    href: 'https://fkt-office.com/life-support.html',
-    labelJa: 'セカイVPN',
-  },
-  {
-    id: 'abema',
-    bgImage: '/banners/abema-bg.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.abema',
-    badgeColor: '#ff2d55',
-    href: 'https://fkt-office.com/life-support.html',
-    labelJa: 'ABEMAプレミアム',
-  },
-  {
-    id: 'prepaid',
-    bgImage: '/banners/prepaid-bg.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.prepaid',
-    badgeColor: '#34c759',
-    href: 'https://fkt-office.com/life-support.html',
-    labelJa: 'スマホプリペイド',
-  },
-  {
     id: 'furnished-share-house',
     bgImage: '/banners/furnished-share-house.webp',
     bgPosition: 'right center',
@@ -96,15 +69,6 @@ const CORE_BANNER_SLIDES: BannerSlide[] = [
     badgeColor: '#ea580c',
     href: 'https://fkt-office.com/life-support.html#furnished-share-house',
     labelJa: '家具家電付きシェアハウス',
-  },
-  {
-    id: 'sim',
-    bgImage: '/banners/sim-bg.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.sim',
-    badgeColor: '#007aff',
-    href: 'https://fkt-office.com/life-support.html',
-    labelJa: '格安SIM（エキサイト）',
   },
   {
     id: 'dtisim',
@@ -132,33 +96,6 @@ const CORE_BANNER_SLIDES: BannerSlide[] = [
     badgeColor: '#006ce4',
     href: 'https://fkt-office.com/life-support.html#agoda',
     labelJa: 'agoda（ホテル予約）',
-  },
-  {
-    id: 'commufa',
-    bgImage: '/banners/commufa-bg.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.commufa',
-    badgeColor: '#ff9500',
-    href: 'https://fkt-office.com/service-guide.html',
-    labelJa: 'コミュファ光',
-  },
-  {
-    id: 'rakuten',
-    bgImage: '/banners/rakuten-bg.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.rakuten',
-    badgeColor: '#bf0000',
-    href: 'https://fkt-office.com/service-guide.html',
-    labelJa: '楽天市場',
-  },
-  {
-    id: 'onamae',
-    bgImage: '/banners/onamae-bg.webp',
-    bgPosition: 'right center',
-    i18nKey: 'banner.onamae',
-    badgeColor: '#007aff',
-    href: 'https://fkt-office.com/service-guide.html',
-    labelJa: 'お名前.com',
   },
   {
     id: 'nexus-card',
