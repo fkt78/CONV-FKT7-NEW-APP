@@ -52,6 +52,15 @@ const CORE_BANNER_SLIDES: BannerSlide[] = [
     href: 'https://fkt-office.com/life-support.html#nexus-card',
     labelJa: 'Nexus Card',
   },
+  {
+    id: 'penguin-mobile',
+    bgImage: '/banners/penguin-mobile.webp',
+    bgPosition: 'right center',
+    i18nKey: 'banner.penguinMobile',
+    badgeColor: '#f59e0b',
+    href: 'https://png-hikaku-app-fkt78.web.app/',
+    labelJa: 'ペンギンモバイル（格安SIM）',
+  },
 ]
 
 /** 常に先頭（インデックス0）に固定するスライド */
