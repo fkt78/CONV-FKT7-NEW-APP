@@ -30,7 +30,7 @@ async function getAnalyticsInstance(): Promise<Analytics | null> {
 /**
  * バナークリックを GA4 に送信し、Firestore の累計カウンタを +1 する。
  *
- * @param bannerId   バナーの一意キー（例: 'vpn', 'dtisim'）
+ * @param bannerId   バナーの一意キー（例: 'agoda', 'fkt-mall'）
  * @param bannerLabel 日本語表示名（例: 'セカイVPN'）
  */
 export async function logBannerClick(bannerId: string, bannerLabel: string): Promise<void> {
