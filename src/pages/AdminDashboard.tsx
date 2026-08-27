@@ -38,6 +38,8 @@ import RoadmapManager from '../components/RoadmapManager'
 import UserManager from '../components/UserManager'
 import MessageTemplateManager, { type MessageTemplate } from '../components/MessageTemplateManager'
 import AnalyticsManager from '../components/AnalyticsManager'
+import UserAvatar from '../components/UserAvatar'
+import { useVisibilityPolling } from '../hooks/useVisibilityPolling'
 
 type AdminTab = 'chat' | 'coupon' | 'omikuji' | 'news' | 'users' | 'roadmap' | 'templates' | 'analytics'
 
@@ -161,7 +163,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     let cancelled = false
     setUsersLoading(true)
-    const q = query(collection(db, 'users'), where('status', '==', 'active'))
+    const q = query(collection(db, 'users'))
     getDocs(q)
       .then((snap) => {
         if (cancelled) return
@@ -193,6 +195,13 @@ export default function AdminDashboard() {
       cancelled = true
     }
   }, [usersRefreshKey])
+
+  useVisibilityPolling(
+    () => setUsersRefreshKey((k) => k + 1),
+    300_000,
+    adminTab === 'chat',
+    [adminTab],
+  )
 
   /**
    * chats（最新メッセージ・未読フラグ）は onSnapshot ではなく 30 秒ポーリングで取得する。
@@ -432,7 +441,9 @@ export default function AdminDashboard() {
     if (adminTab !== 'chat' || showGlobalSearchResults) return
     if (selectedUid != null) return
     if (sortedUsers.length === 0) return
-    const candidates = sortedUsers.filter((u) => u.role !== 'admin' && u.uid !== currentUser?.uid)
+    const candidates = sortedUsers.filter(
+      (u) => u.role !== 'admin' && u.uid !== currentUser?.uid && u.status !== 'blacklisted',
+    )
     const pick = candidates[0]
     if (pick) {
       setSelectedUid(pick.uid)
@@ -645,6 +656,13 @@ export default function AdminDashboard() {
     }
     try {
       await updateDoc(doc(db, 'users', selectedUser.uid), update)
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === selectedUser.uid
+            ? { ...u, yellowCards: next, status: (update.status as string | undefined) ?? u.status }
+            : u,
+        ),
+      )
       setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('イエローカード更新エラー:', err)
@@ -657,6 +675,11 @@ export default function AdminDashboard() {
     if (!confirm(`${selectedUser.fullName}さんにレッドカードを出しますか？\n即座にブラックリストに入ります。`)) return
     try {
       await updateDoc(doc(db, 'users', selectedUser.uid), { status: 'blacklisted', yellowCards: 3 })
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === selectedUser.uid ? { ...u, yellowCards: 3, status: 'blacklisted' } : u,
+        ),
+      )
       setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('レッドカード更新エラー:', err)
@@ -1106,9 +1129,11 @@ export default function AdminDashboard() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold text-sm">{fullName.charAt(0)}</span>
-                        </div>
+                        <UserAvatar
+                          fullName={fullName}
+                          yellowCards={users.find((x) => x.uid === chatId)?.yellowCards ?? 0}
+                          size="md"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-[#1d1d1f] text-sm font-medium truncate">
                             {memberNumber != null && (
@@ -1139,8 +1164,6 @@ export default function AdminDashboard() {
                 const isSelected = selectedUid === user.uid
                 const hasUnread = !!meta?.unreadFromCustomer
                 const yc = user.yellowCards ?? 0
-                // 枚数でアバター色を変化：0→通常青／1→黄／2以上→橙（警戒）
-                const avatarBg = yc >= 2 ? '#f97316' : yc === 1 ? '#eab308' : '#0095B6'
 
                 return (
                   <button
@@ -1153,14 +1176,7 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <div className="relative flex-shrink-0">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                        style={{ backgroundColor: avatarBg }}
-                      >
-                        <span className="text-white font-bold text-sm">
-                          {user.fullName.charAt(0)}
-                        </span>
-                      </div>
+                      <UserAvatar fullName={user.fullName} yellowCards={yc} size="md" />
                       {hasUnread && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" title="未読メッセージあり" />
                       )}
@@ -1197,6 +1213,11 @@ export default function AdminDashboard() {
                           : `${ATTRIBUTE_LABELS[user.attribute] ?? user.attribute} · ${user.birthMonth}`}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {user.status === 'blacklisted' && (
+                          <span className="text-[9px] font-medium text-[#52525b] bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-1.5 py-px">
+                            停止中
+                          </span>
+                        )}
                         {user.totalSavedAmount > 0 && (
                           <span className="text-[9px] text-[#0095B6]">
                             👑 累計 ¥{user.totalSavedAmount.toLocaleString()}
@@ -1221,11 +1242,11 @@ export default function AdminDashboard() {
           {selectedUser ? (
             <>
               <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e5e5ea]">
-                <div className="w-9 h-9 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-sm">
-                    {selectedUser.fullName.charAt(0)}
-                  </span>
-                </div>
+                <UserAvatar
+                  fullName={selectedUser.fullName}
+                  yellowCards={selectedUser.yellowCards}
+                  size="sm"
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-[#1d1d1f] text-sm font-medium truncate">
                     {selectedUser.memberNumber != null && (
@@ -1334,11 +1355,11 @@ export default function AdminDashboard() {
 
                         <div className={`flex items-end gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                           {!isOwn && (
-                            <div className="w-7 h-7 rounded-full bg-[#0095B6] flex items-center justify-center flex-shrink-0">
-                              <span className="text-white text-[10px] font-bold">
-                                {selectedUser.fullName.charAt(0)}
-                              </span>
-                            </div>
+                            <UserAvatar
+                              fullName={selectedUser.fullName}
+                              yellowCards={selectedUser.yellowCards}
+                              size="xs"
+                            />
                           )}
 
                           <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
