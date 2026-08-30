@@ -58,6 +58,60 @@ function normalizeYellowCards(value: unknown): number {
   return Number.isFinite(n) ? Math.max(0, n) : 0
 }
 
+/** 氏名検索用の正規化（スペース除去・かな統一・半角化） */
+function normalizeSearchName(name: string): string {
+  if (!name) return ''
+  let s = name.trim()
+  s = s.replace(/[\u3000\s]+/g, '')
+  s = s.replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+  s = s.replace(/[\u3041-\u3096]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60))
+  return s.toLowerCase()
+}
+
+function matchesMemberNumber(term: string, memberNumber: number | null): boolean {
+  if (memberNumber == null) return false
+
+  const raw = term.trim().toLowerCase()
+  if (!raw) return false
+
+  const withoutHash = raw.startsWith('#') ? raw.slice(1) : raw
+  const padded = String(memberNumber).padStart(5, '0')
+  const hashForm = `#${padded}`
+
+  if (withoutHash && padded.includes(withoutHash)) return true
+  if (raw.includes('#') && hashForm.includes(raw)) return true
+
+  const digits = withoutHash.replace(/\D/g, '')
+  if (digits) {
+    const normalizedDigits = digits.replace(/^0+/, '') || '0'
+    if (normalizedDigits === String(memberNumber)) return true
+    if (padded.includes(digits)) return true
+  }
+
+  return false
+}
+
+function userMatchesTerm(user: UserRecord, term: string): boolean {
+  const t = term.trim()
+  if (!t) return true
+
+  if (matchesMemberNumber(t, user.memberNumber)) return true
+
+  const normTerm = normalizeSearchName(t)
+  if (normTerm && normalizeSearchName(user.fullName).includes(normTerm)) return true
+
+  if (user.email.toLowerCase().includes(t.toLowerCase())) return true
+
+  return false
+}
+
+function filterUsers(list: UserRecord[], searchQuery: string): UserRecord[] {
+  const q = searchQuery.trim()
+  if (!q) return list
+  const terms = q.split(/\s+/).filter(Boolean)
+  return list.filter((user) => terms.every((term) => userMatchesTerm(user, term)))
+}
+
 function sortUsersList(
   list: UserRecord[],
   sortKey: UserSortKey,
@@ -142,8 +196,11 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
   const [couponSortDir, setCouponSortDir] = useState<'asc' | 'desc'>('desc')
   const [sortKey, setSortKey] = useState<UserSortKey>('memberNumber')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectionClearNotice, setSelectionClearNotice] = useState(false)
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersRefreshKey, setUsersRefreshKey] = useState(0)
+  const isFirstSearchRender = useRef(true)
 
   useEffect(() => {
     let cancelled = false
@@ -181,40 +238,34 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     }
   }, [usersRefreshKey])
 
+  useEffect(() => {
+    if (isFirstSearchRender.current) {
+      isFirstSearchRender.current = false
+      return
+    }
+    setSelectedUids((prev) => {
+      if (prev.size > 0) setSelectionClearNotice(true)
+      return new Set()
+    })
+  }, [searchQuery])
+
   async function handleExportCsv() {
     setExporting(true)
     try {
-      // users と使用済みクーポンを並列一括取得（N+1 解消）
-      const [usersSnap, usedCouponsSnap] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(query(collectionGroup(db, 'coupons'), where('status', '==', 'used'))),
-      ])
+      const usedCouponsSnap = await getDocs(
+        query(collectionGroup(db, 'coupons'), where('status', '==', 'used')),
+      )
 
-      // uid → 使用済みクーポン数のマップをクライアント集計
       const usedCountMap = new Map<string, number>()
       for (const d of usedCouponsSnap.docs) {
-        // path: users/{uid}/coupons/{couponId}
         const uid = d.ref.path.split('/')[1]
         if (uid) usedCountMap.set(uid, (usedCountMap.get(uid) ?? 0) + 1)
       }
 
-      const rows: UserRecord[] = usersSnap.docs.map((d) => {
-        const data = d.data()
-        const uid = d.id
-        return {
-          uid,
-          fullName: (data.fullName as string) ?? '',
-          email: (data.email as string) ?? '',
-          attribute: (data.attribute as string) ?? '',
-          birthMonth: (data.birthMonth as string) ?? '',
-          status: (data.status as string) ?? 'active',
-          yellowCards: normalizeYellowCards(data.yellowCards),
-          totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
-          usedCouponCount: usedCountMap.get(uid) ?? 0,
-          memberNumber: (data.memberNumber as number) ?? null,
-          memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
-        }
-      })
+      const rows: UserRecord[] = filteredUsers.map((u) => ({
+        ...u,
+        usedCouponCount: usedCountMap.get(u.uid) ?? 0,
+      }))
 
       const header = [
         '会員番号',
@@ -358,6 +409,11 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     [users, sortKey, sortDir],
   )
 
+  const filteredUsers = useMemo(
+    () => filterUsers(sortedUsers, searchQuery),
+    [sortedUsers, searchQuery],
+  )
+
   function toggleUserSort(key: UserSortKey) {
     if (sortKey === key) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -419,7 +475,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
   }
 
-  const selectableUsers = sortedUsers.filter(
+  const selectableUsers = filteredUsers.filter(
     (u) => u.status === 'active' && u.uid !== currentUser?.uid,
   )
 
@@ -513,12 +569,51 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
           )}
           <button
             onClick={handleExportCsv}
-          disabled={exporting || users.length === 0}
-          className="px-4 py-2 bg-[#0095B6] text-white text-sm font-medium rounded-lg hover:bg-[#007A96] transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-            {exporting ? '出力中...' : 'CSV出力'}
+            disabled={exporting || filteredUsers.length === 0}
+            className="px-4 py-2 bg-[#0095B6] text-white text-sm font-medium rounded-lg hover:bg-[#007A96] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? '出力中...' : `CSV出力（表示中${filteredUsers.length}名）`}
           </button>
         </div>
+      </div>
+
+      <div className="px-4 py-3 bg-white border-b border-[#e5e5ea]">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => {
+                setSelectionClearNotice(false)
+                setSearchQuery(e.target.value)
+              }}
+              placeholder="会員番号・氏名・メールアドレスで検索"
+              aria-label="会員番号・氏名・メールアドレスで検索"
+              className="w-full bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg pl-3 pr-9 py-2 text-[#1d1d1f] placeholder-[#86868b] text-sm focus:outline-none focus:border-[#0095B6] transition"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectionClearNotice(false)
+                  setSearchQuery('')
+                }}
+                aria-label="検索をクリア"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] rounded-full hover:bg-[#e5e5ea]/60 transition text-sm"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <span className="text-[#86868b] text-xs whitespace-nowrap">
+            {searchQuery.trim()
+              ? `${users.length}名中 ${filteredUsers.length}名を表示`
+              : `全${users.length}名`}
+          </span>
+        </div>
+        {selectionClearNotice && (
+          <p className="text-[#FF9500] text-xs mt-2">検索条件が変わったため、選択を解除しました</p>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto p-4">
@@ -559,7 +654,29 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedUsers.map((user) => (
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={onSendToSelected ? 12 : 11}
+                        className="px-4 py-10 text-center"
+                      >
+                        <p className="text-[#86868b] text-sm">
+                          「{searchQuery.trim()}」に一致する会員が見つかりませんでした
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectionClearNotice(false)
+                            setSearchQuery('')
+                          }}
+                          className="mt-3 text-[#0095B6] text-sm font-medium hover:underline"
+                        >
+                          検索をクリア
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((user) => (
                     <tr
                       key={user.uid}
                       role={user.status === 'active' && onOpenChat ? 'button' : undefined}
@@ -725,7 +842,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                         ¥{(user.totalSavedAmount ?? 0).toLocaleString()}
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
