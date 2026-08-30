@@ -59,7 +59,7 @@ function normalizeYellowCards(value: unknown): number {
 }
 
 /** 氏名検索用の正規化（スペース除去・かな統一・半角化） */
-function normalizeSearchName(name: string): string {
+function normalizeSearchName(name: string | null | undefined): string {
   if (!name) return ''
   let s = name.trim()
   s = s.replace(/[\u3000\s]+/g, '')
@@ -100,7 +100,7 @@ function userMatchesTerm(user: UserRecord, term: string): boolean {
   const normTerm = normalizeSearchName(t)
   if (normTerm && normalizeSearchName(user.fullName).includes(normTerm)) return true
 
-  if (user.email.toLowerCase().includes(t.toLowerCase())) return true
+  if ((user.email ?? '').toLowerCase().includes(t.toLowerCase())) return true
 
   return false
 }
@@ -213,8 +213,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
             const data = d.data()
             return {
               uid: d.id,
-              fullName: (data.fullName as string) ?? '',
-              email: (data.email as string) ?? '',
+              fullName: (data.fullName as string | undefined)?.trim() || '(名前未設定)',
+              email: (data.email as string | undefined)?.trim() ?? '',
               attribute: (data.attribute as string) ?? '',
               birthMonth: (data.birthMonth as string) ?? '',
               status: (data.status as string) ?? 'active',

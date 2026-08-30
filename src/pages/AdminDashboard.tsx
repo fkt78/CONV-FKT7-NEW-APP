@@ -172,10 +172,10 @@ export default function AdminDashboard() {
             const data = d.data()
             return {
               uid: d.id,
-              fullName: data.fullName as string,
-              email: data.email as string,
-              attribute: data.attribute as string,
-              birthMonth: data.birthMonth as string,
+              fullName: (data.fullName as string | undefined)?.trim() || '(名前未設定)',
+              email: (data.email as string | undefined)?.trim() ?? '',
+              attribute: (data.attribute as string | undefined) ?? '',
+              birthMonth: (data.birthMonth as string | undefined) ?? '',
               status: (data.status as string) ?? 'active',
               yellowCards: normalizeYellowCards(data.yellowCards),
               totalSavedAmount: (data.totalSavedAmount as number) ?? 0,

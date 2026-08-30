@@ -586,7 +586,7 @@ export default function Home() {
           <div className="p-5 flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#0095B6] to-[#5BC8D7] flex items-center justify-center flex-shrink-0 shadow-sm">
               <span className="text-white font-semibold text-xl">
-                {displayName.charAt(0)}
+                {(displayName ?? '').charAt(0) || '？'}
               </span>
             </div>
             <div className="flex-1 min-w-0">

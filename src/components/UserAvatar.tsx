@@ -2,7 +2,7 @@ import { getAvatarBg } from '../lib/userAvatar'
 
 interface Props {
   /** 表示名（先頭1文字をアイコンに出す） */
-  fullName: string
+  fullName: string | null | undefined
   /** イエローカード枚数。未取得なら 0 扱い */
   yellowCards: number | null | undefined
   /** 円の直径（Tailwind のサイズ指定にそのまま使う） */
@@ -18,12 +18,13 @@ const SIZE = {
 
 export default function UserAvatar({ fullName, yellowCards, size = 'md', className = '' }: Props) {
   const s = SIZE[size]
+  const initial = (fullName ?? '').trim().charAt(0) || '？'
   return (
     <div
       className={`${s.box} rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${className}`}
       style={{ backgroundColor: getAvatarBg(yellowCards) }}
     >
-      <span className={`text-white font-bold ${s.text}`}>{fullName.charAt(0)}</span>
+      <span className={`text-white font-bold ${s.text}`}>{initial}</span>
     </div>
   )
 }
