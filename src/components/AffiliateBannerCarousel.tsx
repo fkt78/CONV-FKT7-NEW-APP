@@ -15,6 +15,9 @@ interface BannerSlide {
   labelJa: string
 }
 
+/** 常に1番目に固定表示する、最優先バナーの id */
+const TOP_BANNER_ID = 'penguin-mobile'
+
 const CORE_BANNER_SLIDES: BannerSlide[] = [
   {
     id: 'local-ad-recruit',
@@ -108,7 +111,16 @@ export default function AffiliateBannerCarousel({ inCard = false }: Props) {
       href: jobUrl,
       labelJa: '伊賀エリア3店舗 求人',
     }
-    return [FKT_MALL_SLIDE, jobSlide, ...shuffleBannerSlides([...CORE_BANNER_SLIDES])]
+    // ペンギンモバイルを1番目に固定し、FKT Mall・求人がそれに続く
+    const topSlide = CORE_BANNER_SLIDES.find((s) => s.id === TOP_BANNER_ID)
+    const rest = shuffleBannerSlides(
+      CORE_BANNER_SLIDES.filter((s) => s.id !== TOP_BANNER_ID),
+    )
+    // 最優先バナーが見つからない場合（削除された等）は従来どおりの並びにフォールバック
+    if (!topSlide) {
+      return [FKT_MALL_SLIDE, jobSlide, ...rest]
+    }
+    return [topSlide, FKT_MALL_SLIDE, jobSlide, ...rest]
   }, [])
   const [current, setCurrent] = useState(0)
   const [visible, setVisible] = useState(0)   // 実際に表示中のインデックス（フェード後に更新）
