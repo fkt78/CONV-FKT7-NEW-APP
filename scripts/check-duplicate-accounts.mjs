@@ -27,6 +27,8 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { normalizeEmail, normalizeName, runNormalizationTests, CONFIDENCE_RANK } from './lib/normalize.mjs'
+import { detectDuplicateGroups } from './lib/duplicate-detection.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const requireFromFunctions = createRequire(join(__dirname, '../functions/package.json'))
@@ -37,57 +39,8 @@ const PROJECT_ID = 'conv-fkt7-new-app'
 const DEFAULT_OUTPUT_DIR = join(homedir(), 'Desktop', 'fkt7-duplicate-check')
 const OUTPUT_BASENAME = 'duplicate-check_2026-08'
 
-const PLUS_STRIP_DOMAINS = new Set([
-  'gmail.com',
-  'icloud.com',
-  'me.com',
-  'mac.com',
-  'outlook.com',
-  'outlook.jp',
-  'hotmail.com',
-  'hotmail.co.jp',
-  'live.jp',
-  'live.com',
-])
-
-const CONFIDENCE_RANK = { 高: 3, 中: 2, 低: 1 }
-
 const FIREBASE_CLI_CLIENT_ID = '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com'
 const FIREBASE_CLI_CLIENT_SECRET = 'j9iVZfS8kkCEFUPaAeJV0sAi'
-
-/** @param {string} email */
-export function normalizeEmail(email) {
-  if (!email || typeof email !== 'string') return ''
-  let normalized = email.trim().toLowerCase()
-  const at = normalized.lastIndexOf('@')
-  if (at <= 0) return normalized
-
-  let local = normalized.slice(0, at)
-  let domain = normalized.slice(at + 1)
-
-  if (domain === 'googlemail.com') domain = 'gmail.com'
-
-  if (PLUS_STRIP_DOMAINS.has(domain)) {
-    const plusIndex = local.indexOf('+')
-    if (plusIndex >= 0) local = local.slice(0, plusIndex)
-  }
-
-  if (domain === 'gmail.com') {
-    local = local.replace(/\./g, '')
-  }
-
-  return `${local}@${domain}`
-}
-
-/** @param {string} name */
-export function normalizeName(name) {
-  if (!name || typeof name !== 'string') return ''
-  let s = name.trim()
-  s = s.replace(/[\u3000\s]+/g, '')
-  s = s.replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
-  s = s.replace(/[\u3041-\u3096]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60))
-  return s.toLowerCase()
-}
 
 function parseArgs(argv) {
   let outputDir = process.env.FKT7_DUPLICATE_CHECK_OUTPUT || DEFAULT_OUTPUT_DIR
@@ -97,50 +50,6 @@ function parseArgs(argv) {
     else if (arg.startsWith('--output=')) outputDir = arg.slice('--output='.length)
   }
   return { outputDir, testNormalizeOnly }
-}
-
-function runNormalizationTests() {
-  const cases = [
-    { input: 'FKT78@Gmail.com', expected: 'fkt78@gmail.com', label: '小文字化' },
-    { input: 'fkt.78@gmail.com', expected: 'fkt78@gmail.com', label: 'gmail のドット除去' },
-    { input: 'fkt78+shop@gmail.com', expected: 'fkt78@gmail.com', label: '+ 以降を除去' },
-    { input: 'fkt78@googlemail.com', expected: 'fkt78@gmail.com', label: 'ドメイン読み替え' },
-    {
-      input: 'taro.suzuki@docomo.ne.jp',
-      expected: 'taro.suzuki@docomo.ne.jp',
-      label: 'docomo ドットを消さない',
-    },
-    {
-      input: 'taro.suzuki@icloud.com',
-      expected: 'taro.suzuki@icloud.com',
-      label: 'icloud ドットを消さない',
-    },
-  ]
-  const nameCases = [
-    { inputs: ['吹田 克己', '吹田　克己', '吹田克己'], expected: '吹田克己', label: 'スペース除去' },
-    { inputs: ['スイタ', 'すいた'], expected: 'スイタ', label: 'かな統一' },
-  ]
-
-  const results = []
-  let allPass = true
-
-  for (const c of cases) {
-    const actual = normalizeEmail(c.input)
-    const pass = actual === c.expected
-    if (!pass) allPass = false
-    results.push({ kind: 'email', label: c.label, input: c.input, expected: c.expected, actual, pass })
-  }
-
-  for (const c of nameCases) {
-    for (const input of c.inputs) {
-      const actual = normalizeName(input)
-      const pass = actual === c.expected
-      if (!pass) allPass = false
-      results.push({ kind: 'name', label: c.label, input, expected: c.expected, actual, pass })
-    }
-  }
-
-  return { results, allPass }
 }
 
 async function getFirebaseCliAccessToken() {
@@ -328,161 +237,6 @@ function maskEmail(email) {
   const [local, domain] = email.split('@')
   const visible = local.slice(0, Math.min(2, local.length))
   return `${visible}***@${domain}`
-}
-
-class UnionFind {
-  constructor(size) {
-    this.parent = Array.from({ length: size }, (_, i) => i)
-    this.rank = Array(size).fill(0)
-  }
-
-  find(x) {
-    if (this.parent[x] !== x) this.parent[x] = this.find(this.parent[x])
-    return this.parent[x]
-  }
-
-  union(a, b) {
-    const ra = this.find(a)
-    const rb = this.find(b)
-    if (ra === rb) return
-    if (this.rank[ra] < this.rank[rb]) this.parent[ra] = rb
-    else if (this.rank[ra] > this.rank[rb]) this.parent[rb] = ra
-    else {
-      this.parent[rb] = ra
-      this.rank[ra]++
-    }
-  }
-}
-
-/**
- * @param {Array<Record<string, unknown>>} users
- */
-function detectDuplicateGroups(users) {
-  const n = users.length
-  const uf = new UnionFind(n)
-  /** @type {Array<{ confidence: '高'|'中'|'低', reason: string }>} */
-  const edgeMeta = []
-
-  /** @param {number} i @param {number} j @param {'高'|'中'|'低'} confidence @param {string} reason */
-  function link(i, j, confidence, reason) {
-    uf.union(i, j)
-    edgeMeta.push({ i, j, confidence, reason })
-  }
-
-  /** @type {Record<string, number[]>} */
-  const emailMap = {}
-  /** @type {Record<string, number[]>} */
-  const nameBirthMap = {}
-  /** @type {Record<string, number[]>} */
-  const nameMap = {}
-  /** @type {Record<string, number[]>} */
-  const localPartMap = {}
-
-  users.forEach((user, idx) => {
-    const emailKey = user.normEmail
-    if (emailKey) {
-      if (!emailMap[emailKey]) emailMap[emailKey] = []
-      emailMap[emailKey].push(idx)
-    }
-
-    const nameKey = user.normName
-    if (nameKey) {
-      if (!nameMap[nameKey]) nameMap[nameKey] = []
-      nameMap[nameKey].push(idx)
-    }
-
-    const birth = user.birthMonth || ''
-    if (nameKey && birth) {
-      const key = `${nameKey}|${birth}`
-      if (!nameBirthMap[key]) nameBirthMap[key] = []
-      nameBirthMap[key].push(idx)
-    }
-
-    const rawEmail = (user.email || '').trim().toLowerCase()
-    const at = rawEmail.lastIndexOf('@')
-    if (at > 0) {
-      const local = rawEmail.slice(0, at)
-      if (!localPartMap[local]) localPartMap[local] = []
-      localPartMap[local].push(idx)
-    }
-  })
-
-  for (const indices of Object.values(emailMap)) {
-    if (indices.length < 2) continue
-    for (let k = 1; k < indices.length; k++) {
-      link(indices[0], indices[k], '高', 'メール正規化一致')
-    }
-  }
-
-  for (const indices of Object.values(nameBirthMap)) {
-    if (indices.length < 2) continue
-    for (let k = 1; k < indices.length; k++) {
-      link(indices[0], indices[k], '高', '氏名＋生年月一致')
-    }
-  }
-
-  for (const [nameKey, indices] of Object.entries(nameMap)) {
-    if (indices.length < 2) continue
-    const births = new Set(indices.map((i) => users[i].birthMonth || ''))
-    if (births.size <= 1 && [...births][0]) continue
-    for (let k = 1; k < indices.length; k++) {
-      link(indices[0], indices[k], '中', '氏名一致（生年月不一致）')
-    }
-  }
-
-  for (const indices of Object.values(localPartMap)) {
-    if (indices.length < 2) continue
-    const domains = new Set(
-      indices.map((i) => {
-        const email = (users[i].email || '').trim().toLowerCase()
-        const at = email.lastIndexOf('@')
-        return at > 0 ? email.slice(at + 1) : ''
-      }),
-    )
-    if (domains.size < 2) continue
-
-    const normEmails = new Set(indices.map((i) => users[i].normEmail))
-    if (normEmails.size === 1) continue
-
-    for (let k = 1; k < indices.length; k++) {
-      link(indices[0], indices[k], '低', 'ローカル部一致（ドメイン不一致）')
-    }
-  }
-
-  /** @type {Record<number, number[]>} */
-  const components = {}
-  for (let i = 0; i < n; i++) {
-    const root = uf.find(i)
-    if (!components[root]) components[root] = []
-    components[root].push(i)
-  }
-
-  /** @type {Array<{ confidence: '高'|'中'|'低', reason: string, members: number[] }>} */
-  const groups = []
-
-  for (const members of Object.values(components)) {
-    if (members.length < 2) continue
-
-    const memberSet = new Set(members)
-    let best = { confidence: /** @type {'低'} */ ('低'), reason: 'ローカル部一致（ドメイン不一致）' }
-
-    for (const edge of edgeMeta) {
-      if (!memberSet.has(edge.i) || !memberSet.has(edge.j)) continue
-      if (CONFIDENCE_RANK[edge.confidence] > CONFIDENCE_RANK[best.confidence]) {
-        best = { confidence: edge.confidence, reason: edge.reason }
-      }
-    }
-
-    groups.push({ confidence: best.confidence, reason: best.reason, members })
-  }
-
-  groups.sort((a, b) => {
-    const rankDiff = CONFIDENCE_RANK[b.confidence] - CONFIDENCE_RANK[a.confidence]
-    if (rankDiff !== 0) return rankDiff
-    return b.members.length - a.members.length
-  })
-
-  return groups
 }
 
 function getEmailDomain(email) {

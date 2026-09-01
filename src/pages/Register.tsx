@@ -41,12 +41,20 @@ export default function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function checkBlacklist(name: string, emailAddr: string): Promise<boolean> {
-    const fn = httpsCallable<{ fullName?: string; email?: string }, { isBlacklisted: boolean }>(
-      functions,
-      'checkBlacklist',
-    )
-    const { data } = await fn({ fullName: name || undefined, email: emailAddr || undefined })
+  async function checkBlacklist(
+    name: string,
+    emailAddr: string,
+    birthMonthValue: string,
+  ): Promise<boolean> {
+    const fn = httpsCallable<
+      { fullName?: string; email?: string; birthMonth?: string },
+      { isBlacklisted: boolean }
+    >(functions, 'checkBlacklist')
+    const { data } = await fn({
+      fullName: name || undefined,
+      email: emailAddr || undefined,
+      birthMonth: birthMonthValue || undefined,
+    })
     return data.isBlacklisted
   }
 
@@ -84,7 +92,7 @@ export default function Register() {
 
     let isBlacklisted = false
     try {
-      isBlacklisted = await checkBlacklist(fullName.trim(), trimmedEmail)
+      isBlacklisted = await checkBlacklist(fullName.trim(), trimmedEmail, birthMonth)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === 'functions/resource-exhausted') {

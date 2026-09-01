@@ -12,6 +12,9 @@ import {
 } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { initializeApp } from 'firebase-admin/app'
+import { evaluateBlacklistMatch, type BlacklistCandidate } from './blacklistMatch.js'
+import { syncBlacklistOnUserStatusChange } from './blacklistSync.js'
+import { normalizeEmail, normalizeName } from './normalize.js'
 
 initializeApp()
 
@@ -300,8 +303,18 @@ export const onUserUpdated = onDocumentUpdated('users/{uid}', async (event) => {
   const after = event.data?.after
   if (!after?.exists) return
   const data = after.data()
-  if (data?.memberNumber != null) return
-  await assignMemberNumberIfNeeded(uid, data)
+  if (data?.memberNumber != null) {
+    // 会員番号採番済み — 採番処理はスキップ（既存ロジックと同じ分岐）
+  } else {
+    await assignMemberNumberIfNeeded(uid, data)
+  }
+
+  try {
+    const before = event.data?.before?.data()
+    await syncBlacklistOnUserStatusChange(db, uid, before, data)
+  } catch (err) {
+    console.error('blacklist sync failed for', uid, err)
+  }
 })
 
 /** checkBlacklist 用：同一クライアントあたりの呼び出し上限（窓内） */
@@ -364,23 +377,77 @@ async function assertCheckBlacklistRateLimit(req: CallableRequest): Promise<void
 export const checkBlacklist = onCall(async (request) => {
   await assertCheckBlacklistRateLimit(request)
 
-  const { fullName, email } = request.data as { fullName?: string; email?: string }
+  const { fullName, email, birthMonth } = request.data as {
+    fullName?: string
+    email?: string
+    birthMonth?: string
+  }
   if (!fullName && !email) {
     throw new HttpsError('invalid-argument', '照合するデータがありません')
   }
 
+  const rawFullName = typeof fullName === 'string' ? fullName.trim() : ''
+  const rawEmail = typeof email === 'string' ? email.trim() : ''
+  const inputBirthMonth = typeof birthMonth === 'string' ? birthMonth.trim() : ''
+
+  const normalizedFullName = rawFullName ? normalizeName(rawFullName) : ''
+  const normalizedEmail = rawEmail ? normalizeEmail(rawEmail) : ''
+
   const blRef = db.collection('blacklist')
   const checks: Array<Promise<FirebaseFirestore.QuerySnapshot>> = []
 
-  if (fullName) {
-    checks.push(blRef.where('fullName', '==', fullName).limit(1).get())
+  if (normalizedEmail) {
+    checks.push(blRef.where('normalizedEmail', '==', normalizedEmail).get())
   }
-  if (email) {
-    checks.push(blRef.where('email', '==', email).limit(1).get())
+  if (normalizedFullName) {
+    checks.push(blRef.where('normalizedFullName', '==', normalizedFullName).get())
+  }
+  if (rawEmail) {
+    checks.push(blRef.where('email', '==', rawEmail).get())
+  }
+  if (rawFullName) {
+    checks.push(blRef.where('fullName', '==', rawFullName).get())
   }
 
   const results = await Promise.all(checks)
-  const isBlacklisted = results.some((snap) => !snap.empty)
+  const candidateMap = new Map<string, BlacklistCandidate>()
+
+  for (const snap of results) {
+    for (const doc of snap.docs) {
+      const data = doc.data()
+      candidateMap.set(doc.id, {
+        id: doc.id,
+        fullName: data.fullName,
+        email: data.email,
+        normalizedFullName: data.normalizedFullName,
+        normalizedEmail: data.normalizedEmail,
+        birthMonth: data.birthMonth,
+        active: data.active,
+      })
+    }
+  }
+
+  const { isBlacklisted, nameOnlyMatchCount } = evaluateBlacklistMatch(
+    {
+      normalizedEmail,
+      normalizedFullName,
+      birthMonth: inputBirthMonth,
+      rawEmail,
+      rawFullName,
+    },
+    [...candidateMap.values()],
+  )
+
+  if (nameOnlyMatchCount > 0) {
+    console.log(
+      'checkBlacklist: name-only match skipped',
+      JSON.stringify({
+        normalizedFullName,
+        birthMonth: inputBirthMonth,
+        matchCount: nameOnlyMatchCount,
+      }),
+    )
+  }
 
   return { isBlacklisted }
 })
