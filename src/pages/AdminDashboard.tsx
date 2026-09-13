@@ -54,6 +54,15 @@ interface UserRecord {
   totalSavedAmount: number
   memberNumber: number | null
   role?: string
+  blacklistReason?: string
+  blacklistedAt?: Timestamp | null
+}
+
+function appendBlacklistStopFields(update: Record<string, unknown>, reasonInput: string | null) {
+  update.blacklistedAt = serverTimestamp()
+  if (reasonInput && reasonInput.trim()) {
+    update.blacklistReason = reasonInput.trim()
+  }
 }
 
 function normalizeYellowCards(value: unknown): number {
@@ -181,6 +190,8 @@ export default function AdminDashboard() {
               totalSavedAmount: (data.totalSavedAmount as number) ?? 0,
               memberNumber: (data.memberNumber as number) ?? null,
               role: data.role as string | undefined,
+              blacklistReason: (data.blacklistReason as string | undefined) ?? undefined,
+              blacklistedAt: (data.blacklistedAt as Timestamp | null | undefined) ?? null,
             }
           }),
         )
@@ -648,8 +659,15 @@ export default function AdminDashboard() {
     const label = delta > 0 ? 'イエローカードを付与' : 'イエローカードを取消'
     if (!confirm(`${selectedUser.fullName}さんに${label}しますか？（${selectedUser.yellowCards}枚→${next}枚）${next >= 3 ? '\n⚠️ 3枚到達のためブラックリストに入ります' : ''}`)) return
     const update: Record<string, unknown> = { yellowCards: next }
+    let reasonTrimmed: string | undefined
     if (next >= 3 && selectedUser.status === 'active' && selectedUser.role !== 'admin') {
+      const reasonInput = window.prompt(
+        '停止理由を入力してください（任意・空欄のままでも停止できます）',
+        '',
+      )
       update.status = 'blacklisted'
+      appendBlacklistStopFields(update, reasonInput)
+      reasonTrimmed = reasonInput?.trim() || undefined
     }
     if (next < 3 && selectedUser.status === 'blacklisted') {
       update.status = 'active'
@@ -659,7 +677,13 @@ export default function AdminDashboard() {
       setUsers((prev) =>
         prev.map((u) =>
           u.uid === selectedUser.uid
-            ? { ...u, yellowCards: next, status: (update.status as string | undefined) ?? u.status }
+            ? {
+                ...u,
+                yellowCards: next,
+                status: (update.status as string | undefined) ?? u.status,
+                blacklistReason:
+                  reasonTrimmed !== undefined ? reasonTrimmed || u.blacklistReason : u.blacklistReason,
+              }
             : u,
         ),
       )
@@ -673,11 +697,25 @@ export default function AdminDashboard() {
   async function handleRedCard() {
     if (!selectedUser) return
     if (!confirm(`${selectedUser.fullName}さんにレッドカードを出しますか？\n即座にブラックリストに入ります。`)) return
+    const reasonInput = window.prompt(
+      '停止理由を入力してください（任意・空欄のままでも停止できます）',
+      '',
+    )
     try {
-      await updateDoc(doc(db, 'users', selectedUser.uid), { status: 'blacklisted', yellowCards: 3 })
+      const update: Record<string, unknown> = { status: 'blacklisted', yellowCards: 3 }
+      appendBlacklistStopFields(update, reasonInput)
+      await updateDoc(doc(db, 'users', selectedUser.uid), update)
+      const reasonTrimmed = reasonInput?.trim() || undefined
       setUsers((prev) =>
         prev.map((u) =>
-          u.uid === selectedUser.uid ? { ...u, yellowCards: 3, status: 'blacklisted' } : u,
+          u.uid === selectedUser.uid
+            ? {
+                ...u,
+                yellowCards: 3,
+                status: 'blacklisted',
+                blacklistReason: reasonTrimmed ?? u.blacklistReason,
+              }
+            : u,
         ),
       )
       setUsersRefreshKey((k) => k + 1)
@@ -1214,7 +1252,10 @@ export default function AdminDashboard() {
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         {user.status === 'blacklisted' && (
-                          <span className="text-[9px] font-medium text-[#52525b] bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-1.5 py-px">
+                          <span
+                            title={user.blacklistReason || undefined}
+                            className="text-[9px] font-medium text-[#52525b] bg-[#f4f4f5] border border-[#e4e4e7] rounded-full px-1.5 py-px"
+                          >
                             停止中
                           </span>
                         )}

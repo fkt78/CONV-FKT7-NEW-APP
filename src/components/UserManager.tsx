@@ -8,6 +8,7 @@ import {
   getDocs,
   doc,
   updateDoc,
+  serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../lib/firebase'
@@ -27,6 +28,15 @@ interface UserRecord {
   memberNumber: number | null
   /** 例: food_support（食料支援）。管理者のみ編集 */
   memberGroups: string[]
+  blacklistReason?: string
+  blacklistedAt?: Timestamp | null
+}
+
+function appendBlacklistStopFields(update: Record<string, unknown>, reasonInput: string | null) {
+  update.blacklistedAt = serverTimestamp()
+  if (reasonInput && reasonInput.trim()) {
+    update.blacklistReason = reasonInput.trim()
+  }
 }
 
 const ATTRIBUTE_LABELS: Record<string, string> = {
@@ -223,6 +233,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
               usedCouponCount: 0,
               memberNumber: (data.memberNumber as number) ?? null,
               memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
+              blacklistReason: (data.blacklistReason as string | undefined) ?? undefined,
+              blacklistedAt: (data.blacklistedAt as Timestamp | null | undefined) ?? null,
             }
           }),
         )
@@ -339,9 +351,20 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     } else {
       if (!confirm(`${user.fullName}さんのアクセスを復元しますか？`)) return
     }
+    let reasonInput: string | null = null
+    if (nextStatus === 'blacklisted') {
+      reasonInput = window.prompt(
+        '停止理由を入力してください（任意・空欄のままでも停止できます）',
+        '',
+      )
+    }
     setUpdatingUid(user.uid)
     try {
-      await updateDoc(doc(db, 'users', user.uid), { status: nextStatus })
+      const update: Record<string, unknown> = { status: nextStatus }
+      if (nextStatus === 'blacklisted') {
+        appendBlacklistStopFields(update, reasonInput)
+      }
+      await updateDoc(doc(db, 'users', user.uid), update)
       setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('ステータス変更エラー:', err)
@@ -359,7 +382,14 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
     setUpdatingUid(user.uid)
     try {
       const update: Record<string, unknown> = { yellowCards: next }
-      if (next >= 3 && user.status === 'active') update.status = 'blacklisted'
+      if (next >= 3 && user.status === 'active') {
+        const reasonInput = window.prompt(
+          '停止理由を入力してください（任意・空欄のままでも停止できます）',
+          '',
+        )
+        update.status = 'blacklisted'
+        appendBlacklistStopFields(update, reasonInput)
+      }
       if (next < 3 && user.status === 'blacklisted') update.status = 'active'
       await updateDoc(doc(db, 'users', user.uid), update)
       setUsersRefreshKey((k) => k + 1)
@@ -374,9 +404,15 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
   async function handleRedCard(user: UserRecord) {
     if (user.uid === currentUser?.uid) return
     if (!confirm(`${user.fullName}さんにレッドカードを出しますか？\n即座にブラックリストに入ります。`)) return
+    const reasonInput = window.prompt(
+      '停止理由を入力してください（任意・空欄のままでも停止できます）',
+      '',
+    )
     setUpdatingUid(user.uid)
     try {
-      await updateDoc(doc(db, 'users', user.uid), { status: 'blacklisted', yellowCards: 3 })
+      const update: Record<string, unknown> = { status: 'blacklisted', yellowCards: 3 }
+      appendBlacklistStopFields(update, reasonInput)
+      await updateDoc(doc(db, 'users', user.uid), update)
       setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       console.error('レッドカード更新エラー:', err)
@@ -786,6 +822,7 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
                       </td>
                       <td className="px-4 py-3">
                         <span
+                          title={user.blacklistReason || undefined}
                           className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                             user.status === 'active'
                               ? 'bg-green-100 text-green-800'

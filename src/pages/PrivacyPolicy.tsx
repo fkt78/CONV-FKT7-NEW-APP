@@ -30,9 +30,14 @@ export default function PrivacyPolicy() {
 
       <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s4_title')}</h2>
-        <p>{lp('s4_p1')}</p>
+        <p className="whitespace-pre-line">{lp('s4_body')}</p>
+      </section>
+
+      <section>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s5_title')}</h2>
+        <p>{lp('s5_p1')}</p>
         <p className="mt-2">
-          {lp('s4_p2_intro')}
+          {lp('s5_p2_intro')}
           <br />
           ・
           <a
@@ -57,36 +62,31 @@ export default function PrivacyPolicy() {
       </section>
 
       <section>
-        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s5_title')}</h2>
-        <p>{lp('s5_p1')}</p>
-        <ul className="list-disc list-inside mt-2 space-y-1">
-          <li>{lp('s5_li1')}</li>
-          <li>{lp('s5_li2')}</li>
-          <li>{lp('s5_li3')}</li>
-        </ul>
-        <p className="mt-2">{lp('s5_p2')}</p>
-      </section>
-
-      <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s6_title')}</h2>
         <p>{lp('s6_p1')}</p>
-        <p className="mt-2">
-          {lp('s6_p2_before')}
-          <Link to="/advertising" className="text-[#0095B6] underline hover:text-[#007A96]">
-            {t('footer.advertising')}
-          </Link>
-          {lp('s6_p2_after')}
-        </p>
+        <ul className="list-disc list-inside mt-2 space-y-1">
+          <li>{lp('s6_li1')}</li>
+          <li>{lp('s6_li2')}</li>
+          <li>{lp('s6_li3')}</li>
+        </ul>
+        <p className="mt-2">{lp('s6_p2')}</p>
       </section>
 
       <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s7_title')}</h2>
-        <p className="whitespace-pre-line">{lp('s7_body')}</p>
+        <p>{lp('s7_p1')}</p>
+        <p className="mt-2">
+          {lp('s7_p2_before')}
+          <Link to="/advertising" className="text-[#0095B6] underline hover:text-[#007A96]">
+            {t('footer.advertising')}
+          </Link>
+          {lp('s7_p2_after')}
+        </p>
       </section>
 
       <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s8_title')}</h2>
-        <p>{lp('s8_body')}</p>
+        <p className="whitespace-pre-line">{lp('s8_body')}</p>
       </section>
 
       <section>
@@ -107,6 +107,11 @@ export default function PrivacyPolicy() {
       <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s12_title')}</h2>
         <p>{lp('s12_body')}</p>
+      </section>
+
+      <section>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lp('s13_title')}</h2>
+        <p>{lp('s13_body')}</p>
       </section>
 
       <div className="text-[#86868b] text-xs mt-8 space-y-1">

@@ -29,6 +29,11 @@ export default function TermsOfUse() {
       </section>
 
       <section>
+        <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lt('s3b_title')}</h2>
+        <p className="whitespace-pre-line">{lt('s3b_body')}</p>
+      </section>
+
+      <section>
         <h2 className="text-[#1d1d1f] font-semibold text-base mt-6 mb-2">{lt('s4_title')}</h2>
         <p>{lt('s4_body')}</p>
       </section>
