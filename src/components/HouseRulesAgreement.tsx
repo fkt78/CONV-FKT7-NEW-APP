@@ -63,6 +63,7 @@ export default function HouseRulesAgreement() {
               <p>{hr('s1_lead')}</p>
               <ul className="list-disc list-inside space-y-1.5 text-[#86868b]">
                 <BulletItem label={hr('s1_b1_label')} text={hr('s1_b1_text')} />
+                <BulletItem label={hr('s1_b1b_label')} text={hr('s1_b1b_text')} />
                 <BulletItem label={hr('s1_b2_label')} text={hr('s1_b2_text')} />
                 <BulletItem label={hr('s1_b3_label')} text={hr('s1_b3_text')} />
                 <BulletItem label={hr('s1_b4_label')} text={hr('s1_b4_text')} />
