@@ -30,6 +30,8 @@ interface UserRecord {
   memberGroups: string[]
   blacklistReason?: string
   blacklistedAt?: Timestamp | null
+  rulesAcceptedVersion?: string
+  rulesAcceptedAt?: Timestamp | null
 }
 
 function appendBlacklistStopFields(update: Record<string, unknown>, reasonInput: string | null) {
@@ -235,6 +237,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
               memberGroups: Array.isArray(data.memberGroups) ? (data.memberGroups as string[]) : [],
               blacklistReason: (data.blacklistReason as string | undefined) ?? undefined,
               blacklistedAt: (data.blacklistedAt as Timestamp | null | undefined) ?? null,
+              rulesAcceptedVersion: (data.rulesAcceptedVersion as string | undefined) ?? undefined,
+              rulesAcceptedAt: (data.rulesAcceptedAt as Timestamp | null) ?? null,
             }
           }),
         )
@@ -290,6 +294,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
         'ステータス',
         '累計節約額',
         'クーポン使用回数',
+        '規約同意版',
+        '規約同意日時',
       ]
       const csvRows = rows.map((r) => [
         escapeCsvField(r.memberNumber ?? ''),
@@ -302,6 +308,8 @@ export default function UserManager({ onOpenChat, onSendToSelected }: UserManage
         escapeCsvField(STATUS_LABELS[r.status] ?? r.status),
         escapeCsvField(r.totalSavedAmount),
         escapeCsvField(r.usedCouponCount),
+        escapeCsvField(r.rulesAcceptedVersion ?? ''),
+        escapeCsvField(r.rulesAcceptedAt ? r.rulesAcceptedAt.toDate().toLocaleString('ja-JP') : ''),
       ].join(','))
       const csv = '\uFEFF' + [header.join(','), ...csvRows].join('\r\n')
 

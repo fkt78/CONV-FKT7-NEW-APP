@@ -4,15 +4,56 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import LanguageSwitcher from './LanguageSwitcher'
 
+/**
+ * ハウスルールの版。
+ * ハウスルール・利用規約・プライバシーポリシーを改定したら、この文字列を新しい日付に変更する。
+ * 変更すると、すべての利用者に同意画面がもう一度表示される。
+ */
+export const HOUSE_RULES_VERSION = '2026-09-24'
+
 const STORAGE_KEY = 'fkt7_rules_accepted'
 
+/** 同意ボタンが押されたことを同一画面内の他のコンポーネントに知らせるためのイベント名 */
+export const RULES_ACCEPTED_EVENT = 'fkt7:rules-accepted'
+
+/**
+ * 同意済みの版を返す。
+ * 旧仕様で保存されていた 'true' は、版が不明な古い同意として 'legacy' を返す。
+ */
+export function getAcceptedRulesVersion(): string | null {
+  if (typeof window === 'undefined') return null
+  let v: string | null = null
+  try {
+    v = localStorage.getItem(STORAGE_KEY)
+  } catch {
+    return null
+  }
+  if (!v) return null
+  return v === 'true' ? 'legacy' : v
+}
+
+/** 現在の版に同意済みかどうか */
 export function isRulesAccepted(): boolean {
-  if (typeof window === 'undefined') return false
-  return localStorage.getItem(STORAGE_KEY) === 'true'
+  return getAcceptedRulesVersion() === HOUSE_RULES_VERSION
+}
+
+/** 過去に同意したことがあるが、現在の版ではない（＝改定による再同意）かどうか */
+export function hasPreviousConsent(): boolean {
+  const v = getAcceptedRulesVersion()
+  return v !== null && v !== HOUSE_RULES_VERSION
 }
 
 export function setRulesAccepted(): void {
-  localStorage.setItem(STORAGE_KEY, 'true')
+  try {
+    localStorage.setItem(STORAGE_KEY, HOUSE_RULES_VERSION)
+  } catch {
+    /* プライベートブラウズ等で保存できない場合は無視 */
+  }
+  try {
+    window.dispatchEvent(new Event(RULES_ACCEPTED_EVENT))
+  } catch {
+    /* イベントを飛ばせない環境でも同意自体は成立しているので無視 */
+  }
 }
 
 function BulletItem({ label, text }: { label: string; text: string }) {
@@ -27,6 +68,7 @@ export default function HouseRulesAgreement() {
   const { t } = useTranslation()
   const hr = (key: string) => t(`houseRules.${key}`)
   const [accepted, setAccepted] = useState(isRulesAccepted)
+  const [isRevision] = useState(hasPreviousConsent)
 
   const handleAccept = useCallback(() => {
     setRulesAccepted()
@@ -45,6 +87,11 @@ export default function HouseRulesAgreement() {
           <div className="flex justify-end mb-4">
             <LanguageSwitcher />
           </div>
+          {isRevision && (
+            <div className="mb-5 rounded-2xl border border-[#0095B6]/30 bg-[#0095B6]/5 px-4 py-3">
+              <p className="text-[#1d1d1f] text-[15px] leading-relaxed">{hr('revisedNotice')}</p>
+            </div>
+          )}
           <div className="text-center mb-8">
             <span className="text-[#0095B6] text-4xl block mb-3" aria-hidden>♛</span>
             <h1 className="text-[#1d1d1f] font-semibold text-[22px] tracking-wide leading-tight">
@@ -64,6 +111,7 @@ export default function HouseRulesAgreement() {
               <ul className="list-disc list-inside space-y-1.5 text-[#86868b]">
                 <BulletItem label={hr('s1_b1_label')} text={hr('s1_b1_text')} />
                 <BulletItem label={hr('s1_b1b_label')} text={hr('s1_b1b_text')} />
+                <BulletItem label={hr('s1_b1c_label')} text={hr('s1_b1c_text')} />
                 <BulletItem label={hr('s1_b2_label')} text={hr('s1_b2_text')} />
                 <BulletItem label={hr('s1_b3_label')} text={hr('s1_b3_text')} />
                 <BulletItem label={hr('s1_b4_label')} text={hr('s1_b4_text')} />

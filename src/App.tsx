@@ -11,6 +11,7 @@ import VersionBadge from './components/VersionBadge'
 import PwaUpdatePrompt from './components/PwaUpdatePrompt'
 import AppBadge from './components/AppBadge'
 import NotificationRegistration from './components/NotificationRegistration'
+import RulesConsentSync from './components/RulesConsentSync'
 import { useAdminIdleTimeout } from './hooks/useAdminIdleTimeout'
 
 const Register = lazy(() => import('./pages/Register'))
@@ -65,6 +66,7 @@ export default function App() {
             <AdminIdleTimeoutGuard />
             <AppBadge />
             <NotificationRegistration />
+            <RulesConsentSync />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/install-guide" element={<InstallGuide />} />
